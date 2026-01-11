@@ -1,13 +1,10 @@
 <template>
   <div class="min-h-screen">
-    <div class="mx-auto max-w-6xl px-6 py-16 grid lg:grid-cols-[0.95fr,1.05fr] gap-12 items-center">
+    <div class="mx-auto max-w-5xl px-6 py-16 grid lg:grid-cols-[1fr,1fr] gap-12 items-center">
       <div class="order-2 lg:order-1 bg-white rounded-3xl border border-[#E5E7EB] p-8">
         <div class="flex items-center gap-3 mb-6">
-          <div class="h-12 w-12 rounded-2xl bg-[#0B2C6F] text-white flex items-center justify-center">
-            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 3v18" />
-              <path d="M3 12h18" />
-            </svg>
+          <div class="h-12 w-12 rounded-2xl bg-white border border-[#E5E7EB] flex items-center justify-center">
+            <img src="/logo.png" alt="Barangay San Miguel" class="h-8 w-8 object-contain" />
           </div>
           <div>
             <h2 class="text-2xl font-semibold">Create an account</h2>
@@ -65,62 +62,19 @@
         </div>
         <p v-if="error" class="mt-4 text-red-600 text-sm">{{ error }}</p>
       </div>
-      <div class="order-1 lg:order-2 space-y-8">
+      <div class="order-1 lg:order-2 space-y-6">
         <div>
           <p class="text-xs uppercase tracking-[0.35em] text-[#6B7280]">Get Verified</p>
           <h1 class="text-5xl font-semibold leading-tight text-[#0B2C6F]">
-            Register once, access
-            <span class="block text-[#F2C300]">all barangay services</span>
+            Create your account
+            <span class="block text-[#F2C300]">in minutes</span>
           </h1>
         </div>
         <p class="text-[#6B7280] text-lg">
-          Upload a valid ID after registration. Once approved, a QR code appears for kiosk check-in.
+          Register once, get verified, and use your QR code at the kiosk for faster service.
         </p>
-        <div class="grid gap-4">
-          <div class="flex items-start gap-3 rounded-2xl bg-white border border-[#E5E7EB] p-4">
-            <div class="h-10 w-10 rounded-lg bg-[#F3F4F6] text-[#2E7D32] flex items-center justify-center">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 12l2-2 4 4 8-8 4 4" />
-              </svg>
-            </div>
-            <div>
-              <p class="font-semibold">Fast verification</p>
-              <p class="text-sm text-[#6B7280]">Track your approval status in real time.</p>
-            </div>
-          </div>
-          <div class="flex items-start gap-3 rounded-2xl bg-white border border-[#E5E7EB] p-4">
-            <div class="h-10 w-10 rounded-lg bg-[#F3F4F6] text-[#0B2C6F] flex items-center justify-center">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 2v4" />
-                <path d="M12 18v4" />
-                <path d="M4.9 4.9l2.8 2.8" />
-                <path d="M16.3 16.3l2.8 2.8" />
-                <path d="M2 12h4" />
-                <path d="M18 12h4" />
-                <path d="M4.9 19.1l2.8-2.8" />
-                <path d="M16.3 7.7l2.8-2.8" />
-              </svg>
-            </div>
-            <div>
-              <p class="font-semibold">Priority updates</p>
-              <p class="text-sm text-[#6B7280]">Get notified when your QR code is ready.</p>
-            </div>
-          </div>
-          <div class="flex items-start gap-3 rounded-2xl bg-white border border-[#E5E7EB] p-4">
-            <div class="h-10 w-10 rounded-lg bg-[#F3F4F6] text-[#0B2C6F] flex items-center justify-center">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 8v4l3 3" />
-                <circle cx="12" cy="12" r="9" />
-              </svg>
-            </div>
-            <div>
-              <p class="font-semibold">Kiosk ready</p>
-              <p class="text-sm text-[#6B7280]">Use the QR code for faster queue entry.</p>
-            </div>
-          </div>
-        </div>
         <div class="rounded-2xl border border-[#E5E7EB] bg-[#F3F4F6] p-4 text-sm text-[#6B7280]">
-          Need help? Visit the barangay help desk for assisted registration.
+          Bring a valid ID for quick verification.
         </div>
       </div>
     </div>

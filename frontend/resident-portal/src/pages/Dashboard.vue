@@ -9,7 +9,7 @@
         View profile
       </router-link>
     </div>
-    <div class="mt-10 grid lg:grid-cols-[1.4fr,0.6fr] gap-6">
+    <div class="mt-10 grid lg:grid-cols-[1.3fr,0.7fr] gap-6">
       <section class="bg-white rounded-3xl border border-[#E5E7EB] p-8">
         <div class="flex items-center gap-4">
           <div class="h-12 w-12 rounded-2xl bg-[#0B2C6F] text-white flex items-center justify-center">
@@ -51,36 +51,14 @@
         </div>
       </section>
       <aside class="space-y-4">
-        <div class="bg-white rounded-3xl border border-[#E5E7EB] p-6">
-          <h2 class="text-lg font-semibold">Kiosk quick steps</h2>
-          <div class="mt-4 space-y-3">
-            <div class="flex items-center gap-3">
-              <div class="h-9 w-9 rounded-full bg-[#F2C300] text-black flex items-center justify-center font-semibold">1</div>
-              <div>
-                <p class="font-semibold">Show QR</p>
-                <p class="text-sm text-[#6B7280]">Note your resident number.</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-3">
-              <div class="h-9 w-9 rounded-full bg-[#F2C300] text-black flex items-center justify-center font-semibold">2</div>
-              <div>
-                <p class="font-semibold">Select service</p>
-                <p class="text-sm text-[#6B7280]">Choose the document type.</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-3">
-              <div class="h-9 w-9 rounded-full bg-[#F2C300] text-black flex items-center justify-center font-semibold">3</div>
-              <div>
-                <p class="font-semibold">Receive ticket</p>
-                <p class="text-sm text-[#6B7280]">Wait for your number to be called.</p>
-              </div>
-            </div>
-          </div>
-        </div>
         <div class="rounded-3xl bg-[#0B2C6F] text-white p-6">
           <p class="text-xs uppercase tracking-[0.3em] text-white/70">Reminder</p>
           <p class="mt-3 text-lg font-semibold">Bring a valid ID</p>
           <p class="mt-2 text-sm text-white/70">Approval depends on your barangay residency documents.</p>
+        </div>
+        <div class="bg-white rounded-3xl border border-[#E5E7EB] p-6">
+          <h2 class="text-lg font-semibold text-[#0B2C6F]">Need help?</h2>
+          <p class="mt-2 text-sm text-[#6B7280]">Visit the barangay help desk for assisted registration.</p>
         </div>
       </aside>
     </div>
