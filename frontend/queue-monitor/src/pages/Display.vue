@@ -1,27 +1,39 @@
 <template>
-  <div class="min-h-screen bg-slate-900 text-white p-10">
-    <div class="flex items-center justify-between">
-      <h1 class="text-4xl font-bold">Now Serving</h1>
-      <select v-model="serviceFilter" class="bg-slate-800 border border-slate-700 px-3 py-2 rounded">
-        <option value="">All Services</option>
-        <option v-for="service in services" :key="service.id" :value="service.id">
-          {{ service.name }}
-        </option>
-      </select>
+  <div class="min-h-screen p-10">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+      <div>
+        <p class="text-sm uppercase tracking-[0.3em] text-white/70">Barangay San Miguel</p>
+        <h1 class="text-5xl font-semibold text-[#F2C300]">Now Serving</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="h-11 w-11 rounded-xl bg-white/10 text-white flex items-center justify-center">
+          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12h18" />
+            <path d="M3 6h18" />
+            <path d="M3 18h10" />
+          </svg>
+        </div>
+        <select v-model="serviceFilter" class="bg-white text-black border border-white px-4 py-3 rounded-xl text-lg">
+          <option value="">All Services</option>
+          <option v-for="service in services" :key="service.id" :value="service.id">
+            {{ service.name }}
+          </option>
+        </select>
+      </div>
     </div>
 
-    <div class="mt-10 bg-slate-800 rounded p-8 text-center">
-      <div class="text-6xl font-mono">{{ nowServing || '---' }}</div>
-      <div class="mt-2 text-slate-300">Please proceed to the counter</div>
+    <div class="mt-12 border-4 border-[#F2C300] rounded-3xl p-10 text-center">
+      <div class="text-7xl md:text-8xl font-mono tracking-widest text-white">{{ nowServing || '---' }}</div>
+      <div class="mt-3 text-[#F2C300] text-xl">Please proceed to the counter</div>
     </div>
 
-    <div class="mt-10">
+    <div class="mt-12">
       <h2 class="text-2xl font-semibold">Next in Line</h2>
-      <div class="mt-4 grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-5 gap-4">
         <div
           v-for="ticket in tickets"
           :key="ticket.ticket_no"
-          class="bg-slate-800 rounded p-6 text-center text-3xl font-mono"
+          class="bg-white text-black border border-white rounded-2xl p-6 text-center text-3xl font-mono"
         >
           {{ ticket.ticket_no }}
         </div>

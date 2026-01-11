@@ -1,17 +1,35 @@
 <template>
   <div class="min-h-screen flex flex-col items-center justify-center px-6">
-    <h1 class="text-3xl font-bold mb-6">Scan Resident QR</h1>
-    <input
-      ref="inputRef"
-      v-model="qrCode"
-      class="w-full max-w-md border text-xl px-4 py-3 rounded"
-      placeholder="Enter or scan QR code"
-      @keyup.enter="onSubmit"
-    />
-    <button class="mt-6 bg-green-600 text-white text-xl px-6 py-3 rounded" @click="onSubmit">
-      Validate
-    </button>
-    <p v-if="error" class="mt-4 text-red-600">{{ error }}</p>
+    <div class="max-w-2xl w-full bg-white border border-[#E5E7EB] rounded-3xl px-10 py-12">
+      <div class="flex items-center gap-4">
+        <div class="h-14 w-14 rounded-2xl bg-[#0B2C6F] text-white flex items-center justify-center">
+          <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 7V3h4" />
+            <path d="M17 3h4v4" />
+            <path d="M21 17v4h-4" />
+            <path d="M7 21H3v-4" />
+            <path d="M7 12h10" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold text-[#0B2C6F]">Scan Resident QR</h1>
+          <p class="text-[#6B7280]">Place the QR code in front of the scanner.</p>
+        </div>
+      </div>
+      <div class="mt-8">
+        <input
+          ref="inputRef"
+          v-model="qrCode"
+          class="w-full border-2 border-dashed text-2xl px-5 py-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+          placeholder="Enter or scan QR code"
+          @keyup.enter="onSubmit"
+        />
+        <button class="mt-6 w-full bg-[#F2C300] text-black text-2xl py-4 rounded-2xl font-semibold" @click="onSubmit">
+          Validate QR Code
+        </button>
+        <p v-if="error" class="mt-4 text-red-600 text-lg">{{ error }}</p>
+      </div>
+    </div>
   </div>
 </template>
 

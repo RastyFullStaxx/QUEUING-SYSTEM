@@ -1,8 +1,15 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@source "../index.html";
+@source "./**/*.{vue,js,ts,jsx,tsx}";
+
+:root {
+  color-scheme: dark;
+  --primary: #0b2c6f;
+  --secondary: #f2c300;
+}
 
 body {
-  background-color: #f8fafc;
-  color: #0f172a;
+  font-family: "Trebuchet MS", "Gill Sans", "Noto Sans", sans-serif;
+  background-color: var(--primary);
+  color: #ffffff;
 }
