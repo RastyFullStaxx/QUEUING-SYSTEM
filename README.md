@@ -10,7 +10,7 @@ Barangay San Miguel, Pasig City
     /kiosk-app/            # Vue app (thin UI)
     /queue-monitor/        # Vue app (public display)
     /admin-portal/         # Vue app
-  /infra/
+  /infra/                  # Optional local Docker setup
     docker-compose.yml
     nginx/
       default.conf
@@ -22,7 +22,7 @@ Barangay San Miguel, Pasig City
   README.md
 ```
 
-## Quick Start (Local Dev)
+## Quick Start (Local Dev - XAMPP)
 1) Copy env files
 ```
 cp .env.example backend/.env
@@ -32,20 +32,29 @@ cp frontend/queue-monitor/.env.example frontend/queue-monitor/.env
 cp frontend/admin-portal/.env.example frontend/admin-portal/.env
 ```
 
-2) Start infrastructure
+2) Start Apache + MySQL in XAMPP.
+
+3) Update `backend/.env` for local DB:
 ```
-cd infra
-docker compose up -d
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=queuing_system
+DB_USERNAME=root
+DB_PASSWORD=
 ```
 
-3) Run migrations + seed data
+4) Create the database in phpMyAdmin, then run migrations + seed data:
 ```
-cd infra
-docker compose exec php php /var/www/html/scripts/migrate.php
-docker compose exec php php /var/www/html/scripts/seed.php
+C:\\xampp\\php\\php.exe backend\\scripts\\migrate.php
+C:\\xampp\\php\\php.exe backend\\scripts\\seed.php
 ```
 
-4) Start the frontend apps (separate terminals)
+5) Start the backend API:
+```
+C:\\xampp\\php\\php.exe -S localhost:8080 -t backend/public
+```
+
+6) Start the frontend apps (separate terminals)
 ```
 cd frontend/resident-portal && npm install && npm run dev -- --port 5173
 cd frontend/kiosk-app && npm install && npm run dev -- --port 5174
