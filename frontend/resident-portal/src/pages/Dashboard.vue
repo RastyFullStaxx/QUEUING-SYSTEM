@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-6xl mx-auto py-12 px-6">
+  <div class="w-full py-12 px-10">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
       <div>
         <p class="text-xs uppercase tracking-[0.35em] text-[#6B7280]">Resident</p>

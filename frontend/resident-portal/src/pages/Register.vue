@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen">
-    <div class="mx-auto max-w-5xl px-6 py-16 grid lg:grid-cols-[1fr,1fr] gap-12 items-center">
+    <div class="w-full px-10 py-16 grid lg:grid-cols-[1fr,1fr] gap-12 items-center">
       <div class="order-2 lg:order-1 bg-white rounded-3xl border border-[#E5E7EB] p-8">
         <div class="flex items-center gap-3 mb-6">
           <div class="h-12 w-12 rounded-2xl bg-white border border-[#E5E7EB] flex items-center justify-center">

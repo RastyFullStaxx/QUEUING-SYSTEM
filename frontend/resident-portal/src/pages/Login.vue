@@ -19,61 +19,28 @@
         <div class="intro-orb orb-2"></div>
         <div class="intro-orb orb-3"></div>
         <div class="text-center max-w-xl relative intro-content intro-center">
-          <img src="/logo.png" alt="Barangay San Miguel" class="mx-auto h-50 w-50 object-contain" />
+          <img src="/logo.png" alt="Barangay San Miguel" class="mx-auto h-50 w-50 object-contain logo-breathe" />
           <p class="mt-6 text-sm uppercase tracking-[0.4em] text-[#6B7280]">Queue Registration Kiosk</p>
           <h1 class="mt-3 text-6xl font-semibold text-[#0B2C6F]">Barangay San Miguel</h1>
           <div class="mt-10 text-sm uppercase tracking-[0.35em] text-[#6B7280] intro-pulse intro-guide">
             Tap anywhere to begin
           </div>
         </div>
-        <div class="buildings">
-          <svg viewBox="0 0 1200 220" preserveAspectRatio="none">
-            <rect x="0" y="80" width="80" height="140" fill="#0B2C6F" />
-            <rect x="90" y="100" width="70" height="120" fill="#F2C300" />
-            <rect x="170" y="60" width="110" height="160" fill="#0B2C6F" />
-            <rect x="300" y="90" width="90" height="130" fill="#F2C300" />
-            <rect x="410" y="40" width="130" height="180" fill="#0B2C6F" />
-            <rect x="560" y="110" width="80" height="110" fill="#F2C300" />
-            <rect x="660" y="70" width="100" height="150" fill="#0B2C6F" />
-            <rect x="780" y="100" width="90" height="120" fill="#F2C300" />
-            <rect x="890" y="50" width="140" height="170" fill="#0B2C6F" />
-            <rect x="1050" y="90" width="90" height="130" fill="#F2C300" />
-            <rect x="0" y="200" width="1200" height="20" fill="#0B2C6F" />
-          </svg>
-        </div>
+        <div class="buildings"></div>
       </div>
       <div
         v-else
         key="login"
-        class="mx-auto max-w-5xl px-6 py-16 grid lg:grid-cols-[1fr,1fr] gap-12 items-center"
+        class="min-h-screen w-full px-10 py-16 flex items-center justify-center relative z-10"
       >
-      <div class="space-y-6">
-        <div class="inline-flex items-center gap-3 rounded-full bg-[#F3F4F6] text-[#0B2C6F] px-4 py-2 text-base border border-[#E5E7EB]">
-          <img src="/logo.png" alt="Barangay San Miguel" class="h-5 w-5 object-contain" />
-          Barangay San Miguel
-        </div>
-        <div>
-          <p class="text-sm uppercase tracking-[0.35em] text-[#6B7280]">Resident Portal</p>
-          <h1 class="text-6xl font-semibold leading-tight text-[#0B2C6F]">
-            Queue Registration
-            <span class="block text-[#F2C300]">fast and simple</span>
-          </h1>
-        </div>
-        <p class="text-[#6B7280] text-xl">
-          Log in to check your approval status and keep your QR code ready for the kiosk.
-        </p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-base text-[#6B7280]">
-          <div class="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <p class="font-semibold text-[#0B2C6F]">Kiosk-ready</p>
-            <p class="mt-1">Your QR code appears after approval.</p>
-          </div>
-          <div class="rounded-xl border border-[#E5E7EB] bg-white p-4">
-            <p class="font-semibold text-[#0B2C6F]">Clear status</p>
-            <p class="mt-1">Approved, pending, or rejected at a glance.</p>
-          </div>
-        </div>
-      </div>
-      <div class="bg-white rounded-3xl border border-[#E5E7EB] p-10">
+      <div class="bg-white rounded-3xl border border-[#E5E7EB] p-10 w-full max-w-2xl pop-card relative">
+        <button
+          class="absolute top-4 right-4 h-10 w-10 rounded-full border border-[#E5E7EB] text-[#0B2C6F] text-2xl leading-none"
+          @click="showIntro = true"
+          aria-label="Close"
+        >
+          ×
+        </button>
         <div class="flex items-center gap-3 mb-6">
           <div class="h-12 w-12 rounded-2xl bg-[#0B2C6F] text-white flex items-center justify-center">
             <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -107,15 +74,92 @@
               required
             />
           </div>
-          <button class="w-full bg-[#F2C300] text-black py-4 rounded-2xl text-xl font-semibold">Login</button>
+          <button
+            class="w-full bg-[#F2C300] text-black py-4 rounded-2xl text-xl font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
+            :disabled="isLoading"
+          >
+            {{ isLoading ? 'Signing in...' : 'Login' }}
+          </button>
         </form>
         <div class="mt-6 flex items-center justify-between text-base">
           <span class="text-[#6B7280]">Need an account?</span>
-          <router-link class="text-[#0B2C6F] font-semibold" to="/register">Register</router-link>
+          <button class="text-[#0B2C6F] font-semibold" type="button" @click="mode = 'register'">
+            Create account
+          </button>
         </div>
         <p v-if="error" class="mt-4 text-red-600 text-sm">{{ error }}</p>
+        <div v-if="mode === 'register'" class="mt-8 border-t border-[#E5E7EB] pt-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="h-10 w-10 rounded-2xl bg-[#0B2C6F] text-white flex items-center justify-center">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 3v18" />
+                <path d="M3 12h18" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-2xl font-semibold">Create account</h3>
+              <p class="text-base text-[#6B7280]">Register for resident access.</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="text-base font-semibold text-[#0B2C6F]">First name</label>
+              <input
+                v-model="firstName"
+                type="text"
+                placeholder="Juan"
+                class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+                required
+              />
+            </div>
+            <div>
+              <label class="text-base font-semibold text-[#0B2C6F]">Last name</label>
+              <input
+                v-model="lastName"
+                type="text"
+                placeholder="Dela Cruz"
+                class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+                required
+              />
+            </div>
+          </div>
+          <div class="mt-4">
+            <label class="text-base font-semibold text-[#0B2C6F]">Email</label>
+            <input
+              v-model="regEmail"
+              type="email"
+              placeholder="you@example.com"
+              class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+              required
+            />
+          </div>
+          <div class="mt-4">
+            <label class="text-base font-semibold text-[#0B2C6F]">Password</label>
+            <input
+              v-model="regPassword"
+              type="password"
+              placeholder="Create a password"
+              class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+              required
+            />
+          </div>
+          <button
+            class="mt-5 w-full bg-[#F2C300] text-black py-4 rounded-2xl text-xl font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
+            :disabled="isRegistering"
+            @click="onRegister"
+          >
+            {{ isRegistering ? 'Creating...' : 'Create Account' }}
+          </button>
+          <div class="mt-4 text-base text-[#6B7280]">
+            Already have an account?
+            <button class="text-[#0B2C6F] font-semibold" type="button" @click="mode = 'login'">Sign in</button>
+          </div>
+        </div>
       </div>
       </div>
+    </transition>
+    <transition name="fade-overlay">
+      <div v-if="!showIntro" class="modal-overlay"></div>
     </transition>
   </div>
 </template>
@@ -129,10 +173,18 @@ const router = useRouter()
 const email = ref('')
 const password = ref('')
 const error = ref('')
+const isLoading = ref(false)
+const mode = ref('login')
+const firstName = ref('')
+const lastName = ref('')
+const regEmail = ref('')
+const regPassword = ref('')
+const isRegistering = ref(false)
 const showIntro = ref(true)
 
 const onSubmit = async () => {
   error.value = ''
+  isLoading.value = true
   try {
     const data = await request('/api/auth/resident/login', {
       method: 'POST',
@@ -143,8 +195,34 @@ const onSubmit = async () => {
     router.push('/dashboard')
   } catch (err) {
     error.value = err.message
+  } finally {
+    isLoading.value = false
   }
 }
+
+const onRegister = async () => {
+  error.value = ''
+  isRegistering.value = true
+  try {
+    const data = await request('/api/auth/resident/register', {
+      method: 'POST',
+      body: JSON.stringify({
+        first_name: firstName.value,
+        last_name: lastName.value,
+        email: regEmail.value,
+        password: regPassword.value,
+      }),
+    })
+    localStorage.setItem('resident_token', data.token)
+    localStorage.setItem('resident_profile', JSON.stringify(data.resident))
+    router.push('/dashboard')
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    isRegistering.value = false
+  }
+}
+
 </script>
 
 <style scoped>
@@ -157,6 +235,28 @@ const onSubmit = async () => {
 .fade-slide-leave-to {
   opacity: 0;
   transform: translateY(12px);
+}
+
+.fade-overlay-enter-active,
+.fade-overlay-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-overlay-enter-from,
+.fade-overlay-leave-to {
+  opacity: 0;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 44, 111, 0.12);
+  backdrop-filter: blur(1px);
+  z-index: 5;
+}
+
+.pop-card {
+  animation: popIn 0.4s ease-out;
 }
 
 .intro-orb {
@@ -186,6 +286,7 @@ const onSubmit = async () => {
   z-index: 0;
 }
 
+
 .buildings {
   position: absolute;
   left: 0;
@@ -193,17 +294,23 @@ const onSubmit = async () => {
   bottom: 0;
   width: 100%;
   height: 220px;
-  z-index: 2;
+  z-index: 3;
+  background-image: url("/buildings.png");
+  background-repeat: repeat-x;
+  background-size: auto 100%;
 }
 
-.buildings svg {
-  width: 100%;
-  height: 100%;
-  display: block;
+.buildings::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.08);
+  animation: shimmer 6s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .intro-content {
-  z-index: 3;
+  z-index: 4;
 }
 
 .intro-center {
@@ -227,6 +334,11 @@ const onSubmit = async () => {
   background-color: #0b2c6f;
   opacity: 0.3;
 }
+
+.logo-breathe {
+  animation: logoBreathe 8s ease-in-out infinite;
+}
+
 
 .orb-1 {
   width: 220px;
@@ -296,5 +408,37 @@ const onSubmit = async () => {
     transform: rotate(360deg);
   }
 }
+
+@keyframes popIn {
+  0% {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes logoBreathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes shimmer {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
 
 </style>
