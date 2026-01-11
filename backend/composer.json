@@ -1,0 +1,13 @@
+{
+  "name": "brgy-san-miguel/queuing-system-api",
+  "description": "Lightweight PHP API for the automated kiosk queuing system.",
+  "type": "project",
+  "require": {
+    "php": ">=8.2"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  }
+}
