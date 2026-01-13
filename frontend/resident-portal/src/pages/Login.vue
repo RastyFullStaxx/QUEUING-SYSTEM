@@ -1,161 +1,151 @@
 <template>
   <div
     class="min-h-screen relative transition-colors duration-700"
-    :class="showIntro ? 'bg-white' : 'bg-[#F3F4F6]'"
+    :class="showIntro ? 'bg-[#F7F8FB]' : 'bg-[#F7F8FB]'"
   >
+    <div
+      class="min-h-screen flex items-center justify-center px-6 relative overflow-hidden intro-stage"
+      :class="{ 'intro-dim': !showIntro }"
+      role="button"
+      tabindex="0"
+      @click="showIntro = false"
+      @keydown.enter.prevent="showIntro = false"
+      @keydown.space.prevent="showIntro = false"
+    >
+      <div class="sun-rays"></div>
+      <div class="intro-orb orb-1"></div>
+      <div class="intro-orb orb-2"></div>
+      <div class="intro-orb orb-3"></div>
+      <div class="text-center max-w-xl relative intro-content intro-center">
+        <img src="/logo.png" alt="Barangay San Miguel" class="mx-auto h-50 w-50 object-contain logo-breathe" />
+        <p class="mt-6 text-sm uppercase tracking-[0.4em] text-[#6B7280]">Queue Registration Kiosk</p>
+        <h1 class="mt-3 text-6xl font-semibold text-[#0B2C6F]">Barangay San Miguel</h1>
+        <div class="mt-10 text-sm uppercase tracking-[0.35em] text-[#6B7280] intro-pulse intro-guide">
+          Tap anywhere to begin
+        </div>
+      </div>
+      <div class="buildings"></div>
+    </div>
     <transition name="fade-slide" mode="out-in">
       <div
-        v-if="showIntro"
-        key="intro"
-        class="min-h-screen flex items-center justify-center px-6 relative overflow-hidden"
-        role="button"
-        tabindex="0"
-        @click="showIntro = false"
-        @keydown.enter.prevent="showIntro = false"
-        @keydown.space.prevent="showIntro = false"
-      >
-        <div class="sun-rays"></div>
-        <div class="intro-orb orb-1"></div>
-        <div class="intro-orb orb-2"></div>
-        <div class="intro-orb orb-3"></div>
-        <div class="text-center max-w-xl relative intro-content intro-center">
-          <img src="/logo.png" alt="Barangay San Miguel" class="mx-auto h-50 w-50 object-contain logo-breathe" />
-          <p class="mt-6 text-sm uppercase tracking-[0.4em] text-[#6B7280]">Queue Registration Kiosk</p>
-          <h1 class="mt-3 text-6xl font-semibold text-[#0B2C6F]">Barangay San Miguel</h1>
-          <div class="mt-10 text-sm uppercase tracking-[0.35em] text-[#6B7280] intro-pulse intro-guide">
-            Tap anywhere to begin
-          </div>
-        </div>
-        <div class="buildings"></div>
-      </div>
-      <div
-        v-else
+        v-if="!showIntro"
         key="login"
-        class="min-h-screen w-full px-10 py-16 flex items-center justify-center relative z-10"
+        class="fixed inset-0 w-full px-6 sm:px-10 py-16 flex items-center justify-center z-30"
       >
-      <div class="bg-white rounded-3xl border border-[#E5E7EB] p-10 w-full max-w-2xl pop-card relative">
-        <button
-          class="absolute top-4 right-4 h-10 w-10 rounded-full border border-[#E5E7EB] text-[#0B2C6F] text-2xl leading-none"
-          @click="showIntro = true"
-          aria-label="Close"
-        >
-          ×
-        </button>
-        <div class="flex items-center gap-3 mb-6">
-          <div class="h-12 w-12 rounded-2xl bg-[#0B2C6F] text-white flex items-center justify-center">
-            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 20c1.8-4 6-6 8-6s6.2 2 8 6" />
-            </svg>
-          </div>
-          <div>
-            <h2 class="text-3xl font-semibold">Sign in</h2>
-            <p class="text-base text-[#6B7280]">Use your registered email.</p>
-          </div>
-        </div>
-        <form class="space-y-5" @submit.prevent="onSubmit">
-          <div>
-            <label class="text-base font-semibold text-[#0B2C6F]">Email</label>
-            <input
-              v-model="email"
-              type="email"
-              placeholder="you@example.com"
-              class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
-              required
-            />
-          </div>
-          <div>
-            <label class="text-base font-semibold text-[#0B2C6F]">Password</label>
-            <input
-              v-model="password"
-              type="password"
-              placeholder="Enter your password"
-              class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
-              required
-            />
-          </div>
-          <button
-            class="w-full bg-[#F2C300] text-black py-4 rounded-2xl text-xl font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
-            :disabled="isLoading"
-          >
-            {{ isLoading ? 'Signing in...' : 'Login' }}
-          </button>
-        </form>
-        <div class="mt-6 flex items-center justify-between text-base">
-          <span class="text-[#6B7280]">Need an account?</span>
-          <button class="text-[#0B2C6F] font-semibold" type="button" @click="mode = 'register'">
-            Create account
-          </button>
-        </div>
-        <p v-if="error" class="mt-4 text-red-600 text-sm">{{ error }}</p>
-        <div v-if="mode === 'register'" class="mt-8 border-t border-[#E5E7EB] pt-6">
-          <div class="flex items-center gap-3 mb-4">
-            <div class="h-10 w-10 rounded-2xl bg-[#0B2C6F] text-white flex items-center justify-center">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 3v18" />
-                <path d="M3 12h18" />
-              </svg>
+        <div class="w-full max-w-2xl pop-shell">
+          <div class="pop-card">
+            <div class="pop-top">
+              <div class="pop-brand">
+                <div class="pop-logo">
+                  <img src="/logo.png" alt="Barangay San Miguel" />
+                </div>
+                <div>
+                  <p class="pop-eyebrow">Barangay San Miguel</p>
+                  <h2 class="pop-title">{{ mode === 'login' ? 'Sign in' : 'Create account' }}</h2>
+                  <p class="pop-subtitle">
+                    {{ mode === 'login' ? 'Use your registered email.' : 'Register for resident access.' }}
+                  </p>
+                </div>
+              </div>
+              <button
+                class="pop-close"
+                @click="showIntro = true"
+                aria-label="Close"
+              >
+                ×
+              </button>
             </div>
+          <form v-if="mode === 'login'" class="space-y-5" @submit.prevent="onSubmit">
             <div>
-              <h3 class="text-2xl font-semibold">Create account</h3>
-              <p class="text-base text-[#6B7280]">Register for resident access.</p>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="text-base font-semibold text-[#0B2C6F]">First name</label>
+              <label class="text-base font-semibold text-[#0B2C6F]">Email</label>
               <input
-                v-model="firstName"
-                type="text"
-                placeholder="Juan"
+                v-model="email"
+                type="email"
+                placeholder="you@example.com"
                 class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
                 required
               />
             </div>
             <div>
-              <label class="text-base font-semibold text-[#0B2C6F]">Last name</label>
+              <label class="text-base font-semibold text-[#0B2C6F]">Password</label>
               <input
-                v-model="lastName"
-                type="text"
-                placeholder="Dela Cruz"
+                v-model="password"
+                type="password"
+                placeholder="Enter your password"
                 class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
                 required
               />
             </div>
-          </div>
-          <div class="mt-4">
-            <label class="text-base font-semibold text-[#0B2C6F]">Email</label>
-            <input
-              v-model="regEmail"
-              type="email"
-              placeholder="you@example.com"
-              class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
-              required
-            />
-          </div>
-          <div class="mt-4">
-            <label class="text-base font-semibold text-[#0B2C6F]">Password</label>
-            <input
-              v-model="regPassword"
-              type="password"
-              placeholder="Create a password"
-              class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
-              required
-            />
-          </div>
-          <button
-            class="mt-5 w-full bg-[#F2C300] text-black py-4 rounded-2xl text-xl font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
-            :disabled="isRegistering"
-            @click="onRegister"
-          >
-            {{ isRegistering ? 'Creating...' : 'Create Account' }}
-          </button>
-          <div class="mt-4 text-base text-[#6B7280]">
-            Already have an account?
-            <button class="text-[#0B2C6F] font-semibold" type="button" @click="mode = 'login'">Sign in</button>
+            <button
+              class="w-full bg-[#F2C300] text-black py-4 rounded-2xl text-xl font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
+              :disabled="isLoading"
+            >
+              {{ isLoading ? 'Signing in...' : 'Login' }}
+            </button>
+            <div class="flex items-center justify-between text-base">
+              <span class="text-[#6B7280]">Need an account?</span>
+              <button class="text-[#0B2C6F] font-semibold" type="button" @click="mode = 'register'">
+                Create account
+              </button>
+            </div>
+          </form>
+          <form v-else class="space-y-4" @submit.prevent="onRegister">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="text-base font-semibold text-[#0B2C6F]">First name</label>
+                <input
+                  v-model="firstName"
+                  type="text"
+                  placeholder="Juan"
+                  class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+                  required
+                />
+              </div>
+              <div>
+                <label class="text-base font-semibold text-[#0B2C6F]">Last name</label>
+                <input
+                  v-model="lastName"
+                  type="text"
+                  placeholder="Dela Cruz"
+                  class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label class="text-base font-semibold text-[#0B2C6F]">Email</label>
+              <input
+                v-model="regEmail"
+                type="email"
+                placeholder="you@example.com"
+                class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+                required
+              />
+            </div>
+            <div>
+              <label class="text-base font-semibold text-[#0B2C6F]">Password</label>
+              <input
+                v-model="regPassword"
+                type="password"
+                placeholder="Create a password"
+                class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+                required
+              />
+            </div>
+            <button
+              class="w-full bg-[#F2C300] text-black py-4 rounded-2xl text-xl font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
+              :disabled="isRegistering"
+            >
+              {{ isRegistering ? 'Creating...' : 'Create Account' }}
+            </button>
+            <div class="text-base text-[#6B7280]">
+              Already have an account?
+              <button class="text-[#0B2C6F] font-semibold" type="button" @click="mode = 'login'">Sign in</button>
+            </div>
+          </form>
+          <p v-if="error" class="mt-4 text-red-600 text-sm">{{ error }}</p>
           </div>
         </div>
-      </div>
       </div>
     </transition>
     <transition name="fade-overlay">
@@ -250,13 +240,129 @@ const onRegister = async () => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(11, 44, 111, 0.12);
-  backdrop-filter: blur(1px);
-  z-index: 5;
+  background: rgba(9, 20, 50, 0.35);
+  backdrop-filter: blur(3px);
+  z-index: 20;
+}
+
+.pop-shell {
+  position: relative;
+  padding: 2px;
+  border-radius: 36px;
+  background: conic-gradient(
+    from 180deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(242, 195, 0, 0.85),
+    rgba(255, 255, 255, 0.95),
+    rgba(145, 175, 230, 0.9),
+    rgba(255, 255, 255, 0.95)
+  );
+  box-shadow: 0 28px 80px rgba(10, 25, 60, 0.35);
+  animation: popIn 0.4s ease-out;
+}
+
+.pop-shell::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: 44px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.9),
+    rgba(255, 255, 255, 0.5),
+    rgba(242, 195, 0, 0.8),
+    rgba(255, 255, 255, 0.9),
+    rgba(145, 175, 230, 0.9),
+    rgba(255, 255, 255, 0.9)
+  );
+  filter: blur(16px);
+  opacity: 0.85;
+  z-index: 0;
+  animation: glowFlow 10s linear infinite;
 }
 
 .pop-card {
-  animation: popIn 0.4s ease-out;
+  position: relative;
+  z-index: 1;
+  border-radius: 34px;
+  padding: 2.75rem 2.75rem 2.5rem;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), rgba(246, 249, 255, 0.85)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(245, 247, 252, 0.95));
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.pop-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2.25rem;
+}
+
+.pop-brand {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.pop-logo {
+  height: 64px;
+  width: 64px;
+  padding: 0.6rem;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(12, 28, 74, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  display: grid;
+  place-items: center;
+}
+
+.pop-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.pop-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  font-size: 0.7rem;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.pop-title {
+  font-size: 2.25rem;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #0b2c6f;
+  margin-top: 0.35rem;
+}
+
+.pop-subtitle {
+  font-size: 1rem;
+  color: #6b7280;
+  margin-top: 0.4rem;
+}
+
+.pop-close {
+  height: 40px;
+  width: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  color: #0b2c6f;
+  font-size: 1.5rem;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 12px 30px rgba(12, 28, 74, 0.16);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pop-close:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 40px rgba(12, 28, 74, 0.2);
 }
 
 .intro-orb {
@@ -311,6 +417,15 @@ const onRegister = async () => {
 
 .intro-content {
   z-index: 4;
+}
+
+.intro-stage {
+  transition: filter 0.5s ease, transform 0.5s ease;
+}
+
+.intro-dim {
+  filter: brightness(0.72) saturate(0.9);
+  transform: scale(0.99);
 }
 
 .intro-center {
@@ -417,6 +532,15 @@ const onRegister = async () => {
   100% {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes glowFlow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
   }
 }
 
