@@ -1,74 +1,55 @@
 <template>
-  <div class="w-full py-12 px-10">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <p class="text-xs uppercase tracking-[0.35em] text-[#6B7280]">Resident</p>
-        <h1 class="text-4xl font-semibold text-[#0B2C6F]">Dashboard</h1>
+  <div class="dash-shell">
+    <header class="dash-top">
+      <div class="dash-title-stack">
+        <span class="dash-badge">Resident Portal</span>
+        <h1 class="dash-title">
+          Barangay San Miguel
+          <span class="dash-title-accent">Registration Status</span>
+        </h1>
+        <p class="dash-subtitle">Simple, clear updates about your registration.</p>
       </div>
-      <router-link class="text-sm font-semibold text-slate-900 bg-white/80 px-4 py-2 rounded-full border" to="/profile">
+      <router-link class="dash-link" to="/profile">
         View profile
       </router-link>
-    </div>
-    <div class="mt-10 grid lg:grid-cols-[1.3fr,0.7fr] gap-6">
-      <section class="bg-white rounded-3xl border border-[#E5E7EB] p-8">
-        <div class="flex items-center gap-4">
-          <div class="h-12 w-12 rounded-2xl bg-[#0B2C6F] text-white flex items-center justify-center">
-            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 20c1.8-4 6-6 8-6s6.2 2 8 6" />
-            </svg>
-          </div>
+    </header>
+
+    <main class="dash-main">
+      <section class="dash-card">
+        <div class="status-pill" :class="statusClass">{{ statusCopy }}</div>
+        <h2 class="welcome-title">Hello, {{ residentName }}</h2>
+        <p class="welcome-subtitle">We check your documents and update this screen automatically.</p>
+
+        <div class="status-row">
+          <div class="status-icon" :class="statusClass"></div>
           <div>
-            <p class="text-sm text-[#6B7280]">Welcome back</p>
-            <p class="text-2xl font-semibold">{{ residentName }}</p>
+            <p class="status-label">Current status</p>
+            <p class="status-value">{{ statusCopy }}</p>
           </div>
         </div>
-        <div class="mt-6 grid sm:grid-cols-2 gap-4">
-          <div class="rounded-2xl border border-[#E5E7EB] bg-[#F3F4F6] p-4">
-            <p class="text-xs uppercase tracking-[0.25em] text-[#6B7280]">Status</p>
-            <div class="mt-2 inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold" :class="statusClass">
-              {{ status }}
-            </div>
-            <p class="mt-2 text-sm text-[#6B7280]">We update this once your ID is checked.</p>
-          </div>
-          <div class="rounded-2xl border border-[#E5E7EB] bg-[#F3F4F6] p-4">
-            <p class="text-xs uppercase tracking-[0.25em] text-[#6B7280]">Kiosk lane</p>
-            <p class="mt-2 text-lg font-semibold">Scan-ready</p>
-            <p class="text-sm text-[#6B7280]">Keep your QR code handy for faster service.</p>
-          </div>
+
+        <div v-if="status === 'approved'" class="qr-card">
+          <p class="qr-label">Your resident code</p>
+          <div class="qr-code">RESIDENT #{{ resident?.id || '---' }}</div>
         </div>
-        <div v-if="status === 'approved'" class="mt-8">
-          <div class="flex items-center justify-between">
-            <p class="text-sm text-[#6B7280]">Your QR code</p>
-            <span class="text-xs uppercase tracking-[0.2em] text-[#2E7D32]">Approved</span>
-          </div>
-          <div class="mt-3 p-8 border-2 border-dashed rounded-3xl text-center text-3xl font-mono bg-[#F3F4F6] tracking-widest">
-            RESIDENT #{{ resident?.id || '---' }}
-          </div>
-        </div>
-        <div v-else class="mt-8 text-sm text-[#6B7280]">
-          Your account is awaiting approval. Once approved, your QR code will appear here.
+        <div v-else class="pending-note">
+          Once approved, your resident code will appear here for quick scanning.
         </div>
       </section>
-      <aside class="space-y-4">
-        <div class="rounded-3xl bg-[#0B2C6F] text-white p-6">
-          <p class="text-xs uppercase tracking-[0.3em] text-white/70">Reminder</p>
-          <p class="mt-3 text-lg font-semibold">Bring a valid ID</p>
-          <p class="mt-2 text-sm text-white/70">Approval depends on your barangay residency documents.</p>
-        </div>
-        <div class="bg-white rounded-3xl border border-[#E5E7EB] p-6">
-          <h2 class="text-lg font-semibold text-[#0B2C6F]">Need help?</h2>
-          <p class="mt-2 text-sm text-[#6B7280]">Visit the barangay help desk for assisted registration.</p>
-        </div>
+
+      <aside class="dash-side">
+        <button class="dash-quiet" type="button" @click="onLogout">Log out</button>
       </aside>
-    </div>
+    </main>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { request } from '../api'
 
+const router = useRouter()
 const resident = ref(null)
 const status = ref('pending')
 
@@ -82,6 +63,18 @@ const statusClass = computed(() => {
   if (status.value === 'rejected') return 'bg-[#C0392B] text-white'
   return 'bg-[#F2C300] text-black'
 })
+
+const statusCopy = computed(() => {
+  if (status.value === 'approved') return 'Approved'
+  if (status.value === 'rejected') return 'Not approved'
+  return 'Pending review'
+})
+
+const onLogout = () => {
+  localStorage.removeItem('resident_token')
+  localStorage.removeItem('resident_profile')
+  router.push('/')
+}
 
 onMounted(async () => {
   const cached = localStorage.getItem('resident_profile')
@@ -105,3 +98,242 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+.dash-shell {
+  min-height: 100vh;
+  padding: 3rem 2.5rem 4rem;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.9), rgba(238, 243, 255, 0.92)),
+    radial-gradient(circle at 90% 10%, rgba(255, 255, 255, 0.8), rgba(245, 248, 255, 0.9)),
+    linear-gradient(180deg, #f5f7fb, #eef2f8);
+}
+
+.dash-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.dash-title-stack {
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.dash-title-stack::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #0b2c6f, #f2c300, #0b2c6f);
+  box-shadow: 0 0 16px rgba(242, 195, 0, 0.6);
+}
+
+.dash-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #0b2c6f;
+  background: rgba(242, 195, 0, 0.18);
+  border: 1px solid rgba(242, 195, 0, 0.4);
+}
+
+.dash-title {
+  margin-top: 0.75rem;
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #0b2c6f;
+  line-height: 1.1;
+}
+
+.dash-title-accent {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #475569;
+  margin-top: 0.5rem;
+}
+
+.dash-subtitle {
+  margin-top: 0.5rem;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.dash-link {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  padding: 0.5rem 1.25rem;
+  background: rgba(255, 255, 255, 0.85);
+  font-weight: 600;
+  color: #0b2c6f;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dash-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+}
+
+.dash-main {
+  margin-top: 2.75rem;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+  .dash-main {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+  }
+}
+
+.dash-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 32px;
+  padding: 2.5rem;
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.35rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+}
+
+.welcome-title {
+  margin-top: 1.5rem;
+  font-size: 2rem;
+  color: #0b2c6f;
+  font-weight: 700;
+}
+
+.welcome-subtitle {
+  margin-top: 0.5rem;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.status-row {
+  margin-top: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(241, 245, 249, 0.8);
+  border-radius: 20px;
+  padding: 1.25rem 1.5rem;
+}
+
+.status-icon {
+  height: 14px;
+  width: 14px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 6px rgba(148, 163, 184, 0.15);
+}
+
+.status-label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.status-value {
+  margin-top: 0.25rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.qr-card {
+  margin-top: 2rem;
+  border-radius: 24px;
+  padding: 1.75rem;
+  background: rgba(240, 244, 255, 0.85);
+  border: 1px dashed rgba(100, 116, 139, 0.4);
+  text-align: center;
+}
+
+.qr-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.qr-code {
+  margin-top: 1rem;
+  font-size: 1.75rem;
+  letter-spacing: 0.25em;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.pending-note {
+  margin-top: 1.75rem;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.dash-side {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.dash-quiet {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.dash-quiet:hover {
+  color: #0b2c6f;
+}
+
+@media (max-width: 640px) {
+  .dash-shell {
+    padding: 2.5rem 1.25rem 3rem;
+  }
+
+  .dash-title {
+    font-size: 2.1rem;
+  }
+
+  .dash-title-stack {
+    padding-left: 1.2rem;
+  }
+
+  .dash-card {
+    padding: 2rem 1.75rem;
+  }
+}
+</style>

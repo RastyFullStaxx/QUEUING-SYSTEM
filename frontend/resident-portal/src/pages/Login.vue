@@ -12,7 +12,7 @@
       @keydown.enter.prevent="showIntro = false"
       @keydown.space.prevent="showIntro = false"
     >
-      <div class="sun-rays"></div>
+      <div v-if="showIntro" class="sun-rays"></div>
       <div class="intro-orb orb-1"></div>
       <div class="intro-orb orb-2"></div>
       <div class="intro-orb orb-3"></div>
@@ -35,18 +35,6 @@
         <div class="w-full max-w-2xl pop-shell">
           <div class="pop-card">
             <div class="pop-top">
-              <div class="pop-brand">
-                <div class="pop-logo">
-                  <img src="/logo.png" alt="Barangay San Miguel" />
-                </div>
-                <div>
-                  <p class="pop-eyebrow">Barangay San Miguel</p>
-                  <h2 class="pop-title">{{ mode === 'login' ? 'Sign in' : 'Create account' }}</h2>
-                  <p class="pop-subtitle">
-                    {{ mode === 'login' ? 'Use your registered email.' : 'Register for resident access.' }}
-                  </p>
-                </div>
-              </div>
               <button
                 class="pop-close"
                 @click="showIntro = true"
@@ -54,95 +42,110 @@
               >
                 ×
               </button>
+              <div class="pop-brand">
+                <p class="pop-eyebrow">Barangay San Miguel</p>
+                <h2 class="pop-title">{{ mode === 'login' ? 'Sign in' : 'Create account' }}</h2>
+                <p class="pop-subtitle">
+                  {{ mode === 'login' ? 'Use your registered email.' : 'Register for resident access.' }}
+                </p>
+              </div>
             </div>
-          <form v-if="mode === 'login'" class="space-y-5" @submit.prevent="onSubmit">
-            <div>
-              <label class="text-base font-semibold text-[#0B2C6F]">Email</label>
-              <input
-                v-model="email"
-                type="email"
-                placeholder="you@example.com"
-                class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
-                required
-              />
-            </div>
-            <div>
-              <label class="text-base font-semibold text-[#0B2C6F]">Password</label>
-              <input
-                v-model="password"
-                type="password"
-                placeholder="Enter your password"
-                class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
-                required
-              />
-            </div>
+          <transition name="form-swap" mode="out-in">
+            <form v-if="mode === 'login'" key="login-form" class="space-y-5" @submit.prevent="onSubmit">
+              <div>
+                <label class="text-base font-semibold text-[#0B2C6F]">Email</label>
+                <input
+                  v-model="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+                  required
+                />
+              </div>
+              <div>
+                <label class="text-base font-semibold text-[#0B2C6F]">Password</label>
+                <input
+                  v-model="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  autocomplete="current-password"
+                  class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+                  required
+                />
+              </div>
             <button
-              class="w-full bg-[#F2C300] text-black py-4 rounded-2xl text-xl font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
+              class="w-full pop-action bg-[#F2C300] text-black py-4 rounded-2xl text-xl font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
               :disabled="isLoading"
             >
               {{ isLoading ? 'Signing in...' : 'Login' }}
             </button>
             <div class="flex items-center justify-between text-base">
               <span class="text-[#6B7280]">Need an account?</span>
-              <button class="text-[#0B2C6F] font-semibold" type="button" @click="mode = 'register'">
+              <button class="text-[#0B2C6F] font-semibold pop-link" type="button" @click="mode = 'register'">
                 Create account
               </button>
             </div>
-          </form>
-          <form v-else class="space-y-4" @submit.prevent="onRegister">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            </form>
+            <form v-else key="register-form" class="space-y-4" @submit.prevent="onRegister">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="text-base font-semibold text-[#0B2C6F]">First name</label>
+                  <input
+                    v-model="firstName"
+                    type="text"
+                    placeholder="Juan"
+                    autocomplete="given-name"
+                    class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+                    required
+                  />
+                </div>
+                <div>
+                  <label class="text-base font-semibold text-[#0B2C6F]">Last name</label>
+                  <input
+                    v-model="lastName"
+                    type="text"
+                    placeholder="Dela Cruz"
+                    autocomplete="family-name"
+                    class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+                    required
+                  />
+                </div>
+              </div>
               <div>
-                <label class="text-base font-semibold text-[#0B2C6F]">First name</label>
+                <label class="text-base font-semibold text-[#0B2C6F]">Email</label>
                 <input
-                  v-model="firstName"
-                  type="text"
-                  placeholder="Juan"
+                  v-model="regEmail"
+                  type="email"
+                  placeholder="you@example.com"
+                  autocomplete="email"
                   class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
                   required
                 />
               </div>
               <div>
-                <label class="text-base font-semibold text-[#0B2C6F]">Last name</label>
+                <label class="text-base font-semibold text-[#0B2C6F]">Password</label>
                 <input
-                  v-model="lastName"
-                  type="text"
-                  placeholder="Dela Cruz"
+                  v-model="regPassword"
+                  type="password"
+                  placeholder="Create a password"
+                  autocomplete="new-password"
                   class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
                   required
                 />
               </div>
-            </div>
-            <div>
-              <label class="text-base font-semibold text-[#0B2C6F]">Email</label>
-              <input
-                v-model="regEmail"
-                type="email"
-                placeholder="you@example.com"
-                class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
-                required
-              />
-            </div>
-            <div>
-              <label class="text-base font-semibold text-[#0B2C6F]">Password</label>
-              <input
-                v-model="regPassword"
-                type="password"
-                placeholder="Create a password"
-                class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
-                required
-              />
-            </div>
             <button
-              class="w-full bg-[#F2C300] text-black py-4 rounded-2xl text-xl font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
+              class="w-full pop-action bg-[#F2C300] text-black py-4 rounded-2xl text-xl font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
               :disabled="isRegistering"
             >
               {{ isRegistering ? 'Creating...' : 'Create Account' }}
             </button>
             <div class="text-base text-[#6B7280]">
               Already have an account?
-              <button class="text-[#0B2C6F] font-semibold" type="button" @click="mode = 'login'">Sign in</button>
+              <button class="text-[#0B2C6F] font-semibold pop-link" type="button" @click="mode = 'login'">Sign in</button>
             </div>
           </form>
+          </transition>
           <p v-if="error" class="mt-4 text-red-600 text-sm">{{ error }}</p>
           </div>
         </div>
@@ -247,16 +250,9 @@ const onRegister = async () => {
 
 .pop-shell {
   position: relative;
-  padding: 2px;
+  padding: 3px;
   border-radius: 36px;
-  background: conic-gradient(
-    from 180deg,
-    rgba(255, 255, 255, 0.95),
-    rgba(242, 195, 0, 0.85),
-    rgba(255, 255, 255, 0.95),
-    rgba(145, 175, 230, 0.9),
-    rgba(255, 255, 255, 0.95)
-  );
+  background: transparent;
   box-shadow: 0 28px 80px rgba(10, 25, 60, 0.35);
   animation: popIn 0.4s ease-out;
 }
@@ -281,73 +277,75 @@ const onRegister = async () => {
   animation: glowFlow 10s linear infinite;
 }
 
+.pop-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 36px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(242, 195, 0, 0.85),
+    rgba(255, 255, 255, 0.95),
+    rgba(145, 175, 230, 0.9),
+    rgba(255, 255, 255, 0.95)
+  );
+  padding: 3px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  z-index: 0;
+  animation: glowFlow 12s linear infinite;
+}
+
 .pop-card {
   position: relative;
   z-index: 1;
   border-radius: 34px;
-  padding: 2.75rem 2.75rem 2.5rem;
+  padding: 2.25rem 2.75rem 2.5rem;
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), rgba(246, 249, 255, 0.85)),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(245, 247, 252, 0.95));
+    radial-gradient(circle at top center, rgba(255, 255, 255, 0.98), rgba(246, 249, 255, 0.86)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(242, 245, 252, 0.95));
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
 .pop-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1.5rem;
-  margin-bottom: 2.25rem;
+  position: relative;
+  margin-bottom: 2.5rem;
 }
 
 .pop-brand {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.pop-logo {
-  height: 64px;
-  width: 64px;
-  padding: 0.6rem;
-  border-radius: 22px;
-  background: #fff;
-  box-shadow: 0 18px 40px rgba(12, 28, 74, 0.18);
-  border: 1px solid rgba(255, 255, 255, 0.9);
+  text-align: left;
   display: grid;
-  place-items: center;
-}
-
-.pop-logo img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  justify-items: start;
+  gap: 0.4rem;
 }
 
 .pop-eyebrow {
   text-transform: uppercase;
-  letter-spacing: 0.28em;
-  font-size: 0.7rem;
+  letter-spacing: 0.35em;
+  font-size: 0.68rem;
   color: #6b7280;
   font-weight: 600;
 }
 
 .pop-title {
-  font-size: 2.25rem;
+  font-size: 2.4rem;
   line-height: 1.1;
   font-weight: 700;
   color: #0b2c6f;
-  margin-top: 0.35rem;
 }
 
 .pop-subtitle {
   font-size: 1rem;
   color: #6b7280;
-  margin-top: 0.4rem;
 }
 
 .pop-close {
+  position: absolute;
+  top: 0;
+  right: 0;
   height: 40px;
   width: 40px;
   border-radius: 999px;
@@ -357,12 +355,39 @@ const onRegister = async () => {
   line-height: 1;
   background: rgba(255, 255, 255, 0.85);
   box-shadow: 0 12px 30px rgba(12, 28, 74, 0.16);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+  cursor: pointer;
 }
 
 .pop-close:hover {
   transform: translateY(-1px);
   box-shadow: 0 16px 40px rgba(12, 28, 74, 0.2);
+  background: #fff;
+  color: #092b6c;
+}
+
+.pop-action {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  cursor: pointer;
+}
+
+.pop-action:hover:not(:disabled) {
+  background: #f6cf2a;
+  box-shadow: 0 18px 36px rgba(242, 195, 0, 0.35);
+  transform: translateY(-1px);
+}
+
+.pop-action:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.pop-link {
+  transition: color 0.2s ease;
+  cursor: pointer;
+}
+
+.pop-link:hover {
+  color: #092b6c;
 }
 
 .intro-orb {
@@ -542,6 +567,17 @@ const onRegister = async () => {
   100% {
     transform: rotate(360deg);
   }
+}
+
+.form-swap-enter-active,
+.form-swap-leave-active {
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.form-swap-enter-from,
+.form-swap-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
 }
 
 @keyframes logoBreathe {
