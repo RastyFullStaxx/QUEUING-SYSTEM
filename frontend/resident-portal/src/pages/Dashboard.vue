@@ -8,6 +8,13 @@
           <span class="dash-title-accent">Registration overview</span>
         </h1>
         <p class="dash-subtitle">Track your verification status and prepare for barangay services.</p>
+        <div class="dash-identity" :class="statusTone">
+          <span class="status-pill">{{ statusCopy }}</span>
+          <div class="dash-identity-text">
+            <h2 class="welcome-title">Hello, {{ residentName }}</h2>
+            <p class="welcome-subtitle">{{ statusMessage }}</p>
+          </div>
+        </div>
       </div>
       <div class="dash-actions">
         <a class="dash-help" :href="helpLink" aria-label="Help">
@@ -38,23 +45,17 @@
     </header>
 
     <main class="dash-grid">
-      <section class="dash-panel dash-hero" :class="statusTone">
-        <div class="hero-header">
-          <div class="status-pill">{{ statusCopy }}</div>
-          <h2 class="welcome-title">Hello, {{ residentName }}</h2>
-          <p class="welcome-subtitle">{{ statusMessage }}</p>
-        </div>
-
+      <section class="dash-panel qr-panel" :class="statusTone">
         <div class="resident-focus">
           <div class="resident-pass">
             <div class="pass-top">
               <p class="pass-label">Resident ID</p>
-              <p class="pass-id">#{{ resident?.id || '---' }}</p>
-              <span class="pass-status">{{ statusCopy }}</span>
+              <p class="pass-id">{{ residentIdDisplay }}</p>
             </div>
             <div class="pass-qr" :class="{ 'is-locked': status !== 'approved' }">
               <p class="pass-qr-label">{{ status === 'approved' ? 'Scan QR' : 'Awaiting approval' }}</p>
-              <div v-if="status === 'approved'" class="qr-code">RESIDENT #{{ resident?.id || '---' }}</div>
+              <div v-if="status === 'approved' && qrSvg" class="qr-render" v-html="qrSvg"></div>
+              <div v-else-if="status === 'approved'" class="qr-locked">Generating QR</div>
               <div v-else class="qr-locked">QR locked</div>
             </div>
             <div class="pass-code" :class="{ 'is-locked': status !== 'approved' }">
@@ -79,9 +80,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { request } from '../api'
+import QRCode from 'qrcode'
 
 const router = useRouter()
 const resident = ref(null)
@@ -113,7 +115,7 @@ const statusTone = computed(() => {
 })
 
 const statusCopy = computed(() => {
-  if (status.value === 'approved') return 'Approved'
+  if (status.value === 'approved') return 'Verified'
   if (status.value === 'rejected') return 'Not approved'
   return 'Pending review'
 })
@@ -138,11 +140,43 @@ const statusDetail = computed(() => {
   return 'We will notify you once a decision is made.'
 })
 
-const residentCodeValue = computed(() => `RESIDENT-${resident.value?.id || '---'}`)
+const residentIdPadded = computed(() => {
+  const id = resident.value?.id
+  if (!id && id !== 0) return '000000'
+  return String(id).padStart(6, '0')
+})
+
+const residentIdDisplay = computed(() => `BSM-RES-${residentIdPadded.value}`)
+
+const residentCodeValue = computed(() => `BSM-QR-${residentIdPadded.value}`)
 
 const residentCode = computed(() => {
   return status.value === 'approved' ? residentCodeValue.value : 'Locked until approval'
 })
+
+const qrPayload = computed(() => `BSM|RESIDENT|${residentIdPadded.value}|${residentCodeValue.value}`)
+const qrSvg = ref('')
+
+const generateQr = async () => {
+  if (status.value !== 'approved') {
+    qrSvg.value = ''
+    return
+  }
+  try {
+    qrSvg.value = await QRCode.toString(qrPayload.value, {
+      type: 'svg',
+      width: 220,
+      margin: 1,
+      errorCorrectionLevel: 'M',
+      color: {
+        dark: '#0B2C6F',
+        light: '#FFFFFF',
+      },
+    })
+  } catch (err) {
+    qrSvg.value = ''
+  }
+}
 
 const toggleProfileMenu = () => {
   isProfileMenuOpen.value = !isProfileMenuOpen.value
@@ -217,6 +251,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('click', closeProfileMenu)
 })
+
+watch([qrPayload, status], () => {
+  generateQr()
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -271,12 +309,12 @@ onBeforeUnmount(() => {
 
 .dash-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1.75rem;
   flex-wrap: wrap;
   position: relative;
-  z-index: 1;
+  z-index: 10;
 }
 
 .dash-title-stack {
@@ -337,6 +375,23 @@ onBeforeUnmount(() => {
   color: var(--muted);
   font-size: 1.05rem;
   max-width: 520px;
+}
+
+.dash-identity {
+  margin-top: 1.4rem;
+  display: grid;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 1rem 1.3rem;
+  border-radius: 20px;
+  border: 1px solid var(--tone-soft, rgba(148, 163, 184, 0.35));
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.1);
+}
+
+.dash-identity-text {
+  display: grid;
+  gap: 0.3rem;
 }
 
 .dash-actions {
@@ -421,7 +476,7 @@ onBeforeUnmount(() => {
   padding: 0.4rem;
   display: grid;
   gap: 0.25rem;
-  z-index: 5;
+  z-index: 20;
 }
 
 .dash-profile-item {
@@ -443,10 +498,11 @@ onBeforeUnmount(() => {
 .dash-grid {
   margin-top: 2.75rem;
   display: grid;
-  gap: 1.5rem;
+  gap: 2rem;
   grid-template-columns: minmax(0, 1fr);
   position: relative;
   z-index: 1;
+  justify-items: center;
 }
 
 .dash-panel {
@@ -457,41 +513,24 @@ onBeforeUnmount(() => {
   box-shadow: var(--shadow);
   backdrop-filter: blur(16px);
   animation: dashRise 0.7s ease both;
+  width: min(1040px, 100%);
 }
 
 .dash-grid > .dash-panel:nth-child(1) {
-  animation-delay: 0.05s;
-}
-
-.dash-grid > .dash-panel:nth-child(2) {
   animation-delay: 0.12s;
 }
 
-.dash-grid > .dash-panel:nth-child(3) {
-  animation-delay: 0.18s;
-}
-
-.dash-grid > .dash-panel:nth-child(4) {
-  animation-delay: 0.24s;
-}
-
-.dash-hero {
-  display: grid;
-  gap: 2rem;
-  justify-items: center;
+.qr-panel {
+  width: min(1040px, 100%);
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
   text-align: center;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(236, 242, 255, 0.85));
   position: relative;
 }
 
-.hero-header {
-  display: grid;
-  gap: 0.7rem;
-  justify-items: center;
-}
-
 .status-pill {
-  align-self: center;
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
@@ -506,14 +545,14 @@ onBeforeUnmount(() => {
 }
 
 .welcome-title {
-  margin-top: 0.3rem;
+  margin: 0;
   font-size: 2.1rem;
   color: var(--ink);
   font-weight: 700;
 }
 
 .welcome-subtitle {
-  margin-top: 0.2rem;
+  margin: 0;
   color: var(--muted);
   font-size: 1.05rem;
   max-width: 520px;
@@ -539,13 +578,26 @@ onBeforeUnmount(() => {
 
 .resident-pass {
   width: min(720px, 100%);
-  background: #ffffff;
-  border-radius: 28px;
-  border: 2px solid rgba(11, 44, 111, 0.18);
-  padding: 2.2rem 2.4rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(234, 240, 255, 0.98));
+  border-radius: 30px;
+  border: 1px solid rgba(11, 44, 111, 0.2);
+  padding: 2.6rem 2.8rem;
   display: grid;
   gap: 1.6rem;
-  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.15);
+  box-shadow:
+    0 26px 60px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(11, 44, 111, 0.08),
+    0 0 40px rgba(242, 195, 0, 0.18);
+  position: relative;
+}
+
+.resident-pass::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border-radius: 24px;
+  border: 1px solid rgba(11, 44, 111, 0.12);
+  pointer-events: none;
 }
 
 .pass-top {
@@ -569,25 +621,24 @@ onBeforeUnmount(() => {
   letter-spacing: 0.06em;
 }
 
-.pass-status {
-  padding: 0.35rem 1.1rem;
-  border-radius: 999px;
-  background: var(--tone, var(--gold));
-  color: var(--tone-ink, #1f2937);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.24em;
-  font-weight: 700;
-}
-
 .pass-qr {
   border-radius: 22px;
   padding: 1.8rem;
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  background: rgba(240, 244, 255, 0.85);
+  border: 1px solid rgba(11, 44, 111, 0.15);
+  background: linear-gradient(180deg, rgba(245, 248, 255, 0.95), rgba(233, 239, 255, 0.9));
   display: grid;
   gap: 1rem;
   justify-items: center;
+  position: relative;
+}
+
+.pass-qr::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border-radius: 16px;
+  border: 1px dashed rgba(11, 44, 111, 0.18);
+  pointer-events: none;
 }
 
 .pass-qr.is-locked {
@@ -607,6 +658,26 @@ onBeforeUnmount(() => {
   letter-spacing: 0.24em;
   font-weight: 700;
   color: var(--ink);
+}
+
+.qr-render {
+  width: 230px;
+  height: 230px;
+  padding: 0.7rem;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid rgba(11, 44, 111, 0.22);
+  box-shadow:
+    0 14px 30px rgba(11, 44, 111, 0.2),
+    0 0 30px rgba(242, 195, 0, 0.22);
+  display: grid;
+  place-items: center;
+}
+
+.qr-render svg {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .qr-locked {
@@ -883,16 +954,6 @@ onBeforeUnmount(() => {
 
 @media (min-width: 1024px) {
   .dash-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .dash-hero {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (max-width: 900px) {
-  .dash-hero {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -908,6 +969,14 @@ onBeforeUnmount(() => {
 
   .dash-title-stack {
     padding-left: 1.2rem;
+  }
+
+  .dash-identity {
+    padding: 0.9rem 1.1rem;
+  }
+
+  .welcome-title {
+    font-size: 1.6rem;
   }
 
   .dash-panel {
