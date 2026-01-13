@@ -13,6 +13,8 @@
 
 body {
   font-family: "Trebuchet MS", "Gill Sans", "Noto Sans", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
   background-color: var(--background);
   color: #111827;
 }

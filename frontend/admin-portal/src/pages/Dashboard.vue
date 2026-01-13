@@ -79,7 +79,7 @@
     </header>
 
     <div class="admin-content">
-      <div class="max-w-6xl mx-auto py-12 px-6">
+      <div class="w-full py-12">
         <div class="admin-intro">
           <div class="admin-intro-left">
             <div class="admin-emblem">
@@ -97,31 +97,40 @@
         </div>
 
         <div id="resident-verification" class="admin-card mt-10" v-show="activeSection === 'resident-verification'">
-      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h2 class="text-2xl font-semibold text-[#0B2C6F]">Resident Verification</h2>
-          <p class="text-sm text-[#6B7280]">Approve or reject resident registrations.</p>
+      <div class="tool-header">
+        <div class="tool-title">
+          <span class="tool-icon">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 12l8-7 8 7v8a2 2 0 0 1-2 2h-4v-6H10v6H6a2 2 0 0 1-2-2v-8Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <h2 class="tool-heading">Resident Verification</h2>
         </div>
-        <div class="flex flex-wrap gap-3">
-          <select v-model="statusFilter" class="border border-[#E5E7EB] rounded-full px-4 py-2 text-sm">
-            <option value="">All statuses</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          <input
-            v-model="search"
-            type="text"
-            placeholder="Search name or email"
-            class="border border-[#E5E7EB] rounded-full px-4 py-2 text-sm w-64"
-          />
-          <button class="bg-[#0B2C6F] text-white px-4 py-2 rounded-full text-sm" @click="loadResidents">
-            Refresh
-          </button>
+        <div class="tool-accent" aria-hidden="true">
+          <span class="tool-accent-bar is-primary"></span>
+          <span class="tool-accent-bar is-gold"></span>
+          <span class="tool-accent-bar is-neutral"></span>
         </div>
       </div>
+      <div class="control-strip mt-4 flex flex-wrap gap-3">
+        <select v-model="statusFilter" class="border border-[#E5E7EB] rounded-full px-4 py-2 text-base">
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <input
+          v-model="search"
+          type="text"
+          placeholder="Search name or email"
+          class="border border-[#E5E7EB] rounded-full px-4 py-2 text-base w-64"
+        />
+        <button class="bg-[#0B2C6F] text-white px-4 py-2 rounded-full text-base" @click="loadResidents">
+          Refresh
+        </button>
+      </div>
       <div class="mt-6 overflow-x-auto">
-        <table class="w-full text-sm border-collapse">
+        <table class="w-full text-base">
           <thead class="text-left text-[#6B7280]">
             <tr class="border-b border-[#E5E7EB]">
               <th class="py-2">Name</th>
@@ -133,16 +142,26 @@
           </thead>
           <tbody>
             <tr v-if="isLoadingResidents">
-              <td colspan="5" class="py-6 text-center text-[#6B7280]">Loading residents...</td>
+              <td colspan="5" class="py-6">
+                <div class="table-state">
+                  <span class="table-state-icon"></span>
+                  <span>Loading residents...</span>
+                </div>
+              </td>
             </tr>
             <tr v-else-if="residents.length === 0">
-              <td colspan="5" class="py-6 text-center text-[#6B7280]">No residents found.</td>
+              <td colspan="5" class="py-6">
+                <div class="table-state">
+                  <span class="table-state-icon"></span>
+                  <span>No residents found.</span>
+                </div>
+              </td>
             </tr>
-            <tr v-for="resident in residents" :key="resident.id" class="border-b border-[#F3F4F6]">
+            <tr v-for="resident in residents" :key="resident.id" class="border-b border-[#F3F4F6]" :class="rowClass(resident.status)">
               <td class="py-3">{{ resident.first_name }} {{ resident.last_name }}</td>
               <td class="py-3">{{ resident.email }}</td>
               <td class="py-3">
-                <span class="px-3 py-1 rounded-full text-xs font-semibold" :class="statusClass(resident.status)">
+                <span class="status-pill" :class="statusClass(resident.status)">
                   {{ resident.status }}
                 </span>
               </td>
@@ -150,13 +169,13 @@
               <td class="py-3 text-right">
                 <div class="inline-flex gap-2">
                   <button
-                    class="px-3 py-1 rounded-full text-xs border border-[#2E7D32] text-[#2E7D32]"
+                    class="px-3 py-1 rounded-full text-base border border-[#2E7D32] text-[#2E7D32]"
                     @click="updateStatus(resident.id, 'approved')"
                   >
                     Approve
                   </button>
                   <button
-                    class="px-3 py-1 rounded-full text-xs border border-[#C0392B] text-[#C0392B]"
+                    class="px-3 py-1 rounded-full text-base border border-[#C0392B] text-[#C0392B]"
                     @click="updateStatus(resident.id, 'rejected')"
                   >
                     Reject
@@ -166,29 +185,38 @@
             </tr>
           </tbody>
         </table>
-        <p v-if="residentError" class="mt-4 text-sm text-[#C0392B]">{{ residentError }}</p>
+        <p v-if="residentError" class="mt-4 text-base text-[#C0392B]">{{ residentError }}</p>
       </div>
     </div>
 
           <section id="services" class="admin-card mt-10" v-show="activeSection === 'services'">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-2xl font-semibold text-[#0B2C6F]">Services</h2>
-            <p class="text-sm text-[#6B7280]">Create and manage service types.</p>
+        <div class="tool-header">
+          <div class="tool-title">
+            <span class="tool-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 3v5m0 8v5m9-9h-5M8 12H3m14.95-6.95-3.54 3.54m-4.82 4.82-3.54 3.54m0-8.36-3.54-3.54m12.3 12.3-3.54-3.54" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              </svg>
+            </span>
+            <h2 class="tool-heading">Services</h2>
           </div>
-          <button class="bg-[#0B2C6F] text-white px-4 py-2 rounded-full text-sm" @click="loadServices">
+          <div class="tool-accent" aria-hidden="true">
+            <span class="tool-accent-bar is-primary"></span>
+            <span class="tool-accent-bar is-gold"></span>
+            <span class="tool-accent-bar is-neutral"></span>
+          </div>
+        </div>
+        <div class="control-strip mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <input v-model="newService.name" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Service name" />
+          <input v-model="newService.code" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Code" />
+          <button class="bg-[#F2C300] text-black rounded-xl text-base font-semibold" @click="createService">
+            Add service
+          </button>
+          <button class="bg-[#0B2C6F] text-white rounded-xl text-base" @click="loadServices">
             Refresh
           </button>
         </div>
-        <div class="mt-4 grid gap-3 sm:grid-cols-3">
-          <input v-model="newService.name" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm" placeholder="Service name" />
-          <input v-model="newService.code" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm" placeholder="Code" />
-          <button class="bg-[#F2C300] text-black rounded-xl text-sm font-semibold" @click="createService">
-            Add service
-          </button>
-        </div>
         <div class="mt-4 overflow-x-auto">
-          <table class="w-full text-sm">
+          <table class="w-full text-base">
             <thead class="text-left text-[#6B7280]">
               <tr class="border-b border-[#E5E7EB]">
                 <th class="py-2">Name</th>
@@ -199,56 +227,76 @@
             </thead>
             <tbody>
               <tr v-if="isLoadingServices">
-                <td colspan="4" class="py-4 text-center text-[#6B7280]">Loading services...</td>
+                <td colspan="4" class="py-4">
+                  <div class="table-state">
+                    <span class="table-state-icon"></span>
+                    <span>Loading services...</span>
+                  </div>
+                </td>
               </tr>
               <tr v-else-if="services.length === 0">
-                <td colspan="4" class="py-4 text-center text-[#6B7280]">No services found.</td>
+                <td colspan="4" class="py-4">
+                  <div class="table-state">
+                    <span class="table-state-icon"></span>
+                    <span>No services found.</span>
+                  </div>
+                </td>
               </tr>
-              <tr v-for="service in services" :key="service.id" class="border-b border-[#F3F4F6]">
+              <tr v-for="service in services" :key="service.id" class="border-b border-[#F3F4F6]" :class="rowClass(service.active ? 'active' : 'inactive')">
                 <td class="py-2">{{ service.name }}</td>
                 <td class="py-2">{{ service.code }}</td>
                 <td class="py-2">
-                  <span class="px-3 py-1 rounded-full text-xs font-semibold" :class="service.active ? 'bg-[#2E7D32] text-white' : 'bg-[#F3F4F6] text-[#6B7280]'">
+                  <span class="status-pill" :class="statusClass(service.active ? 'active' : 'inactive')">
                     {{ service.active ? 'Active' : 'Inactive' }}
                   </span>
                 </td>
                 <td class="py-2 text-right">
-                  <button class="text-xs border border-[#0B2C6F] text-[#0B2C6F] px-3 py-1 rounded-full" @click="toggleService(service)">
+                  <button class="text-base border border-[#0B2C6F] text-[#0B2C6F] px-3 py-1 rounded-full" @click="toggleService(service)">
                     Toggle
                   </button>
                 </td>
               </tr>
             </tbody>
           </table>
-          <p v-if="serviceError" class="mt-3 text-sm text-[#C0392B]">{{ serviceError }}</p>
+          <p v-if="serviceError" class="mt-3 text-base text-[#C0392B]">{{ serviceError }}</p>
         </div>
       </section>
 
           <section id="queue-control" class="admin-card mt-10" v-show="activeSection === 'queue-control'">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-2xl font-semibold text-[#0B2C6F]">Queue Control</h2>
-            <p class="text-sm text-[#6B7280]">Call, serve, or cancel tickets.</p>
+        <div class="tool-header">
+          <div class="tool-title">
+            <span class="tool-icon is-gold">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M5 7h14M5 12h10M5 17h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                <path d="M17 14v6l3-3-3-3Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <h2 class="tool-heading">Queue Control</h2>
           </div>
-          <button class="bg-[#0B2C6F] text-white px-4 py-2 rounded-full text-sm" @click="loadQueue">
-            Refresh
-          </button>
+          <div class="tool-accent" aria-hidden="true">
+            <span class="tool-accent-bar is-primary"></span>
+            <span class="tool-accent-bar is-gold"></span>
+            <span class="tool-accent-bar is-neutral"></span>
+          </div>
         </div>
-        <div class="mt-4 flex flex-wrap gap-3">
-          <input v-model="queueServiceId" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm w-32" placeholder="Service ID" />
-          <select v-model="queueStatus" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm">
+        <div class="control-strip mt-4 flex flex-wrap gap-3">
+          <input v-model="queueServiceId" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base w-32" placeholder="Service ID" />
+          <select v-model="queueStatus" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base">
             <option value="">All</option>
             <option value="waiting">Waiting</option>
             <option value="serving">Serving</option>
             <option value="done">Done</option>
             <option value="cancelled">Cancelled</option>
           </select>
-          <button class="bg-[#F2C300] text-black rounded-xl px-4 py-2 text-sm font-semibold" @click="callNext">
+          <button class="bg-[#F2C300] text-black rounded-xl px-4 py-2 text-base font-semibold" @click="callNext">
             Call next
+          </button>
+          <button class="bg-[#0B2C6F] text-white rounded-xl px-4 py-2 text-base" @click="loadQueue">
+            Refresh
           </button>
         </div>
         <div class="mt-4 overflow-x-auto">
-          <table class="w-full text-sm">
+          <table class="w-full text-base">
             <thead class="text-left text-[#6B7280]">
               <tr class="border-b border-[#E5E7EB]">
                 <th class="py-2">Ticket</th>
@@ -259,48 +307,72 @@
             </thead>
             <tbody>
               <tr v-if="isLoadingQueue">
-                <td colspan="4" class="py-4 text-center text-[#6B7280]">Loading tickets...</td>
+                <td colspan="4" class="py-4">
+                  <div class="table-state">
+                    <span class="table-state-icon"></span>
+                    <span>Loading tickets...</span>
+                  </div>
+                </td>
               </tr>
               <tr v-else-if="queueTickets.length === 0">
-                <td colspan="4" class="py-4 text-center text-[#6B7280]">No tickets found.</td>
+                <td colspan="4" class="py-4">
+                  <div class="table-state">
+                    <span class="table-state-icon"></span>
+                    <span>No tickets found.</span>
+                  </div>
+                </td>
               </tr>
-              <tr v-for="ticket in queueTickets" :key="ticket.id" class="border-b border-[#F3F4F6]">
+              <tr v-for="ticket in queueTickets" :key="ticket.id" class="border-b border-[#F3F4F6]" :class="rowClass(ticket.status)">
                 <td class="py-2">{{ ticket.ticket_no }}</td>
                 <td class="py-2">{{ ticket.service_id }}</td>
-                <td class="py-2">{{ ticket.status }}</td>
+                <td class="py-2">
+                  <span class="status-pill" :class="statusClass(ticket.status)">
+                    {{ ticket.status }}
+                  </span>
+                </td>
                 <td class="py-2 text-right">
-                  <button class="text-xs border border-[#2E7D32] text-[#2E7D32] px-3 py-1 rounded-full" @click="serveTicket(ticket)">
+                  <button class="text-base border border-[#2E7D32] text-[#2E7D32] px-3 py-1 rounded-full" @click="serveTicket(ticket)">
                     Serve
                   </button>
-                  <button class="ml-2 text-xs border border-[#C0392B] text-[#C0392B] px-3 py-1 rounded-full" @click="cancelTicket(ticket)">
+                  <button class="ml-2 text-base border border-[#C0392B] text-[#C0392B] px-3 py-1 rounded-full" @click="cancelTicket(ticket)">
                     Cancel
                   </button>
                 </td>
               </tr>
             </tbody>
           </table>
-          <p v-if="queueError" class="mt-3 text-sm text-[#C0392B]">{{ queueError }}</p>
+          <p v-if="queueError" class="mt-3 text-base text-[#C0392B]">{{ queueError }}</p>
         </div>
       </section>
         <section id="transactions" class="admin-card mt-10" v-show="activeSection === 'transactions'">
-          <div class="flex items-center justify-between">
-            <div>
-              <h2 class="text-2xl font-semibold text-[#0B2C6F]">Transactions</h2>
-              <p class="text-sm text-[#6B7280]">Completed and cancelled tickets.</p>
+          <div class="tool-header">
+            <div class="tool-title">
+              <span class="tool-icon is-gold">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 7h16M4 12h12M4 17h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                  <path d="M18 14h2v6h-6v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <h2 class="tool-heading">Transactions</h2>
             </div>
-            <button class="bg-[#0B2C6F] text-white px-4 py-2 rounded-full text-sm" @click="loadTransactions">
-              Refresh
-            </button>
+            <div class="tool-accent" aria-hidden="true">
+              <span class="tool-accent-bar is-primary"></span>
+              <span class="tool-accent-bar is-gold"></span>
+              <span class="tool-accent-bar is-neutral"></span>
+            </div>
           </div>
-          <div class="mt-4 flex flex-wrap gap-3">
-            <input v-model="transactionServiceId" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm w-32" placeholder="Service ID" />
-            <select v-model="transactionStatus" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm">
+          <div class="control-strip mt-4 flex flex-wrap gap-3">
+            <input v-model="transactionServiceId" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base w-32" placeholder="Service ID" />
+            <select v-model="transactionStatus" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base">
               <option value="done">Done</option>
               <option value="cancelled">Cancelled</option>
             </select>
+            <button class="bg-[#0B2C6F] text-white rounded-xl px-4 py-2 text-base" @click="loadTransactions">
+              Refresh
+            </button>
           </div>
           <div class="mt-4 overflow-x-auto">
-            <table class="w-full text-sm">
+            <table class="w-full text-base">
               <thead class="text-left text-[#6B7280]">
                 <tr class="border-b border-[#E5E7EB]">
                   <th class="py-2">Ticket</th>
@@ -311,42 +383,66 @@
               </thead>
               <tbody>
                 <tr v-if="isLoadingTransactions">
-                  <td colspan="4" class="py-4 text-center text-[#6B7280]">Loading transactions...</td>
+                  <td colspan="4" class="py-4">
+                    <div class="table-state">
+                      <span class="table-state-icon"></span>
+                      <span>Loading transactions...</span>
+                    </div>
+                  </td>
                 </tr>
                 <tr v-else-if="transactions.length === 0">
-                  <td colspan="4" class="py-4 text-center text-[#6B7280]">No transactions found.</td>
+                  <td colspan="4" class="py-4">
+                    <div class="table-state">
+                      <span class="table-state-icon"></span>
+                      <span>No transactions found.</span>
+                    </div>
+                  </td>
                 </tr>
-                <tr v-for="ticket in transactions" :key="ticket.id" class="border-b border-[#F3F4F6]">
+                <tr v-for="ticket in transactions" :key="ticket.id" class="border-b border-[#F3F4F6]" :class="rowClass(ticket.status)">
                   <td class="py-2">{{ ticket.ticket_no }}</td>
                   <td class="py-2">{{ ticket.service_id }}</td>
-                  <td class="py-2">{{ ticket.status }}</td>
+                  <td class="py-2">
+                    <span class="status-pill" :class="statusClass(ticket.status)">
+                      {{ ticket.status }}
+                    </span>
+                  </td>
                   <td class="py-2">{{ formatDate(ticket.issued_at) }}</td>
                 </tr>
               </tbody>
             </table>
-            <p v-if="transactionError" class="mt-3 text-sm text-[#C0392B]">{{ transactionError }}</p>
+            <p v-if="transactionError" class="mt-3 text-base text-[#C0392B]">{{ transactionError }}</p>
           </div>
         </section>
 
           <section id="kiosk-devices" class="admin-card mt-10" v-show="activeSection === 'kiosk-devices'">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-2xl font-semibold text-[#0B2C6F]">Kiosk Devices</h2>
-            <p class="text-sm text-[#6B7280]">Register kiosk devices and tokens.</p>
+        <div class="tool-header">
+          <div class="tool-title">
+            <span class="tool-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="4" y="3" width="16" height="18" rx="3" stroke="currentColor" stroke-width="1.6" />
+                <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              </svg>
+            </span>
+            <h2 class="tool-heading">Kiosk Devices</h2>
           </div>
-          <button class="bg-[#0B2C6F] text-white px-4 py-2 rounded-full text-sm" @click="loadKiosks">
+          <div class="tool-accent" aria-hidden="true">
+            <span class="tool-accent-bar is-primary"></span>
+            <span class="tool-accent-bar is-gold"></span>
+            <span class="tool-accent-bar is-neutral"></span>
+          </div>
+        </div>
+        <div class="control-strip mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <input v-model="newKiosk.device_id" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Device ID" />
+          <input v-model="newKiosk.name" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Name" />
+          <button class="bg-[#F2C300] text-black rounded-xl text-base font-semibold" @click="createKiosk">
+            Add kiosk
+          </button>
+          <button class="bg-[#0B2C6F] text-white rounded-xl text-base" @click="loadKiosks">
             Refresh
           </button>
         </div>
-        <div class="mt-4 grid gap-3 sm:grid-cols-3">
-          <input v-model="newKiosk.device_id" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm" placeholder="Device ID" />
-          <input v-model="newKiosk.name" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm" placeholder="Name" />
-          <button class="bg-[#F2C300] text-black rounded-xl text-sm font-semibold" @click="createKiosk">
-            Add kiosk
-          </button>
-        </div>
         <div class="mt-4 overflow-x-auto">
-          <table class="w-full text-sm">
+          <table class="w-full text-base">
             <thead class="text-left text-[#6B7280]">
               <tr class="border-b border-[#E5E7EB]">
                 <th class="py-2">Device ID</th>
@@ -357,35 +453,57 @@
             </thead>
             <tbody>
               <tr v-if="isLoadingKiosks">
-                <td colspan="4" class="py-4 text-center text-[#6B7280]">Loading kiosks...</td>
+                <td colspan="4" class="py-4">
+                  <div class="table-state">
+                    <span class="table-state-icon"></span>
+                    <span>Loading kiosks...</span>
+                  </div>
+                </td>
               </tr>
               <tr v-else-if="kiosks.length === 0">
-                <td colspan="4" class="py-4 text-center text-[#6B7280]">No kiosks found.</td>
+                <td colspan="4" class="py-4">
+                  <div class="table-state">
+                    <span class="table-state-icon"></span>
+                    <span>No kiosks found.</span>
+                  </div>
+                </td>
               </tr>
-              <tr v-for="kiosk in kiosks" :key="kiosk.id" class="border-b border-[#F3F4F6]">
+              <tr v-for="kiosk in kiosks" :key="kiosk.id" class="border-b border-[#F3F4F6]" :class="rowClass('neutral')">
                 <td class="py-2">{{ kiosk.device_id }}</td>
                 <td class="py-2">{{ kiosk.name }}</td>
-                <td class="py-2 text-xs">{{ kiosk.token }}</td>
+                <td class="py-2 text-base">{{ kiosk.token }}</td>
                 <td class="py-2">{{ kiosk.last_seen_at || '-' }}</td>
               </tr>
             </tbody>
           </table>
-          <p v-if="kioskError" class="mt-3 text-sm text-[#C0392B]">{{ kioskError }}</p>
+          <p v-if="kioskError" class="mt-3 text-base text-[#C0392B]">{{ kioskError }}</p>
         </div>
       </section>
 
           <section id="audit-logs" class="admin-card mt-10" v-show="activeSection === 'audit-logs'">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-2xl font-semibold text-[#0B2C6F]">Audit Logs</h2>
-            <p class="text-sm text-[#6B7280]">Recent system actions.</p>
+        <div class="tool-header">
+          <div class="tool-title">
+            <span class="tool-icon">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 3h9l3 3v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" />
+                <path d="M9 10h6M9 14h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              </svg>
+            </span>
+            <h2 class="tool-heading">Audit Logs</h2>
           </div>
-          <button class="bg-[#0B2C6F] text-white px-4 py-2 rounded-full text-sm" @click="loadAuditLogs">
+          <div class="tool-accent" aria-hidden="true">
+            <span class="tool-accent-bar is-primary"></span>
+            <span class="tool-accent-bar is-gold"></span>
+            <span class="tool-accent-bar is-neutral"></span>
+          </div>
+        </div>
+        <div class="control-strip mt-4 flex justify-end">
+          <button class="bg-[#0B2C6F] text-white rounded-full px-4 py-2 text-base" @click="loadAuditLogs">
             Refresh
           </button>
         </div>
         <div class="mt-4 overflow-x-auto">
-          <table class="w-full text-sm">
+          <table class="w-full text-base">
             <thead class="text-left text-[#6B7280]">
               <tr class="border-b border-[#E5E7EB]">
                 <th class="py-2">When</th>
@@ -395,46 +513,66 @@
             </thead>
             <tbody>
               <tr v-if="isLoadingLogs">
-                <td colspan="3" class="py-4 text-center text-[#6B7280]">Loading logs...</td>
+                <td colspan="3" class="py-4">
+                  <div class="table-state">
+                    <span class="table-state-icon"></span>
+                    <span>Loading logs...</span>
+                  </div>
+                </td>
               </tr>
               <tr v-else-if="auditLogs.length === 0">
-                <td colspan="3" class="py-4 text-center text-[#6B7280]">No logs found.</td>
+                <td colspan="3" class="py-4">
+                  <div class="table-state">
+                    <span class="table-state-icon"></span>
+                    <span>No logs found.</span>
+                  </div>
+                </td>
               </tr>
-              <tr v-for="log in auditLogs" :key="log.id" class="border-b border-[#F3F4F6]">
+              <tr v-for="log in auditLogs" :key="log.id" class="border-b border-[#F3F4F6]" :class="rowClass('neutral')">
                 <td class="py-2">{{ formatDate(log.created_at) }}</td>
                 <td class="py-2">{{ log.action }}</td>
                 <td class="py-2">{{ log.actor_type }} #{{ log.actor_id }}</td>
               </tr>
             </tbody>
           </table>
-          <p v-if="auditError" class="mt-3 text-sm text-[#C0392B]">{{ auditError }}</p>
+          <p v-if="auditError" class="mt-3 text-base text-[#C0392B]">{{ auditError }}</p>
         </div>
       </section>
         <div id="admin-users" class="admin-card mt-10" v-if="isSuperAdmin && activeSection === 'admin-users'">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-2xl font-semibold text-[#0B2C6F]">Admin Users</h2>
-          <p class="text-sm text-[#6B7280]">Create and manage staff admins.</p>
+      <div class="tool-header">
+        <div class="tool-title">
+          <span class="tool-icon">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z" stroke="currentColor" stroke-width="1.6" />
+              <path d="M4 21a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+          </span>
+          <h2 class="tool-heading">Admin Users</h2>
         </div>
-        <button class="bg-[#0B2C6F] text-white px-4 py-2 rounded-full text-sm" @click="loadAdmins">
-          Refresh
-        </button>
+        <div class="tool-accent" aria-hidden="true">
+          <span class="tool-accent-bar is-primary"></span>
+          <span class="tool-accent-bar is-gold"></span>
+          <span class="tool-accent-bar is-neutral"></span>
+        </div>
       </div>
-      <div class="mt-4 grid gap-3 sm:grid-cols-4">
-        <input v-model="newAdmin.name" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm" placeholder="Name" />
-        <input v-model="newAdmin.email" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm" placeholder="Email" />
-        <input v-model="newAdmin.password" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm" placeholder="Password" />
-        <select v-model="newAdmin.role" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm">
+      <div class="control-strip mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <input v-model="newAdmin.name" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Name" />
+        <input v-model="newAdmin.email" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Email" />
+        <input v-model="newAdmin.password" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Password" />
+        <select v-model="newAdmin.role" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base">
           <option value="staff_admin">staff_admin</option>
           <option value="super_admin">super_admin</option>
         </select>
-        <input v-model="newAdmin.service_ids" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-sm sm:col-span-2" placeholder="Service IDs (comma)" />
-        <button class="bg-[#F2C300] text-black rounded-xl text-sm font-semibold sm:col-span-2" @click="createAdmin">
+        <input v-model="newAdmin.service_ids" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base sm:col-span-2 lg:col-span-2" placeholder="Service IDs (comma)" />
+        <button class="bg-[#F2C300] text-black rounded-xl text-base font-semibold" @click="createAdmin">
           Add admin
+        </button>
+        <button class="bg-[#0B2C6F] text-white rounded-xl text-base" @click="loadAdmins">
+          Refresh
         </button>
       </div>
       <div class="mt-4 overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="w-full text-base">
           <thead class="text-left text-[#6B7280]">
             <tr class="border-b border-[#E5E7EB]">
               <th class="py-2">Name</th>
@@ -445,20 +583,30 @@
           </thead>
           <tbody>
             <tr v-if="isLoadingAdmins">
-              <td colspan="4" class="py-4 text-center text-[#6B7280]">Loading admins...</td>
+              <td colspan="4" class="py-4">
+                <div class="table-state">
+                  <span class="table-state-icon"></span>
+                  <span>Loading admins...</span>
+                </div>
+              </td>
             </tr>
             <tr v-else-if="admins.length === 0">
-              <td colspan="4" class="py-4 text-center text-[#6B7280]">No admins found.</td>
+              <td colspan="4" class="py-4">
+                <div class="table-state">
+                  <span class="table-state-icon"></span>
+                  <span>No admins found.</span>
+                </div>
+              </td>
             </tr>
-            <tr v-for="admin in admins" :key="admin.id" class="border-b border-[#F3F4F6]">
+            <tr v-for="admin in admins" :key="admin.id" class="border-b border-[#F3F4F6]" :class="rowClass('neutral')">
               <td class="py-2">{{ admin.name }}</td>
               <td class="py-2">{{ admin.email }}</td>
               <td class="py-2">{{ admin.role }}</td>
-              <td class="py-2 text-xs">{{ admin.service_ids.join(', ') }}</td>
+              <td class="py-2 text-base">{{ admin.service_ids.join(', ') }}</td>
             </tr>
           </tbody>
         </table>
-        <p v-if="adminError" class="mt-3 text-sm text-[#C0392B]">{{ adminError }}</p>
+        <p v-if="adminError" class="mt-3 text-base text-[#C0392B]">{{ adminError }}</p>
       </div>
     </div>
       </div>
@@ -750,11 +898,18 @@ const createAdmin = async () => {
   }
 }
 
-const statusClass = (status) => {
-  if (status === 'approved') return 'bg-[#2E7D32] text-white'
-  if (status === 'rejected') return 'bg-[#C0392B] text-white'
-  return 'bg-[#F2C300] text-black'
+const statusTone = (status) => {
+  const value = String(status || '').toLowerCase()
+  if (['approved', 'active', 'done'].includes(value)) return 'success'
+  if (['rejected', 'cancelled', 'inactive'].includes(value)) return 'danger'
+  if (['serving'].includes(value)) return 'info'
+  if (['waiting', 'pending'].includes(value)) return 'warning'
+  return 'neutral'
 }
+
+const statusClass = (status) => `is-${statusTone(status)}`
+
+const rowClass = (status) => [`table-row`, `row-status-${statusTone(status)}`]
 
 const formatDate = (value) => {
   if (!value) return '-'
@@ -850,14 +1005,14 @@ onBeforeUnmount(() => {
 }
 
 .admin-name {
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 600;
   color: #f8f7ff;
 }
 
 .admin-email {
   margin-top: 0.15rem;
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: rgba(226, 232, 240, 0.8);
 }
 
@@ -881,7 +1036,7 @@ onBeforeUnmount(() => {
   gap: 0.55rem;
   padding: 0.65rem 1rem;
   border-radius: 999px;
-  font-size: 0.98rem;
+  font-size: 1rem;
   color: rgba(255, 255, 255, 0.86);
   text-decoration: none;
   transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
@@ -918,7 +1073,7 @@ onBeforeUnmount(() => {
   border: none;
   border-radius: 999px;
   padding: 0.65rem 1.1rem;
-  font-size: 0.92rem;
+  font-size: 1rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -936,7 +1091,7 @@ onBeforeUnmount(() => {
 .admin-content {
   flex: 1;
   min-width: 0;
-  font-size: 1.02rem;
+  font-size: 1rem;
 }
 
 .admin-intro {
@@ -1008,7 +1163,7 @@ onBeforeUnmount(() => {
 }
 
 .admin-title {
-  font-size: 2.35rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: #0b2c6f;
   letter-spacing: 0.02em;
@@ -1050,6 +1205,206 @@ onBeforeUnmount(() => {
   padding: 1.8rem;
   border: 1px solid #e5e7eb;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-card::after {
+  content: '';
+  position: absolute;
+  top: 18px;
+  right: 24px;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  border: 1px solid rgba(11, 44, 111, 0.12);
+  pointer-events: none;
+}
+
+.tool-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.75rem 0.9rem;
+  border-bottom: 1px solid #e5e7eb;
+  position: relative;
+}
+
+.tool-header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.6rem;
+  bottom: 0.6rem;
+  width: 4px;
+  border-radius: 999px;
+  background: #0b2c6f;
+}
+
+.tool-title {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding-left: 0.85rem;
+}
+
+.tool-heading {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.tool-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b2c6f;
+  color: #ffffff;
+}
+
+.tool-icon.is-gold {
+  background: #f2c300;
+  color: #0b2c6f;
+}
+
+.tool-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.tool-accent {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tool-accent-bar {
+  width: 46px;
+  height: 8px;
+  border-radius: 999px;
+  background: #e5e7eb;
+}
+
+.tool-accent-bar.is-primary {
+  width: 64px;
+  background: #0b2c6f;
+}
+
+.tool-accent-bar.is-gold {
+  background: #f2c300;
+}
+
+.tool-accent-bar.is-neutral {
+  width: 32px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}
+
+.control-strip {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 0.85rem 1rem;
+}
+
+.table-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.table-state-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 2px solid #cbd5f5;
+  background: #ffffff;
+}
+
+.table-row {
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.table-row td:first-child {
+  padding-left: 1rem;
+}
+
+.table-row:hover {
+  background: #f8fafc;
+}
+
+.row-status-success {
+  border-left: 4px solid #2e7d32;
+}
+
+.row-status-danger {
+  border-left: 4px solid #c0392b;
+}
+
+.row-status-warning {
+  border-left: 4px solid #f2c300;
+}
+
+.row-status-info {
+  border-left: 4px solid #0b2c6f;
+}
+
+.row-status-neutral {
+  border-left: 4px solid #e5e7eb;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  font-weight: 700;
+  text-transform: capitalize;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+}
+
+.status-pill::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-pill.is-success {
+  border-color: rgba(46, 125, 50, 0.4);
+  color: #2e7d32;
+}
+
+.status-pill.is-danger {
+  border-color: rgba(192, 57, 43, 0.4);
+  color: #c0392b;
+}
+
+.status-pill.is-warning {
+  border-color: rgba(242, 195, 0, 0.55);
+  color: #a07200;
+}
+
+.status-pill.is-info {
+  border-color: rgba(11, 44, 111, 0.35);
+  color: #0b2c6f;
+}
+
+.status-pill.is-neutral {
+  border-color: #e5e7eb;
+  color: #6b7280;
 }
 
 @media (max-width: 960px) {
@@ -1078,7 +1433,7 @@ onBeforeUnmount(() => {
 
   .admin-nav-item {
     padding: 0.45rem 0.7rem;
-    font-size: 0.82rem;
+    font-size: 0.95rem;
   }
 }
 </style>

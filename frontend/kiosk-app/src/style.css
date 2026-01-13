@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Sora:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 @source "../index.html";
 @source "./**/*.{vue,js,ts,jsx,tsx}";
@@ -6,13 +7,167 @@
   color-scheme: light;
   --primary: #0b2c6f;
   --secondary: #f2c300;
-  --background: #ffffff;
+  --background: #f6f7fb;
   --neutral-light: #f3f4f6;
   --neutral-dark: #6b7280;
+  --kiosk-ink: #0b1f3a;
+  --kiosk-border: rgba(15, 23, 42, 0.08);
+  --kiosk-shadow: 0 40px 90px -60px rgba(11, 31, 58, 0.6);
 }
 
 body {
-  font-family: "Trebuchet MS", "Gill Sans", "Noto Sans", sans-serif;
+  font-family: "Sora", "Trebuchet MS", "Gill Sans", "Noto Sans", sans-serif;
   background-color: var(--background);
-  color: #111827;
+  color: var(--kiosk-ink);
+}
+
+.font-hero {
+  font-family: "Space Grotesk", "Sora", "Trebuchet MS", sans-serif;
+  letter-spacing: -0.02em;
+}
+
+.kiosk-scan {
+  position: relative;
+  background:
+    radial-gradient(900px circle at 10% 10%, rgba(11, 44, 111, 0.18), transparent 55%),
+    radial-gradient(900px circle at 90% 90%, rgba(242, 195, 0, 0.24), transparent 55%),
+    linear-gradient(135deg, #f8fafc 0%, #fdf6e3 45%, #f2f6ff 100%);
+}
+
+.kiosk-scan::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(11, 31, 58, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(11, 31, 58, 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+.kiosk-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--kiosk-border);
+  box-shadow: var(--kiosk-shadow);
+  backdrop-filter: blur(14px);
+}
+
+.scan-frame {
+  position: relative;
+  border-radius: 28px;
+  padding: 32px 24px;
+  background: linear-gradient(180deg, #ffffff 0%, #eef4ff 100%);
+  border: 2px dashed rgba(11, 44, 111, 0.25);
+  overflow: hidden;
+}
+
+.scan-frame::before {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(11, 44, 111, 0.12);
+  pointer-events: none;
+}
+
+.scan-beam {
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  right: 18px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(242, 195, 0, 0.95), transparent);
+  box-shadow: 0 0 18px rgba(242, 195, 0, 0.6);
+  animation: scan-sweep 2.8s ease-in-out infinite;
+}
+
+.scan-dot {
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+  border-radius: 999px;
+  background: #22c55e;
+  box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.15);
+  animation: scan-pulse 1.6s ease-in-out infinite;
+}
+
+.kiosk-button {
+  background: linear-gradient(135deg, #f7d971 0%, #f2c300 45%, #f0b000 100%);
+  color: #0b2c6f;
+  box-shadow: 0 18px 40px -24px rgba(242, 195, 0, 0.85);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.kiosk-button:active {
+  transform: translateY(1px) scale(0.99);
+  box-shadow: 0 12px 28px -20px rgba(242, 195, 0, 0.7);
+}
+
+.kiosk-fade {
+  animation: kiosk-fade-up 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.kiosk-fade-delay-1 {
+  animation-delay: 120ms;
+}
+
+.kiosk-fade-delay-2 {
+  animation-delay: 220ms;
+}
+
+.kiosk-fade-delay-3 {
+  animation-delay: 320ms;
+}
+
+@keyframes kiosk-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scan-sweep {
+  0% {
+    top: 16px;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    top: calc(100% - 20px);
+    opacity: 0;
+  }
+}
+
+@keyframes scan-pulse {
+  0%,
+  100% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.12);
+  }
+  50% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(34, 197, 94, 0.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kiosk-fade,
+  .scan-beam,
+  .scan-dot {
+    animation: none;
+  }
+
+  .kiosk-button {
+    transition: none;
+  }
 }

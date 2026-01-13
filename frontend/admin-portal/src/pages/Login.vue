@@ -2,15 +2,15 @@
   <div class="min-h-screen flex items-center justify-center px-6 py-16">
     <div class="w-full max-w-4xl grid md:grid-cols-2 gap-8 items-center">
       <div class="space-y-6">
-        <p class="text-sm uppercase tracking-[0.35em] text-[#6B7280]">Admin Control</p>
-        <h1 class="text-4xl font-semibold leading-tight text-[#0B2C6F]">
+        <p class="text-base uppercase tracking-[0.35em] text-[#6B7280]">Admin Control</p>
+        <h1 class="text-2xl font-semibold leading-tight text-[#0B2C6F]">
           Operations & Queue
           <span class="block text-[#F2C300]">Command Center</span>
         </h1>
         <p class="text-[#6B7280]">
           Monitor services, manage staff access, and review audit trails from a single panel.
         </p>
-        <div class="flex items-center gap-3 text-sm text-[#6B7280]">
+        <div class="flex items-center gap-3 text-base text-[#6B7280]">
           <span class="inline-flex items-center gap-2">
             <span class="h-2 w-2 rounded-full bg-[#2E7D32]"></span>
             Live status
@@ -30,8 +30,8 @@
             </svg>
           </div>
           <div>
-            <h2 class="text-2xl font-semibold">Admin Login</h2>
-            <p class="text-sm text-[#6B7280]">Use your staff account.</p>
+            <h2 class="text-xl font-semibold">Admin Login</h2>
+            <p class="text-base text-[#6B7280]">Use your staff account.</p>
           </div>
         </div>
         <form class="space-y-4" @submit.prevent="onSubmit">
@@ -49,9 +49,9 @@
             class="w-full border border-[#E5E7EB] px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
             required
           />
-          <button class="w-full bg-[#F2C300] text-black py-3 rounded-xl text-lg font-semibold">Login</button>
+          <button class="w-full bg-[#F2C300] text-black py-3 rounded-xl text-base font-semibold">Login</button>
         </form>
-        <p v-if="error" class="mt-4 text-red-600 text-sm">{{ error }}</p>
+        <p v-if="error" class="mt-4 text-red-600 text-base">{{ error }}</p>
       </div>
     </div>
   </div>
