@@ -1,112 +1,88 @@
 <template>
-  <div class="w-full py-12 px-10">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div>
-        <p class="text-xs uppercase tracking-[0.35em] text-[#6B7280]">Resident</p>
-        <h1 class="text-3xl font-semibold text-[#0B2C6F]">Profile</h1>
-      </div>
-      <div class="flex flex-wrap items-center gap-3">
-        <router-link class="text-sm font-semibold text-slate-900 bg-white/80 px-4 py-2 rounded-full border" to="/dashboard">
-          Back to dashboard
-        </router-link>
-        <button
-          v-if="!isEditing"
-          class="text-sm font-semibold text-white bg-[#0B2C6F] px-4 py-2 rounded-full"
-          type="button"
-          @click="enableEdit"
-        >
-          Edit profile
-        </button>
-        <button
-          v-if="isEditing"
-          class="text-sm font-semibold text-black bg-[#F2C300] px-4 py-2 rounded-full"
-          type="button"
-          @click="saveProfile"
-        >
-          Save changes
-        </button>
-        <button
-          v-if="isEditing"
-          class="text-sm font-semibold text-[#0B2C6F] bg-white/80 px-4 py-2 rounded-full border"
-          type="button"
-          @click="cancelEdit"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
+  <div class="profile-shell">
+    <div class="profile-sunray" aria-hidden="true"></div>
+    <div class="profile-buildings" aria-hidden="true"></div>
+    <div class="profile-content">
+      <header class="profile-header">
+        <div class="profile-title">
+          <p class="profile-kicker">Resident profile</p>
+          <h1 class="profile-heading">Edit profile</h1>
+          <p class="profile-subtitle">Keep your personal details accurate for faster barangay services.</p>
+        </div>
+        <div class="profile-actions">
+          <router-link class="ghost-button" to="/dashboard">
+            Back to dashboard
+          </router-link>
+          <button v-if="!isEditing" class="primary-button" type="button" @click="enableEdit">
+            Edit profile
+          </button>
+          <button v-if="isEditing" class="accent-button" type="button" @click="saveProfile">
+            Save changes
+          </button>
+          <button v-if="isEditing" class="ghost-button" type="button" @click="cancelEdit">
+            Cancel
+          </button>
+        </div>
+      </header>
 
-    <div class="mt-10 grid lg:grid-cols-[0.9fr,1.1fr] gap-6">
-      <div class="bg-white rounded-3xl border border-[#E5E7EB] p-6 space-y-6">
-        <div class="flex items-center gap-4">
-          <div class="h-12 w-12 rounded-2xl bg-[#0B2C6F] text-white flex items-center justify-center">
-            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="8" r="4" />
-              <path d="M4 20c1.8-4 6-6 8-6s6.2 2 8 6" />
-            </svg>
+      <div class="profile-grid">
+        <section class="profile-card" :class="`tone-${resident?.status || 'pending'}`">
+          <span class="card-orbs" aria-hidden="true"></span>
+          <span class="card-corner" aria-hidden="true"></span>
+          <div class="profile-card-header">
+            <div class="profile-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 20c1.8-4 6-6 8-6s6.2 2 8 6" />
+              </svg>
+            </div>
+            <div>
+              <p class="profile-card-kicker">Resident card</p>
+              <h2 class="profile-name">{{ fullName || 'Resident Name' }}</h2>
+            </div>
+            <span class="status-pill" :class="`status-${resident?.status || 'pending'}`">
+              {{ statusLabel }}
+            </span>
           </div>
-          <div>
-            <p class="text-sm text-[#6B7280]">Resident card</p>
-            <p class="text-xl font-semibold">{{ fullName || 'Resident Name' }}</p>
-          </div>
-        </div>
-        <div class="rounded-2xl bg-[#F3F4F6] border border-[#E5E7EB] p-4 text-sm text-[#6B7280] flex items-center justify-between">
-          <span>Status</span>
-          <span class="font-semibold text-[#F2C300]">{{ statusLabel }}</span>
-        </div>
-        <div class="space-y-4 text-sm text-[#0B2C6F]">
-          <div>
-            <label class="text-xs uppercase tracking-[0.2em] text-[#6B7280] font-semibold">First name</label>
-            <input
-              v-model="form.first_name"
-              :readonly="!isEditing"
-              class="mt-2 w-full border border-[#E5E7EB] px-4 py-3 rounded-2xl"
-              :class="inputClass"
-              type="text"
-            />
-          </div>
-          <div>
-            <label class="text-xs uppercase tracking-[0.2em] text-[#6B7280] font-semibold">Last name</label>
-            <input
-              v-model="form.last_name"
-              :readonly="!isEditing"
-              class="mt-2 w-full border border-[#E5E7EB] px-4 py-3 rounded-2xl"
-              :class="inputClass"
-              type="text"
-            />
-          </div>
-          <div>
-            <label class="text-xs uppercase tracking-[0.2em] text-[#6B7280] font-semibold">Email</label>
-            <input
-              v-model="form.email"
-              :readonly="!isEditing"
-              class="mt-2 w-full border border-[#E5E7EB] px-4 py-3 rounded-2xl"
-              :class="inputClass"
-              type="email"
-            />
-          </div>
-        </div>
-        <p v-if="saveMessage" class="text-sm text-[#2E7D32] font-semibold">{{ saveMessage }}</p>
-        <p v-if="errorMessage" class="text-sm text-[#C0392B] font-semibold">{{ errorMessage }}</p>
-      </div>
 
-      <div class="space-y-6">
-        <div class="bg-white rounded-3xl border border-[#E5E7EB] p-6">
-          <h2 class="text-lg font-semibold">Verification</h2>
-          <p class="mt-2 text-sm text-[#6B7280]">Upload a valid ID to complete verification.</p>
-          <div class="mt-6 border-2 border-dashed rounded-2xl p-6 text-center text-sm text-[#6B7280]">
-            Drop your ID file here or click to upload.
+          <div class="profile-form card-reveal">
+            <div class="field">
+              <label>First name</label>
+              <input v-model="form.first_name" :readonly="!isEditing" class="profile-input" :class="inputClass" type="text" />
+            </div>
+            <div class="field">
+              <label>Last name</label>
+              <input v-model="form.last_name" :readonly="!isEditing" class="profile-input" :class="inputClass" type="text" />
+            </div>
+            <div class="field">
+              <label>Email</label>
+              <input v-model="form.email" :readonly="!isEditing" class="profile-input" :class="inputClass" type="email" />
+            </div>
           </div>
-        </div>
-        <div class="bg-white rounded-3xl border border-[#E5E7EB] p-6">
-          <h2 class="text-lg font-semibold">Barangay services</h2>
-          <p class="mt-2 text-sm text-[#6B7280]">Choose services after approval to generate your queue ticket.</p>
-          <div class="mt-4 flex flex-wrap gap-3">
-            <span class="px-3 py-1 rounded-full text-xs bg-[#F3F4F6] text-[#0B2C6F] border border-[#E5E7EB]">Clearance</span>
-            <span class="px-3 py-1 rounded-full text-xs bg-[#F3F4F6] text-[#0B2C6F] border border-[#E5E7EB]">Business Permit</span>
-            <span class="px-3 py-1 rounded-full text-xs bg-[#F3F4F6] text-[#0B2C6F] border border-[#E5E7EB]">Residency</span>
+
+          <p v-if="saveMessage" class="status-message success">{{ saveMessage }}</p>
+          <p v-if="errorMessage" class="status-message error">{{ errorMessage }}</p>
+        </section>
+
+        <section class="profile-card profile-verify">
+          <span class="card-orbs" aria-hidden="true"></span>
+          <span class="card-corner" aria-hidden="true"></span>
+          <h2 class="profile-section-title">Verification</h2>
+          <p class="profile-section-subtitle">Upload a valid ID to complete verification.</p>
+          <div class="upload-box card-reveal">
+            <div class="upload-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M12 16V6" stroke-linecap="round" />
+                <path d="M8 10l4-4 4 4" stroke-linecap="round" stroke-linejoin="round" />
+                <rect x="4" y="16" width="16" height="4" rx="2" />
+              </svg>
+            </div>
+            <div>
+              <p class="upload-title">Drop your ID file here</p>
+              <p class="upload-subtitle">PNG, JPG, or PDF up to 10MB.</p>
+            </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   </div>
@@ -126,9 +102,7 @@ const form = ref({
   email: '',
 })
 
-const inputClass = computed(() =>
-  !isEditing.value ? 'bg-[#F3F4F6] text-[#6B7280] cursor-not-allowed' : 'bg-white'
-)
+const inputClass = computed(() => (!isEditing.value ? 'is-readonly' : ''))
 
 const fullName = computed(() => {
   if (!resident.value) return ''
@@ -211,3 +185,522 @@ onMounted(() => {
   refreshProfile()
 })
 </script>
+
+<style scoped>
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+.profile-shell {
+  min-height: 100vh;
+  padding: clamp(2.5rem, 4vw, 4rem) clamp(1.8rem, 5vw, 4rem) 4rem;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  color: #0f172a;
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 10% 10%, rgba(255, 255, 255, 0.9), rgba(225, 236, 255, 0.55) 45%),
+    radial-gradient(circle at 90% 0%, rgba(255, 255, 255, 0.7), rgba(255, 214, 120, 0.25) 45%),
+    linear-gradient(150deg, #eff4ff 10%, #f7f4ee 65%, #eef3ff 100%);
+}
+
+.profile-content {
+  position: relative;
+  z-index: 2;
+}
+
+.profile-sunray {
+  position: fixed;
+  inset: -60%;
+  background-image:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 70%),
+    repeating-conic-gradient(
+      from 0deg,
+      rgba(11, 44, 111, 0.12) 0deg,
+      rgba(11, 44, 111, 0.12) 10deg,
+      rgba(255, 255, 255, 0) 10deg,
+      rgba(255, 255, 255, 0) 20deg
+    );
+  opacity: 0.6;
+  filter: blur(0.8px);
+  pointer-events: none;
+  z-index: 1;
+  transform-origin: 50% 50%;
+  animation: raysPulse 8s ease-in-out infinite, raysRotate 180s linear infinite;
+}
+
+.profile-buildings {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: clamp(140px, 16vw, 220px);
+  z-index: 0;
+  background-image: url("/building3.png");
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center bottom;
+  opacity: 0.35;
+  pointer-events: none;
+}
+.profile-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.profile-kicker {
+  margin: 0 0 0.4rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.profile-heading {
+  margin: 0;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.profile-subtitle {
+  margin: 0.6rem 0 0;
+  color: #6b7280;
+  max-width: 520px;
+  font-size: 1.05rem;
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+.ghost-button,
+.primary-button,
+.accent-button {
+  border-radius: 999px;
+  padding: 0.65rem 1.4rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ghost-button {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(148, 163, 184, 0.5);
+  color: #0f172a;
+}
+
+.primary-button {
+  background: #0b2c6f;
+  color: #ffffff;
+}
+
+.accent-button {
+  background: #f2c300;
+  color: #111827;
+}
+
+.ghost-button:hover,
+.primary-button:hover,
+.accent-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.15);
+}
+
+.profile-grid {
+  margin-top: 2.5rem;
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+}
+
+.profile-card {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.92)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(11, 44, 111, 0.2), rgba(255, 216, 123, 0.35)) border-box;
+  border-radius: 28px;
+  padding: clamp(1.8rem, 3vw, 2.6rem);
+  border: 1px solid transparent;
+  box-shadow:
+    0 30px 64px rgba(15, 23, 42, 0.2),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.85),
+    inset -1px -1px 0 rgba(15, 23, 42, 0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  display: grid;
+  gap: 1.8rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-card::before,
+.profile-card::after {
+  content: "";
+  position: absolute;
+  inset: -40% -30%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.profile-card::before {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 0);
+  background-size: 4px 4px;
+  opacity: 0.3;
+  mix-blend-mode: soft-light;
+}
+
+.profile-card::after {
+  background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.6) 50%, transparent 80%);
+  transform: translateX(-60%);
+  animation: cardSheen 7s ease-in-out infinite;
+  opacity: 0.5;
+}
+
+.profile-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.profile-card:hover {
+  transform: translateY(-7px);
+  box-shadow:
+    0 40px 86px rgba(15, 23, 42, 0.28),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.9),
+    inset -1px -1px 0 rgba(15, 23, 42, 0.08);
+}
+
+.profile-verify {
+  background:
+    linear-gradient(#0b2c6f, #0b2c6f) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(245, 195, 74, 0.5)) border-box;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.profile-verify::before {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 0);
+  opacity: 0.35;
+}
+
+.profile-verify::after {
+  background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.35) 50%, transparent 80%);
+}
+
+.profile-verify .profile-section-title {
+  color: #ffffff;
+}
+
+.profile-verify .profile-section-subtitle {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.profile-verify .card-corner {
+  background: linear-gradient(135deg, rgba(11, 44, 111, 0.95), rgba(191, 219, 254, 0.85));
+}
+
+.profile-card-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.profile-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: #0b2c6f;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+}
+
+.profile-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.profile-card-kicker {
+  margin: 0 0 0.3rem;
+  color: #64748b;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+}
+
+.profile-name {
+  margin: 0;
+  font-size: 1.45rem;
+  color: #0f172a;
+}
+
+.status-pill {
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-weight: 700;
+  background: rgba(148, 163, 184, 0.2);
+  color: #0f172a;
+}
+
+.status-approved {
+  background: rgba(46, 125, 50, 0.16);
+  color: #2e7d32;
+}
+
+.status-rejected {
+  background: rgba(192, 57, 43, 0.16);
+  color: #c0392b;
+}
+
+.status-pending {
+  background: rgba(245, 195, 74, 0.2);
+  color: #8a5b00;
+}
+
+.profile-form {
+  display: grid;
+  gap: 1.2rem;
+}
+
+.field label {
+  display: block;
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #64748b;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.profile-input {
+  width: 100%;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 0.85rem 1rem;
+  font-size: 1.05rem;
+  background: #ffffff;
+  color: #0f172a;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.profile-input:focus {
+  outline: none;
+  border-color: #0b2c6f;
+  box-shadow: 0 0 0 3px rgba(11, 44, 111, 0.15);
+}
+
+.profile-input.is-readonly {
+  background: rgba(241, 245, 249, 0.9);
+  color: #64748b;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.profile-section-title {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #0b2c6f;
+}
+
+.profile-section-subtitle {
+  margin: 0;
+  color: #64748b;
+}
+
+.upload-box {
+  margin-top: 0.6rem;
+  border-radius: 22px;
+  border: 2px dashed rgba(255, 255, 255, 0.5);
+  padding: 1.6rem;
+  display: grid;
+  gap: 0.4rem;
+  align-items: center;
+  justify-items: center;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
+  transition: transform 0.25s ease, background-color 0.25s ease, border-color 0.25s ease;
+}
+
+.upload-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.6rem;
+}
+
+.upload-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.upload-subtitle {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}
+
+.upload-box:hover {
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+.card-reveal {
+  opacity: 0.78;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.profile-card:hover .card-reveal {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.card-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 90px;
+  height: 90px;
+  background: linear-gradient(135deg, rgba(11, 44, 111, 0.95), rgba(147, 197, 253, 0.85));
+  clip-path: polygon(100% 0, 0 0, 100% 100%);
+  opacity: 0.75;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.card-orbs {
+  position: absolute;
+  inset: -10% -5%;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(11, 44, 111, 0.12), transparent 55%),
+    radial-gradient(circle at 80% 10%, rgba(245, 195, 74, 0.2), transparent 50%),
+    radial-gradient(circle at 70% 80%, rgba(37, 99, 235, 0.16), transparent 60%);
+  opacity: 0.55;
+  filter: blur(2px);
+  animation: orbDrift 10s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.status-message {
+  margin: 0;
+  font-weight: 600;
+}
+
+.status-message.success {
+  color: #2e7d32;
+}
+
+.status-message.error {
+  color: #c0392b;
+}
+
+.tone-approved {
+  animation: cardGlow 6s ease-in-out infinite;
+}
+
+@keyframes cardSheen {
+  0% {
+    transform: translateX(-60%);
+  }
+  50% {
+    transform: translateX(60%);
+  }
+  100% {
+    transform: translateX(-60%);
+  }
+}
+
+@keyframes cardGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 30px 64px rgba(15, 23, 42, 0.2),
+      0 0 0 rgba(11, 44, 111, 0);
+  }
+  50% {
+    box-shadow:
+      0 38px 84px rgba(15, 23, 42, 0.26),
+      0 0 26px rgba(11, 44, 111, 0.18);
+  }
+}
+
+@keyframes orbDrift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(12px, -10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-card::after,
+  .card-orbs,
+  .tone-approved,
+  .profile-sunray {
+    animation: none;
+  }
+}
+
+@keyframes raysPulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1.025);
+  }
+}
+
+@keyframes raysRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 960px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-header {
+    align-items: flex-start;
+  }
+
+  .profile-card-header {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .status-pill {
+    justify-self: start;
+  }
+}
+</style>
