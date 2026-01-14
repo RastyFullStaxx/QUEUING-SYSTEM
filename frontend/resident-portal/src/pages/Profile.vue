@@ -219,10 +219,10 @@ onMounted(() => {
       rgba(255, 255, 255, 0) 10deg,
       rgba(255, 255, 255, 0) 20deg
     );
-  opacity: 0.6;
+  opacity: 0.95;
   filter: blur(0.8px);
   pointer-events: none;
-  z-index: 1;
+  z-index: 0;
   transform-origin: 50% 50%;
   animation: raysPulse 8s ease-in-out infinite, raysRotate 180s linear infinite;
 }
@@ -234,7 +234,7 @@ onMounted(() => {
   bottom: 0;
   width: 100vw;
   height: clamp(140px, 16vw, 220px);
-  z-index: 0;
+  z-index: 1;
   background-image: url("/building3.png");
   background-repeat: no-repeat;
   background-size: cover;
@@ -339,6 +339,7 @@ onMounted(() => {
   gap: 1.8rem;
   position: relative;
   overflow: hidden;
+  z-index: 2;
 }
 
 .profile-card::before,

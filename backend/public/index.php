@@ -790,20 +790,131 @@ if ($path === '/api/kiosk/tickets' && $method === 'POST') {
 if ($path === '/api/queue/current' && $method === 'GET') {
     $serviceId = (int) ($_GET['service_id'] ?? 0);
     $params = [];
+    $nowServingQuery = 'SELECT ticket_no FROM queue_tickets WHERE status = "serving"';
     $query = 'SELECT ticket_no, service_id, status, issued_at FROM queue_tickets WHERE status = "waiting"';
     if ($serviceId) {
+        $nowServingQuery .= ' AND service_id = ?';
         $query .= ' AND service_id = ?';
         $params[] = $serviceId;
     }
+    $nowServingQuery .= ' ORDER BY issued_at DESC LIMIT 1';
     $query .= ' ORDER BY issued_at ASC LIMIT 5';
+
+    $avgWaitMinutes = null;
+    $logStmt = $pdo->prepare('SELECT meta_json, created_at, action FROM audit_logs WHERE DATE(created_at) = CURDATE() AND action IN (?, ?) ORDER BY created_at ASC');
+    $logStmt->execute(['queue.updated', 'queue.completed']);
+    $logs = $logStmt->fetchAll();
+
+    $completedEntries = [];
+    $ticketIds = [];
+    $ticketNos = [];
+    foreach ($logs as $log) {
+        $meta = $log['meta_json'] ? json_decode($log['meta_json'], true) : null;
+        if ($log['action'] === 'queue.updated') {
+            if (($meta['status'] ?? '') !== 'done') {
+                continue;
+            }
+            $ticketId = (int) ($meta['ticket_id'] ?? 0);
+            if ($ticketId) {
+                $ticketIds[] = $ticketId;
+            }
+            $completedEntries[] = [
+                'completed_at' => $log['created_at'],
+                'ticket_id' => $ticketId ?: null,
+                'ticket_no' => null,
+            ];
+            continue;
+        }
+        if ($log['action'] === 'queue.completed') {
+            $ticketNo = $meta['ticket_no'] ?? null;
+            if ($ticketNo) {
+                $ticketNos[] = $ticketNo;
+            }
+            $completedEntries[] = [
+                'completed_at' => $log['created_at'],
+                'ticket_id' => null,
+                'ticket_no' => $ticketNo,
+            ];
+        }
+    }
+
+    if (!empty($completedEntries)) {
+        $ticketsById = [];
+        if (!empty($ticketIds)) {
+            $placeholders = implode(',', array_fill(0, count($ticketIds), '?'));
+            $ticketStmt = $pdo->prepare('SELECT id, ticket_no, service_id, issued_at FROM queue_tickets WHERE id IN (' . $placeholders . ')');
+            $ticketStmt->execute($ticketIds);
+            foreach ($ticketStmt->fetchAll() as $ticket) {
+                $ticketsById[(int) $ticket['id']] = $ticket;
+            }
+        }
+
+        $ticketsByNo = [];
+        if (!empty($ticketNos)) {
+            $placeholders = implode(',', array_fill(0, count($ticketNos), '?'));
+            $ticketStmt = $pdo->prepare('SELECT ticket_no, service_id, issued_at FROM queue_tickets WHERE ticket_no IN (' . $placeholders . ')');
+            $ticketStmt->execute($ticketNos);
+            foreach ($ticketStmt->fetchAll() as $ticket) {
+                $ticketsByNo[$ticket['ticket_no']] = $ticket;
+            }
+        }
+
+        $completionTimes = [];
+        $fallbackDurationMinutes = null;
+        foreach ($completedEntries as $entry) {
+            $ticket = null;
+            if ($entry['ticket_id']) {
+                $ticket = $ticketsById[$entry['ticket_id']] ?? null;
+            } elseif ($entry['ticket_no']) {
+                $ticket = $ticketsByNo[$entry['ticket_no']] ?? null;
+            }
+            if (!$ticket) {
+                continue;
+            }
+            if ($serviceId && (int) $ticket['service_id'] !== $serviceId) {
+                continue;
+            }
+            $completionTimes[] = strtotime($entry['completed_at']);
+            if ($fallbackDurationMinutes === null) {
+                $issuedAt = strtotime($ticket['issued_at']);
+                $completedAt = strtotime($entry['completed_at']);
+                if ($issuedAt && $completedAt && $completedAt > $issuedAt) {
+                    $fallbackDurationMinutes = ($completedAt - $issuedAt) / 60;
+                }
+            }
+        }
+
+        sort($completionTimes);
+        $totalMinutes = 0;
+        $countMinutes = 0;
+        $maxGapMinutes = 30;
+        for ($i = 1; $i < count($completionTimes); $i++) {
+            $gapMinutes = ($completionTimes[$i] - $completionTimes[$i - 1]) / 60;
+            if ($gapMinutes <= 0 || $gapMinutes > $maxGapMinutes) {
+                continue;
+            }
+            $totalMinutes += $gapMinutes;
+            $countMinutes += 1;
+        }
+        if ($countMinutes > 0) {
+            $avgWaitMinutes = round($totalMinutes / $countMinutes, 1);
+        } elseif ($fallbackDurationMinutes !== null) {
+            $avgWaitMinutes = round($fallbackDurationMinutes, 1);
+        }
+    }
+
+    $stmt = $pdo->prepare($nowServingQuery);
+    $stmt->execute($params);
+    $nowServing = $stmt->fetch();
 
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
     $tickets = $stmt->fetchAll();
 
     json_response([
-        'now_serving' => null,
+        'now_serving' => $nowServing ? $nowServing['ticket_no'] : null,
         'tickets' => $tickets,
+        'avg_wait_minutes' => $avgWaitMinutes,
     ]);
     exit;
 }
