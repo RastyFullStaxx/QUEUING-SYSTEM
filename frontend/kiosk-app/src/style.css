@@ -995,16 +995,6 @@ body {
   z-index: 1;
 }
 
-.kiosk-ticket-sheen {
-  position: absolute;
-  inset: -40% -30%;
-  background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.7) 50%, transparent 80%);
-  transform: translateX(-60%);
-  animation: kiosk-card-sheen 8s ease-in-out infinite;
-  opacity: 0.5;
-  pointer-events: none;
-}
-
 .kiosk-ticket-card::before,
 .kiosk-ticket-card::after {
   content: "";
@@ -1024,6 +1014,12 @@ body {
 
 .kiosk-ticket-card::after {
   right: -13px;
+}
+
+.kiosk-ticket-wrapper {
+  display: grid;
+  gap: 1.6rem;
+  justify-items: center;
 }
 
 .kiosk-ticket-header {
@@ -2508,7 +2504,6 @@ body {
   .kiosk-arrow-button:not(.is-disabled),
   .kiosk-service-ribbon-dot,
   .kiosk-card-sheen,
-  .kiosk-ticket-sheen,
   .kiosk-service-stat::after,
   .kiosk-service-body::before,
   .kiosk-service-stage::before,
