@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen kiosk-service-stage">
-    <div class="relative z-10 px-6 py-10 kiosk-service-body" :class="{ 'kiosk-service-body--cta': selectedService }">
-      <div class="max-w-6xl mx-auto grid gap-10">
+    <div class="relative z-10 px-6 py-10 kiosk-service-body">
+      <div class="w-full max-w-none mx-auto grid gap-10">
         <div class="kiosk-service-hero kiosk-fade">
           <div class="kiosk-step-header">
             <div class="kiosk-pill">
@@ -20,6 +20,17 @@
           </div>
         </div>
 
+        <transition name="kiosk-cta">
+          <div v-if="selectedService" class="kiosk-service-cta">
+            <span class="kiosk-cta-scan" aria-hidden="true"></span>
+            <div class="kiosk-service-summary">
+              <p class="kiosk-service-summary-label">{{ labels.selectedLabel }}</p>
+              <p class="kiosk-service-summary-name">{{ selectedService.name }}</p>
+              <p class="kiosk-service-summary-note">{{ labels.selectedNote }}</p>
+            </div>
+          </div>
+        </transition>
+
         <div v-if="services.length" class="kiosk-service-grid kiosk-fade kiosk-fade-delay-1">
           <button
             v-for="service in services"
@@ -27,12 +38,15 @@
             type="button"
             class="kiosk-service-card"
             :class="{ 'is-expanded': isExpanded(service.id), 'is-selected': isSelected(service.id) }"
-            :style="serviceStyle(service)"
+            :style="cardStyle(service)"
+            :data-service-id="service.id"
+            :ref="(el) => setCardRef(el, service.id)"
             @mouseenter="setHovered(service.id)"
-            @mouseleave="clearHovered"
+            @mouseleave="handleCardLeave"
             @focus="setHovered(service.id)"
-            @blur="clearHovered"
-            @click="selectService(service)"
+            @blur="handleCardLeave"
+            @mousemove="handleCardMove"
+            @click="selectService(service, $event)"
             :aria-pressed="isSelected(service.id)"
           >
             <div class="kiosk-service-top">
@@ -59,11 +73,13 @@
               </div>
               <div class="kiosk-service-copy">
                 <p class="kiosk-service-name">{{ service.name }}</p>
-                <p class="kiosk-service-code">{{ labels.codeLabel }}: {{ service.code }}</p>
+                <p class="kiosk-service-snippet">{{ text(getServiceMeta(service).summary) }}</p>
               </div>
-              <div v-if="isSelected(service.id)" class="kiosk-service-selected">
-                <span>{{ labels.selected }}</span>
-              </div>
+              <transition name="kiosk-chip">
+                <div v-if="isSelected(service.id)" class="kiosk-service-selected">
+                  <span>{{ labels.selected }}</span>
+                </div>
+              </transition>
             </div>
 
             <div class="kiosk-service-tagline">
@@ -101,29 +117,14 @@
                 </div>
               </div>
             </div>
+            <span class="kiosk-service-ripple" aria-hidden="true"></span>
 
-            <div class="kiosk-service-footer">
-              <div class="kiosk-service-chip">
-                <span>{{ labels.tapHint }}</span>
-              </div>
-            </div>
           </button>
         </div>
 
         <div v-else class="kiosk-service-empty kiosk-fade kiosk-fade-delay-1">
           <h2 class="text-2xl font-semibold text-slate-800">{{ labels.emptyTitle }}</h2>
           <p class="text-slate-500 mt-2">{{ labels.emptyBody }}</p>
-        </div>
-
-        <div v-if="selectedService" class="kiosk-service-cta kiosk-fade kiosk-fade-delay-2">
-          <div class="kiosk-service-summary">
-            <p class="kiosk-service-summary-label">{{ labels.selectedLabel }}</p>
-            <p class="kiosk-service-summary-name">{{ selectedService.name }}</p>
-            <p class="kiosk-service-summary-code">{{ labels.codeLabel }}: {{ selectedService.code }}</p>
-          </div>
-          <button class="kiosk-button text-lg py-3 px-6 rounded-2xl kiosk-action" type="button" @click="openConfirm">
-            <span>{{ labels.proceed }}</span>
-          </button>
         </div>
 
         <p v-if="error" class="kiosk-service-error">{{ error }}</p>
@@ -145,7 +146,6 @@
               <span>{{ labels.confirmChip }}</span>
             </div>
             <div class="service-confirm-name">{{ selectedService?.name }}</div>
-            <div class="service-confirm-code">{{ labels.codeLabel }}: {{ selectedService?.code }}</div>
             <div class="service-confirm-note">
               <span>{{ labels.confirmNote }}</span>
             </div>
@@ -161,11 +161,36 @@
         </div>
       </div>
     </transition>
+    <transition name="kiosk-panel">
+      <button
+        class="kiosk-button kiosk-proceed-floating kiosk-action"
+        :class="{ 'is-disabled': !selectedService }"
+        type="button"
+        :aria-disabled="!selectedService"
+        @click="handleProceed"
+      >
+        {{ labels.proceed }}
+      </button>
+    </transition>
+    <transition name="kiosk-modal">
+      <div v-if="showReminder" class="kiosk-modal" @click.self="closeReminder">
+        <div class="kiosk-modal-card kiosk-modal-glow service-reminder-card">
+          <span class="modal-orb orb-one" aria-hidden="true"></span>
+          <span class="modal-orb orb-two" aria-hidden="true"></span>
+          <p class="service-reminder-kicker">{{ labels.reminderKicker }}</p>
+          <h2 class="service-reminder-title">{{ labels.reminderTitle }}</h2>
+          <p class="service-reminder-body">{{ labels.reminderBody }}</p>
+          <button class="mt-6 w-full kiosk-button text-lg py-3 rounded-2xl kiosk-action" type="button" @click="closeReminder">
+            {{ labels.reminderButton }}
+          </button>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { request } from '../api'
 
@@ -175,6 +200,9 @@ const error = ref('')
 const selectedServiceId = ref(null)
 const hoveredServiceId = ref(null)
 const showConfirm = ref(false)
+const showReminder = ref(false)
+const cardSpans = ref({})
+const cardElements = new Map()
 
 const copy = {
   en: {
@@ -182,12 +210,11 @@ const copy = {
     title: 'Select Service',
     subtitle: 'Tap a panel to expand and view details before choosing.',
     hint: 'Hover to preview, tap to select.',
-    codeLabel: 'Code',
     selected: 'Selected',
     selectedLabel: 'Selected service',
+    selectedNote: 'Review the details below before proceeding.',
     proceed: 'Proceed',
     requirements: 'Requirements',
-    tapHint: 'Tap to select',
     emptyTitle: 'No services available',
     emptyBody: 'Please ask staff for assistance.',
     confirmKicker: 'Confirmation',
@@ -197,18 +224,21 @@ const copy = {
     confirmNote: 'Please confirm to continue to Step 3.',
     change: 'Change selection',
     confirm: 'Confirm & Continue',
+    reminderKicker: 'Reminder',
+    reminderTitle: 'Select a service first',
+    reminderBody: 'Please choose a service before proceeding.',
+    reminderButton: 'Got it',
   },
   tl: {
     stepBadge: 'Kiosk Scan - Hakbang 2 sa 3',
     title: 'Piliin ang Serbisyo',
     subtitle: 'I-tap ang panel para buksan at makita ang detalye bago pumili.',
     hint: 'I-hover para makita, i-tap para piliin.',
-    codeLabel: 'Kodigo',
     selected: 'Napili',
     selectedLabel: 'Napiling serbisyo',
+    selectedNote: 'Suriin ang detalye bago magpatuloy.',
     proceed: 'Magpatuloy',
     requirements: 'Kailangan',
-    tapHint: 'I-tap para piliin',
     emptyTitle: 'Walang serbisyong available',
     emptyBody: 'Mangyaring humingi ng tulong sa staff.',
     confirmKicker: 'Kumpirmasyon',
@@ -218,6 +248,10 @@ const copy = {
     confirmNote: 'Kumpirmahin para magpatuloy sa Hakbang 3.',
     change: 'Palitan ang pili',
     confirm: 'Kumpirmahin at Magpatuloy',
+    reminderKicker: 'Paalala',
+    reminderTitle: 'Pumili muna ng serbisyo',
+    reminderBody: 'Mangyaring pumili ng serbisyo bago magpatuloy.',
+    reminderButton: 'Sige',
   },
 }
 
@@ -234,8 +268,12 @@ const serviceMeta = {
     accentSoft: 'rgba(11, 44, 111, 0.16)',
     accentGlow: 'rgba(11, 44, 111, 0.32)',
     tagline: {
-      en: 'Proof of residency, travel, or employment needs.',
-      tl: 'Patunay para sa trabaho, pagbiyahe, o pangangailangan.',
+      en: 'Get a barangay clearance for jobs, travel, and official paperwork.',
+      tl: 'Kunin ang barangay clearance para sa trabaho, biyahe, at dokumento.',
+    },
+    summary: {
+      en: 'We will check your records, guide the steps, and release it the same day.',
+      tl: 'Sasala ang rekord, may gabay na proseso, at kadalasang same day.',
     },
     stats: [
       { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '15-25 min' },
@@ -253,8 +291,12 @@ const serviceMeta = {
     accentSoft: 'rgba(24, 90, 219, 0.16)',
     accentGlow: 'rgba(24, 90, 219, 0.32)',
     tagline: {
-      en: 'New or renewal business permit applications.',
-      tl: 'Para sa bagong negosyo o renewal ng permit.',
+      en: 'Apply or renew your business permit with clear, guided steps.',
+      tl: 'Mag-apply o mag-renew ng business permit na may malinaw na gabay.',
+    },
+    summary: {
+      en: 'Submit business details, verify requirements, and get quick processing.',
+      tl: 'Ihanda ang detalye, i-verify ang requirements, at mabilis ang proseso.',
     },
     stats: [
       { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '20-30 min' },
@@ -272,8 +314,12 @@ const serviceMeta = {
     accentSoft: 'rgba(28, 124, 84, 0.16)',
     accentGlow: 'rgba(28, 124, 84, 0.32)',
     tagline: {
-      en: 'Certificate for residency confirmation.',
-      tl: 'Sertipiko para sa patunay ng paninirahan.',
+      en: 'Confirm your residency for school, work, and ID applications.',
+      tl: 'Patunay ng paninirahan para sa paaralan, trabaho, at pagkuha ng ID.',
+    },
+    summary: {
+      en: 'We verify your address and issue a residency certificate promptly.',
+      tl: 'Bine-verify ang address at mabilis na naglalabas ng sertipikasyon.',
     },
     stats: [
       { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '10-15 min' },
@@ -291,8 +337,12 @@ const serviceMeta = {
     accentSoft: 'rgba(216, 67, 67, 0.16)',
     accentGlow: 'rgba(216, 67, 67, 0.32)',
     tagline: {
-      en: 'Health certificate and wellness clearance.',
-      tl: 'Para sa health certificate at wellness clearance.',
+      en: 'Health clearance for employment, school, and compliance needs.',
+      tl: 'Health clearance para sa trabaho, paaralan, at compliance.',
+    },
+    summary: {
+      en: 'Follow guided checks and receive your health certificate after review.',
+      tl: 'May gabay na pagsusuri at makukuha ang health certificate pagkatapos.',
     },
     stats: [
       { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '25-35 min' },
@@ -312,8 +362,12 @@ const defaultMeta = {
   accentSoft: 'rgba(11, 44, 111, 0.16)',
   accentGlow: 'rgba(11, 44, 111, 0.32)',
   tagline: {
-    en: 'General barangay service assistance.',
-    tl: 'Pangkalahatang tulong sa serbisyo.',
+    en: 'Barangay support for common requests and certifications.',
+    tl: 'Tulong barangay para sa karaniwang serbisyo at sertipikasyon.',
+  },
+  summary: {
+    en: 'We provide guided steps and clear requirements for each service.',
+    tl: 'May malinaw na requirements at gabay sa bawat serbisyo.',
   },
   stats: [
     { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '10-20 min' },
@@ -335,26 +389,102 @@ const getServiceMeta = (service) => {
   return serviceMeta[code] || defaultMeta
 }
 
-const serviceStyle = (service) => {
+const cardStyle = (service) => {
   const meta = getServiceMeta(service)
+  const span = cardSpans.value[service.id] || 1
   return {
     '--service-accent': meta.accent,
     '--service-accent-soft': meta.accentSoft,
     '--service-accent-glow': meta.accentGlow,
+    '--row-span': span,
   }
 }
 
 const isSelected = (serviceId) => selectedServiceId.value === serviceId
 
-const isExpanded = (serviceId) =>
-  hoveredServiceId.value === serviceId || selectedServiceId.value === serviceId
+const isExpanded = (serviceId) => {
+  if (selectedServiceId.value) {
+    return selectedServiceId.value === serviceId
+  }
+  return hoveredServiceId.value === serviceId
+}
 
 const setHovered = (serviceId) => {
+  if (selectedServiceId.value) return
   hoveredServiceId.value = serviceId
 }
 
 const clearHovered = () => {
+  if (selectedServiceId.value) return
   hoveredServiceId.value = null
+}
+
+const handleCardLeave = (event) => {
+  clearHovered()
+  resetCardTilt(event)
+}
+
+const handleCardMove = (event) => {
+  const card = event.currentTarget
+  if (!card) return
+  const rect = card.getBoundingClientRect()
+  const x = event.clientX - rect.left
+  const y = event.clientY - rect.top
+  const centerX = rect.width / 2
+  const centerY = rect.height / 2
+  const tiltX = ((y - centerY) / centerY) * -5
+  const tiltY = ((x - centerX) / centerX) * 5
+  card.style.setProperty('--tilt-x', `${tiltX.toFixed(2)}deg`)
+  card.style.setProperty('--tilt-y', `${tiltY.toFixed(2)}deg`)
+  card.style.setProperty('--glow-x', `${((x / rect.width) * 100).toFixed(2)}%`)
+  card.style.setProperty('--glow-y', `${((y / rect.height) * 100).toFixed(2)}%`)
+}
+
+const resetCardTilt = (event) => {
+  const card = event?.currentTarget
+  if (!card) return
+  card.style.setProperty('--tilt-x', '0deg')
+  card.style.setProperty('--tilt-y', '0deg')
+}
+
+const updateCardSpan = (element, entry) => {
+  if (!element) return
+  const grid = element.parentElement
+  if (!grid) return
+  const styles = getComputedStyle(grid)
+  const rowGap = parseFloat(styles.rowGap) || 0
+  const rowHeight = parseFloat(styles.getPropertyValue('--kiosk-row-height')) || 6
+  const measured =
+    entry?.borderBoxSize?.[0]?.blockSize ??
+    entry?.contentRect?.height ??
+    element.getBoundingClientRect().height
+  const span = Math.max(1, Math.ceil((measured + rowGap) / (rowHeight + rowGap)))
+  cardSpans.value[element.dataset.serviceId] = span
+}
+
+const resizeObserver =
+  typeof ResizeObserver !== 'undefined'
+    ? new ResizeObserver((entries) => {
+        entries.forEach((entry) => {
+          updateCardSpan(entry.target, entry)
+        })
+      })
+    : null
+
+const setCardRef = (element, serviceId) => {
+  const existing = cardElements.get(serviceId)
+  if (existing && resizeObserver) {
+    resizeObserver.unobserve(existing)
+    cardElements.delete(serviceId)
+  }
+
+  if (!element) return
+  element.dataset.serviceId = String(serviceId)
+  cardElements.set(serviceId, element)
+  if (resizeObserver) {
+    resizeObserver.observe(element)
+  }
+  requestAnimationFrame(() => updateCardSpan(element))
 }
 
 const loadServices = async () => {
@@ -371,8 +501,38 @@ const loadServices = async () => {
   }
 }
 
-const selectService = (service) => {
-  selectedServiceId.value = service.id
+const selectService = (service, event) => {
+  triggerRipple(event)
+  selectedServiceId.value = selectedServiceId.value === service.id ? null : service.id
+  if (!selectedServiceId.value) {
+    showConfirm.value = false
+  }
+  showReminder.value = false
+}
+
+const triggerRipple = (event) => {
+  const card = event?.currentTarget
+  if (!card || !event) return
+  const rect = card.getBoundingClientRect()
+  const x = event.clientX - rect.left
+  const y = event.clientY - rect.top
+  card.style.setProperty('--ripple-x', `${x}px`)
+  card.style.setProperty('--ripple-y', `${y}px`)
+  card.classList.remove('is-rippling')
+  void card.offsetWidth
+  card.classList.add('is-rippling')
+  window.setTimeout(() => {
+    card.classList.remove('is-rippling')
+  }, 650)
+}
+
+
+const handleProceed = () => {
+  if (!selectedService.value) {
+    showReminder.value = true
+    return
+  }
+  openConfirm()
 }
 
 const openConfirm = () => {
@@ -384,6 +544,10 @@ const closeConfirm = () => {
   showConfirm.value = false
 }
 
+const closeReminder = () => {
+  showReminder.value = false
+}
+
 const confirmProceed = () => {
   if (!selectedService.value) return
   localStorage.setItem('kiosk_service', JSON.stringify(selectedService.value))
@@ -392,5 +556,9 @@ const confirmProceed = () => {
 
 onMounted(() => {
   loadServices()
+})
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect()
 })
 </script>
