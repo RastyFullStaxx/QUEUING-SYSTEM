@@ -1,55 +1,369 @@
 <template>
-  <div class="min-h-screen px-6 py-10">
-    <div class="max-w-4xl mx-auto">
-      <div class="flex items-center gap-4">
-        <div class="h-12 w-12 rounded-xl bg-[#0B2C6F] text-white flex items-center justify-center">
-          <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 7h16" />
-            <path d="M4 12h16" />
-            <path d="M4 17h10" />
-          </svg>
-        </div>
-        <div>
-          <h1 class="text-3xl font-bold text-[#0B2C6F]">Select Service</h1>
-          <p class="text-[#6B7280]">Tap a service to continue.</p>
-        </div>
-      </div>
-      <div class="mt-8 grid gap-4">
-        <button
-          v-for="service in services"
-          :key="service.id"
-          class="w-full text-left bg-white border border-[#E5E7EB] px-6 py-5 rounded-2xl text-xl"
-          @click="selectService(service)"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="font-semibold">{{ service.name }}</div>
-              <div class="text-sm text-[#6B7280]">Code: {{ service.code }}</div>
-            </div>
-            <div class="h-10 w-10 rounded-full bg-[#0B2C6F] text-white flex items-center justify-center">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 18l6-6-6-6" />
-              </svg>
+  <div class="min-h-screen kiosk-service-stage">
+    <div class="relative z-10 px-6 py-10 kiosk-service-body" :class="{ 'kiosk-service-body--cta': selectedService }">
+      <div class="max-w-6xl mx-auto grid gap-10">
+        <div class="kiosk-service-hero kiosk-fade">
+          <div class="kiosk-step-header">
+            <div class="kiosk-pill">
+              <span class="scan-dot"></span>
+              {{ labels.stepBadge }}
             </div>
           </div>
-        </button>
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold text-[#0B2C6F] font-hero">
+            {{ labels.title }}
+          </h1>
+          <p class="kiosk-service-subtitle">
+            <span>{{ labels.subtitle }}</span>
+          </p>
+          <div class="kiosk-service-hint">
+            <span>{{ labels.hint }}</span>
+          </div>
+        </div>
+
+        <div v-if="services.length" class="kiosk-service-grid kiosk-fade kiosk-fade-delay-1">
+          <button
+            v-for="service in services"
+            :key="service.id"
+            type="button"
+            class="kiosk-service-card"
+            :class="{ 'is-expanded': isExpanded(service.id), 'is-selected': isSelected(service.id) }"
+            :style="serviceStyle(service)"
+            @mouseenter="setHovered(service.id)"
+            @mouseleave="clearHovered"
+            @focus="setHovered(service.id)"
+            @blur="clearHovered"
+            @click="selectService(service)"
+            :aria-pressed="isSelected(service.id)"
+          >
+            <div class="kiosk-service-top">
+              <div class="kiosk-service-icon">
+                <svg v-if="getServiceMeta(service).icon === 'shield'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4z" />
+                </svg>
+                <svg v-else-if="getServiceMeta(service).icon === 'briefcase'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M8 6V4h8v2" />
+                  <rect x="3" y="6" width="18" height="14" rx="2" />
+                  <path d="M3 12h18" />
+                </svg>
+                <svg v-else-if="getServiceMeta(service).icon === 'home'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 11l9-7 9 7" />
+                  <path d="M5 10v10h14V10" />
+                </svg>
+                <svg v-else-if="getServiceMeta(service).icon === 'heart'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20.8 7.8a4.5 4.5 0 0 0-6.4 0L12 10.2l-2.4-2.4a4.5 4.5 0 1 0-6.4 6.4l2.4 2.4L12 22l6.4-5.4 2.4-2.4a4.5 4.5 0 0 0 0-6.4z" />
+                </svg>
+                <svg v-else class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+                  <path d="M14 3v5h5" />
+                </svg>
+              </div>
+              <div class="kiosk-service-copy">
+                <p class="kiosk-service-name">{{ service.name }}</p>
+                <p class="kiosk-service-code">{{ labels.codeLabel }}: {{ service.code }}</p>
+              </div>
+              <div v-if="isSelected(service.id)" class="kiosk-service-selected">
+                <span>{{ labels.selected }}</span>
+              </div>
+            </div>
+
+            <div class="kiosk-service-tagline">
+              <span>{{ text(getServiceMeta(service).tagline) }}</span>
+            </div>
+
+            <div class="kiosk-service-details">
+              <div class="kiosk-service-stats">
+                <div v-for="stat in getServiceMeta(service).stats" :key="stat.label.en" class="kiosk-service-stat">
+                  <div class="kiosk-service-stat-label">
+                    <span>{{ text(stat.label) }}</span>
+                  </div>
+                  <div class="kiosk-service-stat-value">{{ stat.value }}</div>
+                </div>
+              </div>
+              <div class="kiosk-service-requirements">
+                <div class="kiosk-service-requirements-title">
+                  <span>{{ labels.requirements }}</span>
+                </div>
+                <div class="kiosk-service-requirements-list">
+                  <div
+                    v-for="item in getServiceMeta(service).requirements"
+                    :key="item.en"
+                    class="kiosk-service-requirements-item"
+                  >
+                    <span class="kiosk-service-check">
+                      <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12l4 4 10-10" />
+                      </svg>
+                    </span>
+                    <div>
+                      <p class="kiosk-service-req-text">{{ text(item) }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="kiosk-service-footer">
+              <div class="kiosk-service-chip">
+                <span>{{ labels.tapHint }}</span>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <div v-else class="kiosk-service-empty kiosk-fade kiosk-fade-delay-1">
+          <h2 class="text-2xl font-semibold text-slate-800">{{ labels.emptyTitle }}</h2>
+          <p class="text-slate-500 mt-2">{{ labels.emptyBody }}</p>
+        </div>
+
+        <div v-if="selectedService" class="kiosk-service-cta kiosk-fade kiosk-fade-delay-2">
+          <div class="kiosk-service-summary">
+            <p class="kiosk-service-summary-label">{{ labels.selectedLabel }}</p>
+            <p class="kiosk-service-summary-name">{{ selectedService.name }}</p>
+            <p class="kiosk-service-summary-code">{{ labels.codeLabel }}: {{ selectedService.code }}</p>
+          </div>
+          <button class="kiosk-button text-lg py-3 px-6 rounded-2xl kiosk-action" type="button" @click="openConfirm">
+            <span>{{ labels.proceed }}</span>
+          </button>
+        </div>
+
+        <p v-if="error" class="kiosk-service-error">{{ error }}</p>
       </div>
-      <p v-if="error" class="mt-6 text-red-600 text-lg">{{ error }}</p>
     </div>
+
+    <transition name="kiosk-modal">
+      <div v-if="showConfirm" class="kiosk-modal" @click.self="closeConfirm">
+        <div class="kiosk-modal-card kiosk-modal-glow service-confirm-card">
+          <span class="modal-orb orb-one" aria-hidden="true"></span>
+          <span class="modal-orb orb-two" aria-hidden="true"></span>
+          <div class="service-confirm-header">
+            <p class="service-confirm-kicker">{{ labels.confirmKicker }}</p>
+            <h2 class="service-confirm-title">{{ labels.confirmTitle }}</h2>
+            <p class="service-confirm-subtitle">{{ labels.confirmSubtitle }}</p>
+          </div>
+          <div class="service-confirm-panel">
+            <div class="service-confirm-chip">
+              <span>{{ labels.confirmChip }}</span>
+            </div>
+            <div class="service-confirm-name">{{ selectedService?.name }}</div>
+            <div class="service-confirm-code">{{ labels.codeLabel }}: {{ selectedService?.code }}</div>
+            <div class="service-confirm-note">
+              <span>{{ labels.confirmNote }}</span>
+            </div>
+          </div>
+          <div class="service-confirm-actions">
+            <button class="kiosk-secondary-button text-lg py-3 rounded-2xl" type="button" @click="closeConfirm">
+              <span>{{ labels.change }}</span>
+            </button>
+            <button class="kiosk-button text-lg py-3 rounded-2xl kiosk-action" type="button" @click="confirmProceed">
+              <span>{{ labels.confirm }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { request } from '../api'
 
 const router = useRouter()
 const services = ref([])
 const error = ref('')
+const selectedServiceId = ref(null)
+const hoveredServiceId = ref(null)
+const showConfirm = ref(false)
+
+const copy = {
+  en: {
+    stepBadge: 'Kiosk Scan - Step 2 of 3',
+    title: 'Select Service',
+    subtitle: 'Tap a panel to expand and view details before choosing.',
+    hint: 'Hover to preview, tap to select.',
+    codeLabel: 'Code',
+    selected: 'Selected',
+    selectedLabel: 'Selected service',
+    proceed: 'Proceed',
+    requirements: 'Requirements',
+    tapHint: 'Tap to select',
+    emptyTitle: 'No services available',
+    emptyBody: 'Please ask staff for assistance.',
+    confirmKicker: 'Confirmation',
+    confirmTitle: 'Proceed with this service?',
+    confirmSubtitle: 'Review your choice before continuing.',
+    confirmChip: 'You selected',
+    confirmNote: 'Please confirm to continue to Step 3.',
+    change: 'Change selection',
+    confirm: 'Confirm & Continue',
+  },
+  tl: {
+    stepBadge: 'Kiosk Scan - Hakbang 2 sa 3',
+    title: 'Piliin ang Serbisyo',
+    subtitle: 'I-tap ang panel para buksan at makita ang detalye bago pumili.',
+    hint: 'I-hover para makita, i-tap para piliin.',
+    codeLabel: 'Kodigo',
+    selected: 'Napili',
+    selectedLabel: 'Napiling serbisyo',
+    proceed: 'Magpatuloy',
+    requirements: 'Kailangan',
+    tapHint: 'I-tap para piliin',
+    emptyTitle: 'Walang serbisyong available',
+    emptyBody: 'Mangyaring humingi ng tulong sa staff.',
+    confirmKicker: 'Kumpirmasyon',
+    confirmTitle: 'Magpatuloy sa serbisyong ito?',
+    confirmSubtitle: 'Suriin muna ang napili bago magpatuloy.',
+    confirmChip: 'Napili mo',
+    confirmNote: 'Kumpirmahin para magpatuloy sa Hakbang 3.',
+    change: 'Palitan ang pili',
+    confirm: 'Kumpirmahin at Magpatuloy',
+  },
+}
+
+const storedLanguage = localStorage.getItem('kiosk_language')
+const language = ref(storedLanguage === 'tl' ? 'tl' : 'en')
+const labels = computed(() => copy[language.value] || copy.en)
+const isTagalog = computed(() => language.value === 'tl')
+const text = (pair) => (isTagalog.value ? pair.tl : pair.en)
+
+const serviceMeta = {
+  BC: {
+    icon: 'shield',
+    accent: '#0B2C6F',
+    accentSoft: 'rgba(11, 44, 111, 0.16)',
+    accentGlow: 'rgba(11, 44, 111, 0.32)',
+    tagline: {
+      en: 'Proof of residency, travel, or employment needs.',
+      tl: 'Patunay para sa trabaho, pagbiyahe, o pangangailangan.',
+    },
+    stats: [
+      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '15-25 min' },
+      { label: { en: 'Counter', tl: 'Counter' }, value: 'Window A' },
+      { label: { en: 'Release', tl: 'Paglabas' }, value: 'Same day' },
+    ],
+    requirements: [
+      { en: 'Valid ID', tl: 'Balidong ID' },
+      { en: 'Proof of address', tl: 'Patunay ng tirahan' },
+    ],
+  },
+  BP: {
+    icon: 'briefcase',
+    accent: '#185ADB',
+    accentSoft: 'rgba(24, 90, 219, 0.16)',
+    accentGlow: 'rgba(24, 90, 219, 0.32)',
+    tagline: {
+      en: 'New or renewal business permit applications.',
+      tl: 'Para sa bagong negosyo o renewal ng permit.',
+    },
+    stats: [
+      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '20-30 min' },
+      { label: { en: 'Counter', tl: 'Counter' }, value: 'Window B' },
+      { label: { en: 'Form', tl: 'Porma' }, value: 'BP-01' },
+    ],
+    requirements: [
+      { en: 'Valid ID', tl: 'Balidong ID' },
+      { en: 'Business details', tl: 'Detalye ng negosyo' },
+    ],
+  },
+  RC: {
+    icon: 'home',
+    accent: '#1C7C54',
+    accentSoft: 'rgba(28, 124, 84, 0.16)',
+    accentGlow: 'rgba(28, 124, 84, 0.32)',
+    tagline: {
+      en: 'Certificate for residency confirmation.',
+      tl: 'Sertipiko para sa patunay ng paninirahan.',
+    },
+    stats: [
+      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '10-15 min' },
+      { label: { en: 'Counter', tl: 'Counter' }, value: 'Window C' },
+      { label: { en: 'Release', tl: 'Paglabas' }, value: 'Same day' },
+    ],
+    requirements: [
+      { en: 'Valid ID', tl: 'Balidong ID' },
+      { en: 'Barangay form', tl: 'Barangay form' },
+    ],
+  },
+  HC: {
+    icon: 'heart',
+    accent: '#D84343',
+    accentSoft: 'rgba(216, 67, 67, 0.16)',
+    accentGlow: 'rgba(216, 67, 67, 0.32)',
+    tagline: {
+      en: 'Health certificate and wellness clearance.',
+      tl: 'Para sa health certificate at wellness clearance.',
+    },
+    stats: [
+      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '25-35 min' },
+      { label: { en: 'Counter', tl: 'Counter' }, value: 'Window D' },
+      { label: { en: 'Release', tl: 'Paglabas' }, value: 'Next day' },
+    ],
+    requirements: [
+      { en: 'Valid ID', tl: 'Balidong ID' },
+      { en: 'Medical history', tl: 'Kasaysayan ng kalusugan' },
+    ],
+  },
+}
+
+const defaultMeta = {
+  icon: 'file',
+  accent: '#0B2C6F',
+  accentSoft: 'rgba(11, 44, 111, 0.16)',
+  accentGlow: 'rgba(11, 44, 111, 0.32)',
+  tagline: {
+    en: 'General barangay service assistance.',
+    tl: 'Pangkalahatang tulong sa serbisyo.',
+  },
+  stats: [
+    { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '10-20 min' },
+    { label: { en: 'Counter', tl: 'Counter' }, value: 'Queue-based' },
+    { label: { en: 'Release', tl: 'Paglabas' }, value: 'Same day' },
+  ],
+  requirements: [
+    { en: 'Valid ID', tl: 'Balidong ID' },
+    { en: 'Service form', tl: 'Form ng serbisyo' },
+  ],
+}
+
+const selectedService = computed(() =>
+  services.value.find((service) => service.id === selectedServiceId.value)
+)
+
+const getServiceMeta = (service) => {
+  const code = (service?.code || '').toUpperCase()
+  return serviceMeta[code] || defaultMeta
+}
+
+const serviceStyle = (service) => {
+  const meta = getServiceMeta(service)
+  return {
+    '--service-accent': meta.accent,
+    '--service-accent-soft': meta.accentSoft,
+    '--service-accent-glow': meta.accentGlow,
+  }
+}
+
+const isSelected = (serviceId) => selectedServiceId.value === serviceId
+
+const isExpanded = (serviceId) =>
+  hoveredServiceId.value === serviceId || selectedServiceId.value === serviceId
+
+const setHovered = (serviceId) => {
+  hoveredServiceId.value = serviceId
+}
+
+const clearHovered = () => {
+  hoveredServiceId.value = null
+}
 
 const loadServices = async () => {
   try {
+    const cached = JSON.parse(localStorage.getItem('kiosk_allowed_services') || 'null')
+    if (Array.isArray(cached) && cached.length) {
+      services.value = cached
+      return
+    }
     const data = await request('/api/services')
     services.value = data.services || []
   } catch (err) {
@@ -58,7 +372,21 @@ const loadServices = async () => {
 }
 
 const selectService = (service) => {
-  localStorage.setItem('kiosk_service', JSON.stringify(service))
+  selectedServiceId.value = service.id
+}
+
+const openConfirm = () => {
+  if (!selectedService.value) return
+  showConfirm.value = true
+}
+
+const closeConfirm = () => {
+  showConfirm.value = false
+}
+
+const confirmProceed = () => {
+  if (!selectedService.value) return
+  localStorage.setItem('kiosk_service', JSON.stringify(selectedService.value))
   router.push('/confirm')
 }
 

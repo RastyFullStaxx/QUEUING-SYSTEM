@@ -291,6 +291,7 @@ const hasQr = computed(() => Boolean(qrCode.value && qrCode.value.trim()))
 
 const setLanguage = (value) => {
   language.value = value
+  localStorage.setItem('kiosk_language', value)
 }
 
 const acknowledgeInstructions = () => {
