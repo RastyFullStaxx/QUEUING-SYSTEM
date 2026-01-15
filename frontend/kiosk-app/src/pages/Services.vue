@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen kiosk-service-stage">
+  <div class="min-h-screen kiosk-service-stage" @click="handleStageClick">
     <div class="relative z-10 px-6 py-10 kiosk-service-body">
       <div class="w-full max-w-none mx-auto grid gap-10">
         <div class="kiosk-service-hero kiosk-fade">
@@ -15,14 +15,17 @@
           <p class="kiosk-service-subtitle">
             <span>{{ labels.subtitle }}</span>
           </p>
+          <p class="kiosk-service-greeting">{{ greeting }}</p>
           <div class="kiosk-service-hint">
             <span>{{ labels.hint }}</span>
           </div>
         </div>
 
         <transition name="kiosk-cta">
-          <div v-if="selectedService" class="kiosk-service-cta">
+          <div v-if="selectedService" class="kiosk-service-cta" :style="ctaStyle">
             <span class="kiosk-cta-scan" aria-hidden="true"></span>
+            <span class="kiosk-service-cta-pulse" aria-hidden="true"></span>
+            <span class="kiosk-service-cta-connector" aria-hidden="true"></span>
             <div class="kiosk-service-summary">
               <p class="kiosk-service-summary-label">{{ labels.selectedLabel }}</p>
               <p class="kiosk-service-summary-name">{{ selectedService.name }}</p>
@@ -33,12 +36,12 @@
 
         <div v-if="services.length" class="kiosk-service-grid kiosk-fade kiosk-fade-delay-1">
           <button
-            v-for="service in services"
+            v-for="(service, index) in services"
             :key="service.id"
             type="button"
             class="kiosk-service-card"
             :class="{ 'is-expanded': isExpanded(service.id), 'is-selected': isSelected(service.id) }"
-            :style="cardStyle(service)"
+            :style="cardStyle(service, index)"
             :data-service-id="service.id"
             :ref="(el) => setCardRef(el, service.id)"
             @mouseenter="setHovered(service.id)"
@@ -49,8 +52,11 @@
             @click="selectService(service, $event)"
             :aria-pressed="isSelected(service.id)"
           >
+            <span class="kiosk-service-accent" aria-hidden="true"></span>
+            <span class="kiosk-service-highlight" aria-hidden="true"></span>
             <div class="kiosk-service-top">
               <div class="kiosk-service-icon">
+                <span class="kiosk-service-pulse" aria-hidden="true"></span>
                 <svg v-if="getServiceMeta(service).icon === 'shield'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4z" />
                 </svg>
@@ -72,18 +78,26 @@
                 </svg>
               </div>
               <div class="kiosk-service-copy">
-                <p class="kiosk-service-name">{{ service.name }}</p>
+                <div class="kiosk-service-title-row">
+                  <transition name="kiosk-chip">
+                    <div v-if="isSelected(service.id)" class="kiosk-service-selected">
+                      <span>{{ labels.selected }}</span>
+                    </div>
+                  </transition>
+                  <p class="kiosk-service-name">{{ service.name }}</p>
+                </div>
                 <p class="kiosk-service-snippet">{{ text(getServiceMeta(service).summary) }}</p>
               </div>
-              <transition name="kiosk-chip">
-                <div v-if="isSelected(service.id)" class="kiosk-service-selected">
-                  <span>{{ labels.selected }}</span>
-                </div>
-              </transition>
             </div>
 
             <div class="kiosk-service-tagline">
               <span>{{ text(getServiceMeta(service).tagline) }}</span>
+            </div>
+            <div class="kiosk-service-card-hint" :class="{ 'is-hidden': isExpanded(service.id) }">
+              <span>{{ labels.cardHint }}</span>
+              <svg class="kiosk-service-hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M7 10l5 5 5-5" />
+              </svg>
             </div>
 
             <div class="kiosk-service-details">
@@ -118,6 +132,7 @@
               </div>
             </div>
             <span class="kiosk-service-ripple" aria-hidden="true"></span>
+            <span class="kiosk-service-blob" aria-hidden="true"></span>
 
           </button>
         </div>
@@ -190,7 +205,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { request } from '../api'
 
@@ -213,6 +228,7 @@ const copy = {
     selected: 'Selected',
     selectedLabel: 'Selected service',
     selectedNote: 'Review the details below before proceeding.',
+    cardHint: 'Tap for details',
     proceed: 'Proceed',
     requirements: 'Requirements',
     emptyTitle: 'No services available',
@@ -237,6 +253,7 @@ const copy = {
     selected: 'Napili',
     selectedLabel: 'Napiling serbisyo',
     selectedNote: 'Suriin ang detalye bago magpatuloy.',
+    cardHint: 'I-tap para sa detalye',
     proceed: 'Magpatuloy',
     requirements: 'Kailangan',
     emptyTitle: 'Walang serbisyong available',
@@ -260,6 +277,24 @@ const language = ref(storedLanguage === 'tl' ? 'tl' : 'en')
 const labels = computed(() => copy[language.value] || copy.en)
 const isTagalog = computed(() => language.value === 'tl')
 const text = (pair) => (isTagalog.value ? pair.tl : pair.en)
+const greetingText = {
+  en: {
+    morning: 'Good morning! Choose a service and we will guide you through.',
+    afternoon: 'Good afternoon! Pick a service to get started.',
+    evening: 'Good evening! Choose a service and we will assist you.',
+  },
+  tl: {
+    morning: 'Magandang umaga! Pumili ng serbisyo at tutulungan ka namin.',
+    afternoon: 'Magandang hapon! Pumili ng serbisyo para magsimula.',
+    evening: 'Magandang gabi! Pumili ng serbisyo at gagabayan ka namin.',
+  },
+}
+const greeting = computed(() => {
+  const hour = new Date().getHours()
+  const slot = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
+  const group = greetingText[language.value] || greetingText.en
+  return group[slot]
+})
 
 const serviceMeta = {
   BC: {
@@ -389,14 +424,28 @@ const getServiceMeta = (service) => {
   return serviceMeta[code] || defaultMeta
 }
 
-const cardStyle = (service) => {
+const selectedMeta = computed(() =>
+  selectedService.value ? getServiceMeta(selectedService.value) : null
+)
+
+const ctaStyle = computed(() => {
+  if (!selectedMeta.value) return null
+  return {
+    '--service-accent': selectedMeta.value.accent,
+    '--service-accent-glow': selectedMeta.value.accentGlow,
+  }
+})
+
+const cardStyle = (service, index = 0) => {
   const meta = getServiceMeta(service)
   const span = cardSpans.value[service.id] || 1
+  const delay = Math.min(index * 90, 540)
   return {
     '--service-accent': meta.accent,
     '--service-accent-soft': meta.accentSoft,
     '--service-accent-glow': meta.accentGlow,
     '--row-span': span,
+    '--card-delay': `${delay}ms`,
   }
 }
 
@@ -417,6 +466,23 @@ const setHovered = (serviceId) => {
 const clearHovered = () => {
   if (selectedServiceId.value) return
   hoveredServiceId.value = null
+}
+
+const clearSelection = () => {
+  if (!selectedServiceId.value) return
+  selectedServiceId.value = null
+  hoveredServiceId.value = null
+  showConfirm.value = false
+  showReminder.value = false
+}
+
+const handleStageClick = (event) => {
+  const target = event.target
+  if (target.closest('.kiosk-service-card')) return
+  if (target.closest('.kiosk-service-cta')) return
+  if (target.closest('.kiosk-proceed-floating')) return
+  if (target.closest('.kiosk-modal')) return
+  clearSelection()
 }
 
 const handleCardLeave = (event) => {
@@ -484,7 +550,9 @@ const setCardRef = (element, serviceId) => {
   if (resizeObserver) {
     resizeObserver.observe(element)
   }
-  requestAnimationFrame(() => updateCardSpan(element))
+  requestAnimationFrame(() => {
+    updateCardSpan(element)
+  })
 }
 
 const loadServices = async () => {
@@ -525,6 +593,25 @@ const triggerRipple = (event) => {
     card.classList.remove('is-rippling')
   }, 650)
 }
+
+const refreshCardSpans = (duration = 900) => {
+  const start = performance.now()
+  const tick = () => {
+    cardElements.forEach((element) => updateCardSpan(element))
+    if (performance.now() - start < duration) {
+      requestAnimationFrame(tick)
+    }
+  }
+  requestAnimationFrame(tick)
+}
+
+watch(
+  () => selectedServiceId.value,
+  async () => {
+    await nextTick()
+    refreshCardSpans()
+  }
+)
 
 
 const handleProceed = () => {

@@ -461,7 +461,8 @@ body {
     max-height 420ms cubic-bezier(0.22, 1, 0.36, 1),
     opacity 260ms ease,
     transform 360ms ease,
-    margin 420ms ease;
+    margin 420ms ease,
+    padding 420ms ease;
   transform-origin: top center;
 }
 
@@ -471,6 +472,8 @@ body {
   opacity: 0;
   transform: translateY(-10px) scale(0.98);
   margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 .kiosk-chip-enter-active,
@@ -600,6 +603,7 @@ body {
     radial-gradient(900px circle at 12% -10%, rgba(242, 195, 0, 0.22), transparent 55%),
     radial-gradient(900px circle at 88% 10%, rgba(11, 44, 111, 0.2), transparent 58%),
     linear-gradient(140deg, #f9fbff 0%, #f4f8ff 45%, #fff4da 100%);
+  overflow-x: hidden;
 }
 
 .kiosk-service-stage::before {
@@ -640,6 +644,38 @@ body {
 
 .kiosk-service-body {
   padding-bottom: 120px;
+  position: relative;
+  overflow: hidden;
+}
+
+.kiosk-service-body::before {
+  content: "";
+  position: absolute;
+  inset: -18% -12%;
+  background:
+    radial-gradient(520px circle at 8% 12%, rgba(11, 44, 111, 0.18), transparent 60%),
+    radial-gradient(420px circle at 92% 18%, rgba(242, 195, 0, 0.18), transparent 65%);
+  opacity: 0.5;
+  filter: blur(18px);
+  animation: kiosk-ambient-drift 18s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.kiosk-service-body::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(11, 44, 111, 0.08) 1px, transparent 1px);
+  background-size: 6px 6px;
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.kiosk-service-body > * {
+  position: relative;
+  z-index: 1;
 }
 
 .kiosk-service-subtitle {
@@ -652,6 +688,13 @@ body {
 
 .kiosk-service-subtitle span {
   display: block;
+}
+
+.kiosk-service-greeting {
+  font-size: 0.95rem;
+  color: #64748b;
+  font-weight: 600;
+  max-width: 40rem;
 }
 
 .kiosk-service-hint {
@@ -671,14 +714,14 @@ body {
 }
 
 .kiosk-service-grid {
-  --kiosk-card-height: 300px;
+  --kiosk-card-height: 320px;
   --kiosk-row-height: 6px;
   display: grid;
   gap: 1.4rem;
-  grid-template-columns: repeat(4, minmax(290px, 340px));
+  grid-template-columns: repeat(4, minmax(300px, 360px));
   grid-auto-rows: var(--kiosk-row-height);
   width: 100%;
-  max-width: 1460px;
+  max-width: 1540px;
   margin: 0 auto;
   align-items: start;
   align-content: start;
@@ -692,13 +735,15 @@ body {
   --service-accent-glow: rgba(11, 44, 111, 0.32);
   --row-span: 1;
   --card-raise: 0px;
+  --card-scale: 1;
   --tilt-x: 0deg;
   --tilt-y: 0deg;
   --glow-x: 70%;
   --glow-y: 0%;
   position: relative;
   height: auto;
-  aspect-ratio: 4 / 3;
+  min-height: var(--kiosk-card-height);
+  max-height: var(--kiosk-card-height);
   padding: 1.7rem 1.7rem 1.2rem;
   border-radius: 26px;
   border: 1px solid rgba(15, 23, 42, 0.1);
@@ -713,25 +758,14 @@ body {
     transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 520ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 360ms ease,
-    background 360ms ease;
-  transform: perspective(900px) translateY(var(--card-raise)) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
+    background 360ms ease,
+    max-height 2200ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 420ms ease;
+  animation: kiosk-card-fade 560ms ease both;
+  animation-delay: var(--card-delay, 0ms);
+  transform: perspective(900px) translateY(var(--card-raise)) scale(var(--card-scale)) rotateX(var(--tilt-x)) rotateY(var(--tilt-y));
   transform-style: preserve-3d;
   overflow: hidden;
-}
-
-.kiosk-service-card::before {
-  content: "";
-  position: absolute;
-  inset: -40% -20% auto auto;
-  width: 240px;
-  height: 240px;
-  background: radial-gradient(
-    circle at var(--glow-x) var(--glow-y),
-    var(--service-accent-soft),
-    transparent 70%
-  );
-  opacity: 0.8;
-  pointer-events: none;
 }
 
 .kiosk-service-card::after {
@@ -758,6 +792,62 @@ body {
   pointer-events: none;
 }
 
+.kiosk-service-card::before {
+  content: "";
+  position: absolute;
+  inset: -40% -20% auto auto;
+  width: 240px;
+  height: 240px;
+  border-radius: 999px;
+  background: radial-gradient(
+    circle at var(--glow-x) var(--glow-y),
+    var(--service-accent-soft),
+    transparent 70%
+  );
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.kiosk-service-accent {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 8px;
+  background: linear-gradient(90deg, transparent, var(--service-accent), transparent);
+  opacity: 0.5;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.kiosk-service-highlight {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--glow-x) var(--glow-y),
+    rgba(255, 255, 255, 0.7),
+    transparent 55%
+  );
+  opacity: 0;
+  transition: opacity 240ms ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.kiosk-service-card:hover .kiosk-service-highlight {
+  opacity: 0.5;
+}
+
+.kiosk-service-card.is-selected .kiosk-service-highlight {
+  opacity: 0.65;
+}
+
+.kiosk-service-top,
+.kiosk-service-tagline,
+.kiosk-service-card-hint,
+.kiosk-service-details {
+  position: relative;
+  z-index: 1;
+}
+
 .kiosk-service-card.is-selected::after {
   opacity: 1;
 }
@@ -767,13 +857,14 @@ body {
 }
 
 .kiosk-service-card.is-expanded {
-  aspect-ratio: auto;
+  max-height: 1200px;
   --card-raise: -4px;
   box-shadow: 0 32px 70px -46px rgba(11, 31, 58, 0.55);
   z-index: 2;
 }
 
 .kiosk-service-card.is-selected {
+  --card-scale: 1.02;
   border-color: var(--service-accent);
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), var(--service-accent-soft));
   box-shadow: 0 38px 80px -50px var(--service-accent-glow);
@@ -789,11 +880,62 @@ body {
   overflow: hidden;
 }
 
+.kiosk-service-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.kiosk-service-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(11, 44, 111, 0.08);
+  color: #0b2c6f;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: transform 240ms ease, box-shadow 240ms ease;
+}
+
+.kiosk-service-chip-label {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.6rem;
+  color: rgba(11, 31, 58, 0.6);
+}
+
+.kiosk-service-chip-value {
+  font-weight: 700;
+}
+
+.kiosk-service-card:hover .kiosk-service-chip {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px -16px rgba(11, 31, 58, 0.45);
+}
+
+.kiosk-service-card.is-selected .kiosk-service-chip {
+  background: rgba(11, 44, 111, 0.14);
+}
+
 .kiosk-service-top {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 1rem;
   align-items: center;
+}
+
+.kiosk-service-title-row {
+  position: relative;
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+}
+
+.kiosk-service-card.is-selected .kiosk-service-title-row {
+  padding-top: 1.6rem;
 }
 
 .kiosk-service-icon {
@@ -802,11 +944,30 @@ body {
   border-radius: 18px;
   background: var(--service-accent-soft);
   color: var(--service-accent);
+  position: relative;
   display: grid;
   place-items: center;
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.8),
     0 12px 26px -20px var(--service-accent-glow);
+}
+
+.kiosk-service-pulse {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--service-accent);
+  box-shadow: 0 0 0 0 rgba(11, 44, 111, 0.3);
+  animation: kiosk-service-pulse 2.8s ease-in-out infinite;
+  z-index: 0;
+}
+
+.kiosk-service-icon svg {
+  position: relative;
+  z-index: 1;
 }
 
 .kiosk-service-card:hover .kiosk-service-icon {
@@ -840,6 +1001,11 @@ body {
   letter-spacing: 0.16em;
   font-weight: 700;
   justify-items: center;
+  position: absolute;
+  top: -0.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
 }
 
 .kiosk-service-tagline {
@@ -852,9 +1018,29 @@ body {
 
 .kiosk-service-tagline span {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.kiosk-service-card-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(71, 85, 105, 0.75);
+  transition: opacity 240ms ease, transform 240ms ease;
+}
+
+.kiosk-service-card-hint.is-hidden {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.kiosk-service-hint-icon {
+  width: 18px;
+  height: 18px;
 }
 
 .kiosk-service-details {
@@ -864,9 +1050,9 @@ body {
   opacity: 0;
   transform: translateY(-8px);
   transition:
-    max-height 760ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 420ms ease,
-    transform 420ms ease;
+    max-height 3200ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 1800ms ease,
+    transform 1800ms ease;
   overflow: hidden;
   will-change: max-height, opacity, transform;
 }
@@ -985,10 +1171,10 @@ body {
   max-height: 240px;
   background: var(--primary);
   color: #ffffff;
-  border: 1px solid rgba(11, 44, 111, 0.4);
+  border: 1px solid var(--service-accent, rgba(11, 44, 111, 0.4));
   box-shadow:
     0 24px 50px -36px rgba(11, 31, 58, 0.65),
-    0 0 36px rgba(59, 130, 246, 0.45);
+    0 0 36px var(--service-accent-glow, rgba(59, 130, 246, 0.45));
   backdrop-filter: blur(12px);
   text-align: center;
   animation: kiosk-cta-glow 3.4s ease-in-out infinite;
@@ -996,6 +1182,29 @@ body {
   transition: transform 320ms ease, box-shadow 320ms ease, opacity 240ms ease;
   overflow: hidden;
   will-change: max-height, opacity, transform;
+}
+
+.kiosk-service-cta-pulse {
+  position: absolute;
+  inset: 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  opacity: 0.35;
+  animation: kiosk-cta-breathe 3.4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.kiosk-service-cta-connector {
+  position: absolute;
+  top: -14px;
+  width: 84px;
+  height: 14px;
+  border-radius: 0 0 12px 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), var(--service-accent, #0b2c6f));
+  box-shadow: 0 6px 18px -8px var(--service-accent-glow, rgba(11, 44, 111, 0.45));
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .kiosk-cta-scan {
@@ -1007,6 +1216,7 @@ body {
   opacity: 0.5;
   animation: kiosk-cta-scan 5.6s ease-in-out infinite;
   pointer-events: none;
+  z-index: 0;
 }
 
 .kiosk-service-cta::before {
@@ -1034,6 +1244,8 @@ body {
   justify-items: center;
   text-align: center;
   max-width: 480px;
+  position: relative;
+  z-index: 1;
 }
 
 .kiosk-service-summary-label {
@@ -1120,6 +1332,21 @@ body {
   transform: translate(-50%, -50%) scale(0);
   opacity: 0;
   pointer-events: none;
+}
+
+.kiosk-service-blob {
+  position: absolute;
+  width: 220px;
+  height: 220px;
+  border-radius: 40% 60% 55% 45%;
+  right: -120px;
+  bottom: -140px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.6), transparent 70%);
+  opacity: 0.45;
+  filter: blur(2px);
+  animation: kiosk-blob-float 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .kiosk-service-card.is-rippling .kiosk-service-ripple {
@@ -1269,15 +1496,15 @@ body {
 
 @media (max-width: 1400px) {
   .kiosk-service-grid {
-    --kiosk-card-height: 290px;
-    grid-template-columns: repeat(3, minmax(280px, 320px));
+    --kiosk-card-height: 300px;
+    grid-template-columns: repeat(3, minmax(290px, 340px));
   }
 }
 
 @media (max-width: 1100px) {
   .kiosk-service-grid {
     --kiosk-card-height: 280px;
-    grid-template-columns: repeat(2, minmax(260px, 320px));
+    grid-template-columns: repeat(2, minmax(260px, 330px));
   }
 }
 
@@ -1302,6 +1529,52 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes kiosk-card-fade {
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@keyframes kiosk-ambient-drift {
+  0% {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(2%, 1%, 0) scale(1.04);
+  }
+}
+
+@keyframes kiosk-service-pulse {
+  0%,
+  100% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(11, 44, 111, 0.2);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(11, 44, 111, 0);
+    opacity: 0.9;
+  }
+}
+
+@keyframes kiosk-cta-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.25;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.45;
   }
 }
 
@@ -1425,6 +1698,18 @@ body {
   }
 }
 
+@keyframes kiosk-blob-float {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate(-8px, -12px) rotate(6deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
 @keyframes kiosk-stage-drift {
   0% {
     transform: translate3d(-2%, -1%, 0) scale(1);
@@ -1478,13 +1763,17 @@ body {
   .kiosk-service-card,
   .kiosk-service-details,
   .kiosk-service-cta,
+  .kiosk-service-cta-pulse,
   .kiosk-proceed-floating,
   .kiosk-service-icon,
+  .kiosk-service-pulse,
   .kiosk-service-stat::after,
+  .kiosk-service-body::before,
   .kiosk-service-stage::before,
   .kiosk-service-stage::after,
   .kiosk-cta-scan,
-  .kiosk-service-ripple {
+  .kiosk-service-ripple,
+  .kiosk-service-blob {
     animation: none;
   }
 
@@ -1493,6 +1782,7 @@ body {
   .kiosk-service-cta,
   .kiosk-proceed-floating,
   .kiosk-service-details,
+  .kiosk-service-highlight,
   .kiosk-panel-enter-active,
   .kiosk-panel-leave-active,
   .kiosk-chip-enter-active,
