@@ -1,6 +1,6 @@
 <template>
   <div class="min-h-screen kiosk-service-stage" @click="handleStageClick">
-    <div class="relative z-10 px-6 py-10 kiosk-service-body">
+    <div class="relative z-10 min-h-screen flex items-center justify-center px-6 py-10 kiosk-service-body">
       <div class="w-full max-w-none mx-auto grid gap-10">
         <div class="kiosk-service-hero kiosk-fade">
           <div class="kiosk-step-header">
@@ -19,6 +19,15 @@
           <div class="kiosk-service-hint">
             <span>{{ labels.hint }}</span>
           </div>
+        </div>
+
+        <div class="kiosk-service-ribbon" aria-hidden="true">
+          <span class="kiosk-service-ribbon-line"></span>
+          <span class="kiosk-service-ribbon-dots">
+            <span class="kiosk-service-ribbon-dot"></span>
+            <span class="kiosk-service-ribbon-dot"></span>
+            <span class="kiosk-service-ribbon-dot"></span>
+          </span>
         </div>
 
         <transition name="kiosk-cta">
@@ -424,6 +433,39 @@ const getServiceMeta = (service) => {
   return serviceMeta[code] || defaultMeta
 }
 
+const capturePositions = () => {
+  const positions = new Map()
+  cardElements.forEach((element, id) => {
+    positions.set(id, element.getBoundingClientRect())
+  })
+  return positions
+}
+
+const animateReflow = async (positions) => {
+  await nextTick()
+  requestAnimationFrame(() => {
+    cardElements.forEach((element, id) => {
+      const first = positions.get(id)
+      if (!first) return
+      const last = element.getBoundingClientRect()
+      const dx = first.left - last.left
+      const dy = first.top - last.top
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return
+      element.style.setProperty('--flow-x', `${dx}px`)
+      element.style.setProperty('--flow-y', `${dy}px`)
+      element.classList.add('is-reflowing')
+      element.getBoundingClientRect()
+      requestAnimationFrame(() => {
+        element.style.setProperty('--flow-x', '0px')
+        element.style.setProperty('--flow-y', '0px')
+        window.setTimeout(() => {
+          element.classList.remove('is-reflowing')
+        }, 920)
+      })
+    })
+  })
+}
+
 const selectedMeta = computed(() =>
   selectedService.value ? getServiceMeta(selectedService.value) : null
 )
@@ -460,12 +502,16 @@ const isExpanded = (serviceId) => {
 
 const setHovered = (serviceId) => {
   if (selectedServiceId.value) return
+  const positions = capturePositions()
   hoveredServiceId.value = serviceId
+  animateReflow(positions)
 }
 
 const clearHovered = () => {
   if (selectedServiceId.value) return
+  const positions = capturePositions()
   hoveredServiceId.value = null
+  animateReflow(positions)
 }
 
 const clearSelection = () => {
@@ -571,11 +617,13 @@ const loadServices = async () => {
 
 const selectService = (service, event) => {
   triggerRipple(event)
+  const positions = capturePositions()
   selectedServiceId.value = selectedServiceId.value === service.id ? null : service.id
   if (!selectedServiceId.value) {
     showConfirm.value = false
   }
   showReminder.value = false
+  animateReflow(positions)
 }
 
 const triggerRipple = (event) => {
