@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Welcome from './pages/Welcome.vue'
 import Scan from './pages/Scan.vue'
 import Services from './pages/Services.vue'
-import Confirm from './pages/Confirm.vue'
 import Ticket from './pages/Ticket.vue'
 
 const routes = [
@@ -10,7 +9,6 @@ const routes = [
   { path: '/welcome', component: Welcome },
   { path: '/scan', component: Scan },
   { path: '/services', component: Services, meta: { requiresApproval: true } },
-  { path: '/confirm', component: Confirm, meta: { requiresApproval: true } },
   { path: '/ticket', component: Ticket, meta: { requiresApproval: true } },
 ]
 

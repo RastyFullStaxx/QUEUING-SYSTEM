@@ -815,6 +815,55 @@ body {
   gap: 1rem;
 }
 
+.kiosk-service-hero-slot {
+  width: min(760px, 90vw);
+  min-height: 220px;
+  display: grid;
+  align-items: center;
+  justify-items: center;
+}
+
+.kiosk-service-hero-default {
+  display: grid;
+  gap: 0.9rem;
+  justify-items: center;
+}
+
+.kiosk-service-hero-cta {
+  width: 100%;
+  padding: 1.6rem 2.2rem;
+  border-radius: 28px;
+  background: var(--primary);
+  color: #ffffff;
+  border: 1px solid rgba(11, 44, 111, 0.4);
+  box-shadow:
+    0 24px 50px -36px rgba(11, 31, 58, 0.65),
+    0 0 36px var(--service-accent-glow, rgba(59, 130, 246, 0.45));
+  display: grid;
+  gap: 0.4rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.kiosk-service-hero-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 700;
+}
+
+.kiosk-service-hero-title {
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.kiosk-service-hero-note {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
 .kiosk-service-body {
   padding-bottom: 120px;
   position: relative;
@@ -924,6 +973,209 @@ body {
   animation-delay: 0.6s;
 }
 
+.kiosk-ticket-card {
+  width: min(720px, 92vw);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 32px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  padding: 2.6rem 2.8rem 2.4rem;
+  box-shadow:
+    0 36px 80px -50px rgba(11, 31, 58, 0.5),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.8);
+  display: grid;
+  gap: 1.8rem;
+  position: relative;
+}
+
+.kiosk-ticket-card::before,
+.kiosk-ticket-card::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #d3e7ff;
+  transform: translateY(-50%);
+  box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.06);
+}
+
+.kiosk-ticket-card::before {
+  left: -13px;
+}
+
+.kiosk-ticket-card::after {
+  right: -13px;
+}
+
+.kiosk-ticket-header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1.2rem;
+  align-items: center;
+}
+
+.kiosk-ticket-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(11, 44, 111, 0.1);
+  color: #0b2c6f;
+  display: grid;
+  place-items: center;
+}
+
+.kiosk-ticket-headline {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.kiosk-ticket-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.kiosk-ticket-title {
+  font-size: clamp(1.6rem, 2.6vw, 2.3rem);
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.kiosk-ticket-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 44, 111, 0.18);
+  background: rgba(255, 255, 255, 0.7);
+  color: #0b2c6f;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.kiosk-ticket-barcode {
+  height: 46px;
+  border-radius: 14px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(11, 44, 111, 0.22) 0 3px,
+      rgba(11, 44, 111, 0.05) 3px 6px
+    );
+  opacity: 0.6;
+}
+
+.kiosk-ticket-number {
+  background: linear-gradient(135deg, #0b2c6f 0%, #0f3a8a 45%, #1d4ed8 100%);
+  color: #ffffff;
+  border-radius: 24px;
+  padding: 1.8rem 2rem;
+  display: grid;
+  gap: 0.4rem;
+  text-align: center;
+  box-shadow: 0 22px 46px -30px rgba(11, 44, 111, 0.75);
+}
+
+.kiosk-ticket-number-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.75);
+  font-weight: 700;
+}
+
+.kiosk-ticket-number-value {
+  font-size: clamp(2.4rem, 4vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  font-family: "Space Grotesk", "Sora", "Trebuchet MS", sans-serif;
+}
+
+.kiosk-ticket-meta {
+  display: grid;
+  gap: 0.6rem;
+  background: rgba(15, 23, 42, 0.04);
+  border-radius: 20px;
+  padding: 1.4rem 1.6rem;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.kiosk-ticket-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.kiosk-ticket-row span:last-child {
+  color: #0b1f3a;
+}
+
+.kiosk-ticket-note {
+  margin: 0;
+  font-size: 1rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.kiosk-ticket-reqs {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.kiosk-ticket-reqs-title {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.kiosk-ticket-reqs-list {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  color: #475569;
+  font-weight: 600;
+}
+
+.kiosk-ticket-reqs-list li {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.kiosk-ticket-reqs-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(11, 44, 111, 0.4);
+}
+
+.kiosk-ticket-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.kiosk-ticket-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #0b2c6f;
+  font-weight: 700;
+}
+
 .kiosk-service-grid {
   --kiosk-card-height: 320px;
   --kiosk-row-height: 6px;
@@ -938,6 +1190,73 @@ body {
   align-content: start;
   grid-auto-flow: row;
   justify-content: center;
+}
+
+.kiosk-service-stage-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 160px) 1fr minmax(120px, 160px);
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+
+.kiosk-arrow-button {
+  width: 100%;
+  min-height: 72px;
+  border: 0;
+  color: #ffffff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #0b2c6f 0%, #0f3a8a 45%, #1d4ed8 100%);
+  box-shadow:
+    0 18px 40px -24px rgba(11, 44, 111, 0.65),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.35),
+    inset -1px -1px 0 rgba(11, 31, 58, 0.2);
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 0 1.6rem;
+  transition: transform 200ms ease, box-shadow 200ms ease, opacity 200ms ease;
+  position: relative;
+  overflow: hidden;
+  justify-self: center;
+}
+
+.kiosk-arrow-button--back {
+  margin-left: 180px;
+}
+
+.kiosk-arrow-button--proceed {
+  margin-right: 180px;
+}
+
+.kiosk-arrow-button--proceed {
+  border-radius: 18px;
+}
+
+.kiosk-arrow-button--back {
+  border-radius: 18px;
+}
+
+.kiosk-arrow-button.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: grayscale(0.2);
+}
+
+.kiosk-arrow-button:not(.is-disabled) {
+  animation: kiosk-arrow-glow 3.2s ease-in-out infinite;
+}
+
+.kiosk-arrow-button:not(.is-disabled):hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 28px 54px -28px rgba(242, 195, 0, 0.9),
+    0 0 30px rgba(242, 195, 0, 0.45);
 }
 
 .kiosk-service-card {
@@ -1695,6 +2014,17 @@ body {
   z-index: 1;
 }
 
+.service-confirm-check {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 12px 24px -16px rgba(34, 197, 94, 0.5);
+}
+
 .service-confirm-chip {
   display: grid;
   gap: 0.2rem;
@@ -1739,6 +2069,18 @@ body {
 }
 
 @media (max-width: 1100px) {
+  .kiosk-service-stage-row {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .kiosk-arrow-button {
+    width: min(340px, 92vw);
+    min-height: 110px;
+    clip-path: none;
+    border-radius: 20px;
+  }
+
   .kiosk-service-grid {
     --kiosk-card-height: 280px;
     grid-template-columns: repeat(2, minmax(260px, 330px));
@@ -1824,6 +2166,20 @@ body {
   50% {
     transform: scale(1.02);
     opacity: 0.45;
+  }
+}
+
+@keyframes kiosk-arrow-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 22px 44px -24px rgba(242, 195, 0, 0.7),
+      0 0 18px rgba(242, 195, 0, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 30px 60px -28px rgba(242, 195, 0, 0.9),
+      0 0 32px rgba(242, 195, 0, 0.6);
   }
 }
 
@@ -2099,6 +2455,7 @@ body {
   .kiosk-brand-sunray,
   .kiosk-brand-logo,
   .kiosk-buildings-back::after,
+  .kiosk-arrow-button:not(.is-disabled),
   .kiosk-service-ribbon-dot,
   .kiosk-service-stat::after,
   .kiosk-service-body::before,
