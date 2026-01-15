@@ -70,9 +70,10 @@
               @click="selectService(service, $event)"
               :aria-pressed="isSelected(service.id)"
             >
-              <span class="kiosk-service-accent" aria-hidden="true"></span>
-              <span class="kiosk-service-highlight" aria-hidden="true"></span>
-              <div class="kiosk-service-top">
+            <span class="kiosk-service-accent" aria-hidden="true"></span>
+            <span class="kiosk-service-highlight" aria-hidden="true"></span>
+            <span class="kiosk-card-sheen" aria-hidden="true"></span>
+            <div class="kiosk-service-top">
                 <div class="kiosk-service-icon">
                   <span class="kiosk-service-pulse" aria-hidden="true"></span>
                   <svg v-if="getServiceMeta(service).icon === 'shield'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

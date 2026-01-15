@@ -1,6 +1,7 @@
 <template>
   <div class="min-h-screen flex items-center justify-center px-6 py-10">
     <div class="kiosk-ticket-card">
+      <span class="kiosk-ticket-sheen" aria-hidden="true"></span>
       <div class="kiosk-ticket-header">
         <div class="kiosk-ticket-icon">
           <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
