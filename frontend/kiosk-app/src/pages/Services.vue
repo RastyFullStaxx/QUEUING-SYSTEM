@@ -1,5 +1,6 @@
 <template>
   <div class="min-h-screen kiosk-service-stage" @click="handleStageClick">
+    <div class="kiosk-step-flash" aria-hidden="true">{{ labels.stepFlash }}</div>
     <div
       class="relative z-10 min-h-screen flex items-center justify-center px-6 py-10 kiosk-service-body"
       :class="{ 'kiosk-dim': showConfirm || showReminder }"
@@ -260,6 +261,7 @@ const resident = JSON.parse(localStorage.getItem('kiosk_resident') || 'null')
 const copy = {
   en: {
     stepBadge: 'Kiosk Scan - Step 2 of 3',
+    stepFlash: 'STEP 2',
     title: 'Select Service',
     subtitle: 'Tap a panel to expand and view details before choosing.',
     hint: 'Hover to preview, tap to select.',
@@ -286,6 +288,7 @@ const copy = {
   },
   tl: {
     stepBadge: 'Kiosk Scan - Hakbang 2 sa 3',
+    stepFlash: 'HAKBANG 2',
     title: 'Piliin ang Serbisyo',
     subtitle: 'I-tap ang panel para buksan at makita ang detalye bago pumili.',
     hint: 'I-hover para makita, i-tap para piliin.',

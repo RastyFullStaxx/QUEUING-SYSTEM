@@ -210,6 +210,26 @@ body {
   z-index: 1;
 }
 
+.kiosk-step-flash {
+  position: fixed;
+  top: 16%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0.65rem 1.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(11, 44, 111, 0.22);
+  color: #0b2c6f;
+  font-size: clamp(0.95rem, 2.2vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
+  box-shadow: 0 28px 60px -40px rgba(11, 31, 58, 0.65);
+  z-index: 25;
+  pointer-events: none;
+  animation: kiosk-step-flash 2.2s ease-out both;
+}
+
 .kiosk-landing {
   width: min(1200px, 92vw);
   display: grid;
@@ -612,8 +632,8 @@ body {
 }
 
 .kiosk-dim {
-  filter: blur(1.5px) brightness(0.8);
-  transition: filter 200ms ease;
+  filter: blur(3px) brightness(0.6) saturate(0.85);
+  transition: filter 220ms ease;
 }
 
 .kiosk-modal {
@@ -623,10 +643,10 @@ body {
   display: grid;
   place-items: center;
   background:
-    radial-gradient(1200px circle at 20% 20%, rgba(15, 23, 42, 0.35), transparent 60%),
-    radial-gradient(800px circle at 80% 80%, rgba(11, 44, 111, 0.3), transparent 65%),
-    rgba(11, 31, 58, 0.45);
-  backdrop-filter: blur(6px);
+    radial-gradient(1200px circle at 20% 20%, rgba(15, 23, 42, 0.45), transparent 60%),
+    radial-gradient(900px circle at 80% 80%, rgba(11, 44, 111, 0.4), transparent 65%),
+    rgba(11, 31, 58, 0.62);
+  backdrop-filter: blur(12px);
   transition: opacity 200ms ease;
 }
 
@@ -644,19 +664,13 @@ body {
   gap: 1.6rem;
   max-height: 90vh;
   overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .kiosk-modal-card::-webkit-scrollbar {
-  width: 8px;
-}
-
-.kiosk-modal-card::-webkit-scrollbar-thumb {
-  background: rgba(15, 23, 42, 0.2);
-  border-radius: 999px;
-}
-
-.kiosk-modal-card::-webkit-scrollbar-track {
-  background: transparent;
+  width: 0;
+  height: 0;
 }
 
 .kiosk-modal-header {
@@ -691,6 +705,27 @@ body {
 .kiosk-modal-actions {
   display: grid;
   gap: 0.9rem;
+}
+
+.kiosk-modal-icon-button {
+  position: absolute;
+  top: 1.2rem;
+  right: 1.2rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  color: #0b2c6f;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 16px 30px -24px rgba(11, 31, 58, 0.5);
+  transition: transform 160ms ease, box-shadow 160ms ease;
+}
+
+.kiosk-modal-icon-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 20px 40px -28px rgba(11, 31, 58, 0.6);
 }
 
 .kiosk-modal-note {
@@ -2435,6 +2470,28 @@ body {
   }
 }
 
+@keyframes kiosk-step-flash {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -60%) scale(0.96);
+    filter: blur(10px);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    filter: blur(0);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(1.05);
+    filter: blur(8px);
+  }
+}
+
 @keyframes kiosk-card-fade {
   0% {
     opacity: 0;
@@ -2803,7 +2860,8 @@ body {
   .kiosk-service-stage::after,
   .kiosk-cta-scan,
   .kiosk-service-ripple,
-  .kiosk-service-blob {
+  .kiosk-service-blob,
+  .kiosk-step-flash {
     animation: none;
   }
 

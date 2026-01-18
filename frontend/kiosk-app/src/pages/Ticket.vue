@@ -1,5 +1,6 @@
 <template>
   <div class="min-h-screen flex items-center justify-center px-6 py-10">
+    <div class="kiosk-step-flash" aria-hidden="true">STEP 3</div>
     <div class="kiosk-ticket-wrapper">
       <div class="kiosk-step-header">
         <div class="kiosk-pill">

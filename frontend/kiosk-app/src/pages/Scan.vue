@@ -2,10 +2,11 @@
   <div class="min-h-screen kiosk-scan kiosk-stage">
     <div
       class="relative z-10 min-h-screen flex items-center justify-center px-6 py-10"
-      :class="{ 'kiosk-dim': showLanguagePrompt || showInstructions || showManualEntry }"
+      :class="{ 'kiosk-dim': showLanguagePrompt || showInstructions || showManualEntry || showWelcome }"
     >
       <transition name="kiosk-page">
         <div v-if="isReady" class="kiosk-scan-shell">
+          <div class="kiosk-step-flash" aria-hidden="true">{{ labels.stepFlash }}</div>
           <div class="kiosk-hero kiosk-hero-centered kiosk-fade">
             <div class="kiosk-step-header">
               <div class="kiosk-pill">
@@ -75,6 +76,19 @@
         <div class="kiosk-modal-card kiosk-modal-glow">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
+          <button
+            class="kiosk-modal-icon-button"
+            type="button"
+            aria-label="Change language"
+            @click="openLanguagePrompt"
+          >
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M3 12h18" />
+              <path d="M12 3a13 13 0 0 1 0 18" />
+              <path d="M12 3a13 13 0 0 0 0 18" />
+            </svg>
+          </button>
           <div class="kiosk-modal-header">
             <p class="kiosk-modal-kicker">{{ labels.welcomeKicker }}</p>
             <h2 class="kiosk-modal-title">{{ labels.welcomeTitle }}</h2>
@@ -245,12 +259,14 @@ const language = ref('')
 const instructionsAccepted = ref(false)
 const welcomeAccepted = ref(false)
 const showManualEntry = ref(false)
+const languageDialogOpen = ref(false)
 
 const copy = {
   en: {
     stepBadge: 'Kiosk Scan - Step 1 of 3',
     heroTitle: 'Scan Resident QR',
     heroSubtitle: 'Hold the QR steady. Verification takes seconds.',
+    stepFlash: 'STEP 1',
     instructionsSubtitle: 'A quick guide before we start.',
     reminderKicker: 'Reminder',
     step1Title: 'Align QR',
@@ -299,6 +315,7 @@ const copy = {
     stepBadge: 'Kiosk Scan - Hakbang 1 sa 3',
     heroTitle: 'I-scan ang Resident QR',
     heroSubtitle: 'Iharap nang steady ang QR. Mabilis ang beripikasyon.',
+    stepFlash: 'HAKBANG 1',
     instructionsSubtitle: 'Mabilis na gabay bago mag-scan.',
     reminderKicker: 'Paalala',
     step1Title: 'I-align ang QR',
@@ -346,15 +363,22 @@ const copy = {
 }
 
 const labels = computed(() => copy[language.value] || copy.en)
-const showWelcome = computed(() => !welcomeAccepted.value)
-const showLanguagePrompt = computed(() => welcomeAccepted.value && !language.value)
-const showInstructions = computed(() => Boolean(language.value) && !instructionsAccepted.value)
-const isReady = computed(() => Boolean(language.value) && instructionsAccepted.value)
+const showLanguagePrompt = computed(() => !language.value || languageDialogOpen.value)
+const showWelcome = computed(() => Boolean(language.value) && !welcomeAccepted.value && !showLanguagePrompt.value)
+const showInstructions = computed(
+  () => Boolean(language.value) && welcomeAccepted.value && !instructionsAccepted.value && !showLanguagePrompt.value
+)
+const isReady = computed(() => Boolean(language.value) && welcomeAccepted.value && instructionsAccepted.value)
 const hasQr = computed(() => Boolean(qrCode.value && qrCode.value.trim()))
 
 const setLanguage = (value) => {
   language.value = value
   localStorage.setItem('kiosk_language', value)
+  languageDialogOpen.value = false
+}
+
+const openLanguagePrompt = () => {
+  languageDialogOpen.value = true
 }
 
 const acknowledgeInstructions = () => {
