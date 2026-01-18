@@ -1,11 +1,11 @@
 <template>
-  <div class="min-h-screen kiosk-scan">
+  <div class="min-h-screen kiosk-scan kiosk-stage">
     <div
       class="relative z-10 min-h-screen flex items-center justify-center px-6 py-10"
       :class="{ 'kiosk-dim': showLanguagePrompt || showInstructions || showManualEntry }"
     >
       <transition name="kiosk-page">
-        <div v-if="isReady" class="w-full max-w-6xl grid gap-10">
+        <div v-if="isReady" class="kiosk-scan-shell">
           <div class="kiosk-hero kiosk-hero-centered kiosk-fade">
             <div class="kiosk-step-header">
               <div class="kiosk-pill">
@@ -75,12 +75,33 @@
         <div class="kiosk-modal-card kiosk-modal-glow">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
-          <p class="text-xs uppercase tracking-[0.35em] text-slate-500">Barangay Kiosk</p>
-          <h2 class="mt-2 text-2xl font-semibold text-slate-900">Welcome</h2>
-          <p class="mt-2 text-sm text-slate-600">Maligayang pagdating</p>
-          <button class="mt-6 w-full kiosk-button text-lg py-3 rounded-2xl kiosk-action" @click="acknowledgeWelcome">
-            Start
-          </button>
+          <div class="kiosk-modal-header">
+            <p class="kiosk-modal-kicker">{{ labels.welcomeKicker }}</p>
+            <h2 class="kiosk-modal-title">{{ labels.welcomeTitle }}</h2>
+            <p class="kiosk-modal-subtitle">{{ labels.welcomeSubtitle }}</p>
+          </div>
+          <div class="kiosk-modal-body">
+            <div class="kiosk-journey">
+              <div class="kiosk-journey-step is-active">
+                <span class="kiosk-journey-index">1</span>
+                {{ labels.journeyScan }}
+              </div>
+              <div class="kiosk-journey-step">
+                <span class="kiosk-journey-index">2</span>
+                {{ labels.journeyChoose }}
+              </div>
+              <div class="kiosk-journey-step">
+                <span class="kiosk-journey-index">3</span>
+                {{ labels.journeyTicket }}
+              </div>
+            </div>
+            <p class="kiosk-modal-note">{{ labels.welcomeNote }}</p>
+          </div>
+          <div class="kiosk-modal-actions">
+            <button class="w-full kiosk-button text-lg py-3 rounded-2xl kiosk-action" @click="acknowledgeWelcome">
+              {{ labels.welcomeButton }}
+            </button>
+          </div>
         </div>
       </div>
     </transition>
@@ -89,12 +110,17 @@
         <div class="kiosk-modal-card kiosk-modal-glow">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
-          <p class="text-xs uppercase tracking-[0.35em] text-slate-500">Language</p>
-          <h2 class="mt-2 text-2xl font-semibold text-slate-900">Choose your language</h2>
-          <p class="mt-2 text-sm text-slate-600">Pumili ng wika</p>
-          <div class="mt-6 grid gap-3 sm:grid-cols-2">
-            <button class="kiosk-button text-lg py-3 rounded-2xl kiosk-action" @click="setLanguage('en')">English</button>
-            <button class="kiosk-button text-lg py-3 rounded-2xl kiosk-action" @click="setLanguage('tl')">Tagalog</button>
+          <div class="kiosk-modal-header">
+            <p class="kiosk-modal-kicker">{{ labels.languageKicker }}</p>
+            <h2 class="kiosk-modal-title">{{ labels.languageTitle }}</h2>
+            <p class="kiosk-modal-subtitle">{{ labels.languageSubtitle }}</p>
+          </div>
+          <div class="kiosk-modal-body">
+            <div class="kiosk-language-grid">
+              <button class="kiosk-button text-lg py-3 rounded-2xl kiosk-action" @click="setLanguage('en')">English</button>
+              <button class="kiosk-button text-lg py-3 rounded-2xl kiosk-action" @click="setLanguage('tl')">Tagalog</button>
+            </div>
+            <p class="kiosk-modal-note">{{ labels.languageNote }}</p>
           </div>
         </div>
       </div>
@@ -104,56 +130,63 @@
         <div class="kiosk-modal-card kiosk-modal-glow">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
-          <p class="text-xs uppercase tracking-[0.35em] text-slate-500">{{ labels.instructionsKicker }}</p>
-          <h2 class="mt-2 text-2xl font-semibold text-slate-900">{{ labels.instructionsTitle }}</h2>
-          <div class="mt-4 reminder-card">
-            <p class="text-base text-slate-700">{{ labels.heroSubtitle }}</p>
-            <div class="mt-4 grid gap-3 sm:grid-cols-3">
-              <div class="reminder-item">
-                <div class="reminder-icon">
-                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="7" height="7" />
-                    <rect x="14" y="3" width="7" height="7" />
-                    <rect x="3" y="14" width="7" height="7" />
-                    <path d="M14 14h7v7h-7z" />
-                  </svg>
+          <div class="kiosk-modal-header">
+            <p class="kiosk-modal-kicker">{{ labels.instructionsKicker }}</p>
+            <h2 class="kiosk-modal-title">{{ labels.instructionsTitle }}</h2>
+            <p class="kiosk-modal-subtitle">{{ labels.instructionsSubtitle }}</p>
+          </div>
+          <div class="kiosk-modal-body">
+            <div class="reminder-card">
+              <p class="text-base text-slate-700">{{ labels.heroSubtitle }}</p>
+              <div class="mt-4 grid gap-3 sm:grid-cols-3">
+                <div class="reminder-item">
+                  <div class="reminder-icon">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="7" height="7" />
+                      <rect x="14" y="3" width="7" height="7" />
+                      <rect x="3" y="14" width="7" height="7" />
+                      <path d="M14 14h7v7h-7z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="reminder-title">{{ labels.step1Title }}</p>
+                    <p class="reminder-body">{{ labels.step1Body }}</p>
+                  </div>
                 </div>
-                <div>
-                  <p class="reminder-title">{{ labels.step1Title }}</p>
-                  <p class="reminder-body">{{ labels.step1Body }}</p>
+                <div class="reminder-item">
+                  <div class="reminder-icon">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="12" cy="12" r="7" />
+                      <path d="M12 3v4" />
+                      <path d="M12 17v4" />
+                      <path d="M3 12h4" />
+                      <path d="M17 12h4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="reminder-title">{{ labels.step2Title }}</p>
+                    <p class="reminder-body">{{ labels.step2Body }}</p>
+                  </div>
                 </div>
-              </div>
-              <div class="reminder-item">
-                <div class="reminder-icon">
-                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="7" />
-                    <path d="M12 3v4" />
-                    <path d="M12 17v4" />
-                    <path d="M3 12h4" />
-                    <path d="M17 12h4" />
-                  </svg>
-                </div>
-                <div>
-                  <p class="reminder-title">{{ labels.step2Title }}</p>
-                  <p class="reminder-body">{{ labels.step2Body }}</p>
-                </div>
-              </div>
-              <div class="reminder-item">
-                <div class="reminder-icon">
-                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20 6L9 17l-5-5" />
-                  </svg>
-                </div>
-                <div>
-                  <p class="reminder-title">{{ labels.step3Title }}</p>
-                  <p class="reminder-body">{{ labels.step3Body }}</p>
+                <div class="reminder-item">
+                  <div class="reminder-icon">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="reminder-title">{{ labels.step3Title }}</p>
+                    <p class="reminder-body">{{ labels.step3Body }}</p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-          <button class="mt-6 w-full kiosk-button text-lg py-3 rounded-2xl kiosk-action" @click="acknowledgeInstructions">
-            {{ labels.understandButton }}
-          </button>
+          <div class="kiosk-modal-actions">
+            <button class="w-full kiosk-button text-lg py-3 rounded-2xl kiosk-action" @click="acknowledgeInstructions">
+              {{ labels.understandButton }}
+            </button>
+          </div>
         </div>
       </div>
     </transition>
@@ -162,31 +195,35 @@
         <div class="kiosk-modal-card kiosk-modal-glow">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
-          <p class="text-xs uppercase tracking-[0.35em] text-slate-500">{{ labels.manualKicker }}</p>
-          <h2 class="mt-2 text-2xl font-semibold text-slate-900">{{ labels.manualEntry }}</h2>
-          <p class="mt-2 text-sm text-slate-600">{{ labels.manualHelper }}</p>
-          <div class="mt-6">
+          <div class="kiosk-modal-header">
+            <p class="kiosk-modal-kicker">{{ labels.manualKicker }}</p>
+            <h2 class="kiosk-modal-title">{{ labels.manualEntry }}</h2>
+            <p class="kiosk-modal-subtitle">{{ labels.manualHelper }}</p>
+          </div>
+          <div class="kiosk-modal-body">
             <input
               ref="manualInputRef"
               v-model="qrCode"
-              class="w-full rounded-2xl border border-slate-200 bg-white px-5 py-4 text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]/30 focus:border-transparent"
+              class="kiosk-input"
               :placeholder="labels.manualPlaceholder"
               @keyup.enter="onSubmit"
             />
+            <p class="kiosk-modal-note">{{ labels.validateHint }}</p>
+            <div
+              v-if="error"
+              class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm"
+              role="alert"
+            >
+              {{ error }}
+            </div>
           </div>
-          <button class="mt-4 w-full text-lg py-3 rounded-2xl font-semibold kiosk-button" @click="onSubmit">
-            {{ labels.validateButton }}
-          </button>
-          <button class="mt-3 w-full text-sm py-2 rounded-2xl kiosk-secondary-button" @click="closeManualEntry">
-            {{ labels.backToScan }}
-          </button>
-          <p class="mt-4 text-sm text-slate-500">{{ labels.validateHint }}</p>
-          <div
-            v-if="error"
-            class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm"
-            role="alert"
-          >
-            {{ error }}
+          <div class="kiosk-modal-actions">
+            <button class="w-full text-lg py-3 rounded-2xl font-semibold kiosk-button kiosk-action" @click="onSubmit">
+              {{ labels.validateButton }}
+            </button>
+            <button class="w-full text-lg py-3 rounded-2xl kiosk-secondary-button" @click="closeManualEntry">
+              {{ labels.backToScan }}
+            </button>
           </div>
         </div>
       </div>
@@ -214,6 +251,7 @@ const copy = {
     stepBadge: 'Kiosk Scan - Step 1 of 3',
     heroTitle: 'Scan Resident QR',
     heroSubtitle: 'Hold the QR steady. Verification takes seconds.',
+    instructionsSubtitle: 'A quick guide before we start.',
     reminderKicker: 'Reminder',
     step1Title: 'Align QR',
     step1Body: 'Center it in the frame.',
@@ -244,11 +282,24 @@ const copy = {
     instructionsLine2: 'No photos are stored.',
     instructionsLine3: 'Keep the QR steady.',
     understandButton: 'I understand',
+    welcomeKicker: 'Barangay San Miguel',
+    welcomeTitle: 'Welcome to the Community Kiosk',
+    welcomeSubtitle: 'Maligayang pagdating',
+    welcomeNote: 'A guided, three-step flow to get you a queue ticket.',
+    welcomeButton: 'Start',
+    journeyScan: 'Scan',
+    journeyChoose: 'Choose',
+    journeyTicket: 'Ticket',
+    languageKicker: 'Language',
+    languageTitle: 'Choose your language',
+    languageSubtitle: 'Pumili ng wika',
+    languageNote: 'You can change this anytime during the flow.',
   },
   tl: {
     stepBadge: 'Kiosk Scan - Hakbang 1 sa 3',
     heroTitle: 'I-scan ang Resident QR',
     heroSubtitle: 'Iharap nang steady ang QR. Mabilis ang beripikasyon.',
+    instructionsSubtitle: 'Mabilis na gabay bago mag-scan.',
     reminderKicker: 'Paalala',
     step1Title: 'I-align ang QR',
     step1Body: 'Igitna sa frame.',
@@ -279,6 +330,18 @@ const copy = {
     instructionsLine2: 'Walang larawang itinatago.',
     instructionsLine3: 'Panatilihing steady ang QR.',
     understandButton: 'Naiintindihan ko',
+    welcomeKicker: 'Barangay San Miguel',
+    welcomeTitle: 'Welcome sa Community Kiosk',
+    welcomeSubtitle: 'Maligayang pagdating',
+    welcomeNote: 'Tatlong hakbang para makuha ang queue ticket.',
+    welcomeButton: 'Magsimula',
+    journeyScan: 'Scan',
+    journeyChoose: 'Piliin',
+    journeyTicket: 'Ticket',
+    languageKicker: 'Wika',
+    languageTitle: 'Pumili ng wika',
+    languageSubtitle: 'Choose your language',
+    languageNote: 'Maaari itong palitan anumang oras.',
   },
 }
 

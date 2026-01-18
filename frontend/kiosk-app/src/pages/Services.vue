@@ -180,37 +180,41 @@
         <div class="kiosk-modal-card kiosk-modal-glow service-confirm-card">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
-          <div class="service-confirm-header">
-            <p class="service-confirm-kicker">{{ labels.confirmKicker }}</p>
-            <h2 class="service-confirm-title">{{ labels.confirmTitle }}</h2>
-            <p class="service-confirm-subtitle">{{ labels.confirmSubtitle }}</p>
+          <div class="kiosk-modal-header">
+            <p class="kiosk-modal-kicker">{{ labels.confirmKicker }}</p>
+            <h2 class="kiosk-modal-title">{{ labels.confirmTitle }}</h2>
+            <p class="kiosk-modal-subtitle">{{ labels.confirmSubtitle }}</p>
           </div>
-          <div class="service-confirm-panel">
-            <div class="service-confirm-check" aria-hidden="true">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M5 12l4 4 10-10" />
-              </svg>
-            </div>
-            <div class="service-confirm-chip">
-              <span>{{ labels.confirmChip }}</span>
-            </div>
-            <div class="service-confirm-name">{{ selectedService?.name }}</div>
-            <div class="service-confirm-note">
-              <span>{{ labels.confirmNote }}</span>
+          <div class="kiosk-modal-body">
+            <div class="service-confirm-panel">
+              <div class="service-confirm-check" aria-hidden="true">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12l4 4 10-10" />
+                </svg>
+              </div>
+              <div class="service-confirm-chip">
+                <span>{{ labels.confirmChip }}</span>
+              </div>
+              <div class="service-confirm-name">{{ selectedService?.name }}</div>
+              <div class="service-confirm-note">
+                <span>{{ labels.confirmNote }}</span>
+              </div>
             </div>
           </div>
-          <div class="service-confirm-actions">
-            <button class="kiosk-secondary-button text-lg py-3 rounded-2xl" type="button" @click="closeConfirm">
-              <span>{{ labels.change }}</span>
-            </button>
-            <button
-              class="kiosk-button text-lg py-3 rounded-2xl kiosk-action"
-              type="button"
-              :disabled="isCreatingTicket"
-              @click="confirmProceed"
-            >
-              <span>{{ labels.confirm }}</span>
-            </button>
+          <div class="kiosk-modal-actions">
+            <div class="grid gap-3 sm:grid-cols-2">
+              <button class="kiosk-secondary-button text-lg py-3 rounded-2xl" type="button" @click="closeConfirm">
+                <span>{{ labels.change }}</span>
+              </button>
+              <button
+                class="kiosk-button text-lg py-3 rounded-2xl kiosk-action"
+                type="button"
+                :disabled="isCreatingTicket"
+                @click="confirmProceed"
+              >
+                <span>{{ labels.confirm }}</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -220,12 +224,16 @@
         <div class="kiosk-modal-card kiosk-modal-glow service-reminder-card">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
-          <p class="service-reminder-kicker">{{ labels.reminderKicker }}</p>
-          <h2 class="service-reminder-title">{{ labels.reminderTitle }}</h2>
-          <p class="service-reminder-body">{{ labels.reminderBody }}</p>
-          <button class="mt-6 w-full kiosk-button text-lg py-3 rounded-2xl kiosk-action" type="button" @click="closeReminder">
-            {{ labels.reminderButton }}
-          </button>
+          <div class="kiosk-modal-header">
+            <p class="kiosk-modal-kicker">{{ labels.reminderKicker }}</p>
+            <h2 class="kiosk-modal-title">{{ labels.reminderTitle }}</h2>
+            <p class="kiosk-modal-subtitle">{{ labels.reminderBody }}</p>
+          </div>
+          <div class="kiosk-modal-actions">
+            <button class="w-full kiosk-button text-lg py-3 rounded-2xl kiosk-action" type="button" @click="closeReminder">
+              {{ labels.reminderButton }}
+            </button>
+          </div>
         </div>
       </div>
     </transition>
