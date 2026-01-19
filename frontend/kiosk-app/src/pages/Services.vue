@@ -1,11 +1,11 @@
 <template>
   <div class="min-h-screen kiosk-service-stage" @click="handleStageClick">
-    <div class="kiosk-step-flash" aria-hidden="true">{{ labels.stepFlash }}</div>
+    <div v-if="showStepFlash" class="kiosk-step-flash" aria-hidden="true">{{ labels.stepFlash }}</div>
     <div
       class="relative z-10 min-h-screen flex items-center justify-center px-6 py-10 kiosk-service-body"
-      :class="{ 'kiosk-dim': showConfirm || showReminder }"
+      :class="{ 'kiosk-dim': showConfirm || showReminder || showStepFlash }"
     >
-      <div class="w-full max-w-none mx-auto grid gap-10">
+      <div v-if="!showStepFlash" class="w-full max-w-none mx-auto grid gap-10">
         <div class="kiosk-service-hero kiosk-fade">
           <div class="kiosk-step-header">
             <div class="kiosk-pill">
@@ -257,6 +257,8 @@ const showReminder = ref(false)
 const cardSpans = ref({})
 const cardElements = new Map()
 const resident = JSON.parse(localStorage.getItem('kiosk_resident') || 'null')
+const showStepFlash = ref(true)
+const stepFlashTimer = ref(null)
 
 const copy = {
   en: {
@@ -338,6 +340,16 @@ const greeting = computed(() => {
   const group = greetingText[language.value] || greetingText.en
   return group[slot]
 })
+
+const triggerStepFlash = () => {
+  if (stepFlashTimer.value) {
+    clearTimeout(stepFlashTimer.value)
+  }
+  showStepFlash.value = true
+  stepFlashTimer.value = setTimeout(() => {
+    showStepFlash.value = false
+  }, 3600)
+}
 
 const serviceMeta = {
   BC: {
@@ -758,10 +770,14 @@ const confirmProceed = async () => {
 }
 
 onMounted(() => {
+  triggerStepFlash()
   loadServices()
 })
 
 onBeforeUnmount(() => {
   resizeObserver?.disconnect()
+  if (stepFlashTimer.value) {
+    clearTimeout(stepFlashTimer.value)
+  }
 })
 </script>

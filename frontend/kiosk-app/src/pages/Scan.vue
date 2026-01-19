@@ -1,12 +1,12 @@
 <template>
   <div class="min-h-screen kiosk-scan kiosk-stage">
+    <div v-if="showStepFlash" class="kiosk-step-flash" aria-hidden="true">{{ labels.stepFlash }}</div>
     <div
       class="relative z-10 min-h-screen flex items-center justify-center px-6 py-10"
-      :class="{ 'kiosk-dim': showLanguagePrompt || showInstructions || showManualEntry || showWelcome }"
+      :class="{ 'kiosk-dim': showLanguagePrompt || showInstructions || showManualEntry || showWelcome || showStepFlash }"
     >
       <transition name="kiosk-page">
-        <div v-if="isReady" class="kiosk-scan-shell">
-          <div class="kiosk-step-flash" aria-hidden="true">{{ labels.stepFlash }}</div>
+        <div v-if="isReady && !showStepFlash" class="kiosk-scan-shell">
           <div class="kiosk-hero kiosk-hero-centered kiosk-fade">
             <div class="kiosk-step-header">
               <div class="kiosk-pill">
@@ -246,7 +246,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { request } from '../api'
 
@@ -260,6 +260,8 @@ const instructionsAccepted = ref(false)
 const welcomeAccepted = ref(false)
 const showManualEntry = ref(false)
 const languageDialogOpen = ref(false)
+const showStepFlash = ref(true)
+const stepFlashTimer = ref(null)
 
 const copy = {
   en: {
@@ -363,10 +365,19 @@ const copy = {
 }
 
 const labels = computed(() => copy[language.value] || copy.en)
-const showLanguagePrompt = computed(() => !language.value || languageDialogOpen.value)
-const showWelcome = computed(() => Boolean(language.value) && !welcomeAccepted.value && !showLanguagePrompt.value)
+const showLanguagePrompt = computed(
+  () => !showStepFlash.value && (!language.value || languageDialogOpen.value)
+)
+const showWelcome = computed(
+  () => !showStepFlash.value && Boolean(language.value) && !welcomeAccepted.value && !showLanguagePrompt.value
+)
 const showInstructions = computed(
-  () => Boolean(language.value) && welcomeAccepted.value && !instructionsAccepted.value && !showLanguagePrompt.value
+  () =>
+    !showStepFlash.value &&
+    Boolean(language.value) &&
+    welcomeAccepted.value &&
+    !instructionsAccepted.value &&
+    !showLanguagePrompt.value
 )
 const isReady = computed(() => Boolean(language.value) && welcomeAccepted.value && instructionsAccepted.value)
 const hasQr = computed(() => Boolean(qrCode.value && qrCode.value.trim()))
@@ -379,6 +390,16 @@ const setLanguage = (value) => {
 
 const openLanguagePrompt = () => {
   languageDialogOpen.value = true
+}
+
+const triggerStepFlash = () => {
+  if (stepFlashTimer.value) {
+    clearTimeout(stepFlashTimer.value)
+  }
+  showStepFlash.value = true
+  stepFlashTimer.value = setTimeout(() => {
+    showStepFlash.value = false
+  }, 3600)
 }
 
 const acknowledgeInstructions = () => {
@@ -431,8 +452,15 @@ onMounted(() => {
   localStorage.removeItem('kiosk_ticket')
   localStorage.removeItem('kiosk_service')
   localStorage.removeItem('kiosk_approved')
+  triggerStepFlash()
   if (isReady.value) {
     setTimeout(() => inputRef.value?.focus(), 50)
+  }
+})
+
+onBeforeUnmount(() => {
+  if (stepFlashTimer.value) {
+    clearTimeout(stepFlashTimer.value)
   }
 })
 
