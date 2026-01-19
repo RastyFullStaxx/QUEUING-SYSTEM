@@ -1,6 +1,9 @@
 <template>
   <div class="min-h-screen kiosk-service-stage" @click="handleStageClick">
-    <div v-if="showStepFlash" class="kiosk-step-flash" aria-hidden="true">{{ labels.stepFlash }}</div>
+    <div v-if="showStepFlash" class="kiosk-step-flash" aria-hidden="true">
+      <span class="kiosk-step-flash-text">{{ labels.stepFlash }}</span>
+    </div>
+    <div v-if="showStageReveal" class="kiosk-stage-reveal" aria-hidden="true"></div>
     <div
       class="relative z-10 min-h-screen flex items-center justify-center px-6 py-10 kiosk-service-body"
       :class="{ 'kiosk-dim': showConfirm || showReminder || showStepFlash }"
@@ -259,6 +262,8 @@ const cardElements = new Map()
 const resident = JSON.parse(localStorage.getItem('kiosk_resident') || 'null')
 const showStepFlash = ref(true)
 const stepFlashTimer = ref(null)
+const showStageReveal = ref(false)
+const stageRevealTimer = ref(null)
 
 const copy = {
   en: {
@@ -345,9 +350,17 @@ const triggerStepFlash = () => {
   if (stepFlashTimer.value) {
     clearTimeout(stepFlashTimer.value)
   }
+  if (stageRevealTimer.value) {
+    clearTimeout(stageRevealTimer.value)
+  }
   showStepFlash.value = true
+  showStageReveal.value = false
   stepFlashTimer.value = setTimeout(() => {
     showStepFlash.value = false
+    showStageReveal.value = true
+    stageRevealTimer.value = setTimeout(() => {
+      showStageReveal.value = false
+    }, 1400)
   }, 3600)
 }
 
@@ -778,6 +791,9 @@ onBeforeUnmount(() => {
   resizeObserver?.disconnect()
   if (stepFlashTimer.value) {
     clearTimeout(stepFlashTimer.value)
+  }
+  if (stageRevealTimer.value) {
+    clearTimeout(stageRevealTimer.value)
   }
 })
 </script>

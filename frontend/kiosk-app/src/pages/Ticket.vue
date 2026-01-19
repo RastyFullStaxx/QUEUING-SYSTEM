@@ -1,6 +1,9 @@
 <template>
   <div class="min-h-screen flex items-center justify-center px-6 py-10">
-    <div v-if="showStepFlash" class="kiosk-step-flash" aria-hidden="true">STEP 3</div>
+    <div v-if="showStepFlash" class="kiosk-step-flash" aria-hidden="true">
+      <span class="kiosk-step-flash-text">STEP 3</span>
+    </div>
+    <div v-if="showStageReveal" class="kiosk-stage-reveal" aria-hidden="true"></div>
     <div v-if="!showStepFlash" class="kiosk-ticket-wrapper">
       <div class="kiosk-step-header">
         <div class="kiosk-pill">
@@ -87,6 +90,8 @@ const service = JSON.parse(localStorage.getItem('kiosk_service') || 'null')
 const requirements = JSON.parse(localStorage.getItem('kiosk_service_requirements') || '[]')
 const showStepFlash = ref(true)
 const stepFlashTimer = ref(null)
+const showStageReveal = ref(false)
+const stageRevealTimer = ref(null)
 
 const residentName = computed(() => {
   if (!resident) return 'Unknown'
@@ -127,9 +132,17 @@ const triggerStepFlash = () => {
   if (stepFlashTimer.value) {
     clearTimeout(stepFlashTimer.value)
   }
+  if (stageRevealTimer.value) {
+    clearTimeout(stageRevealTimer.value)
+  }
   showStepFlash.value = true
+  showStageReveal.value = false
   stepFlashTimer.value = setTimeout(() => {
     showStepFlash.value = false
+    showStageReveal.value = true
+    stageRevealTimer.value = setTimeout(() => {
+      showStageReveal.value = false
+    }, 1400)
   }, 3600)
 }
 
@@ -140,6 +153,9 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (stepFlashTimer.value) {
     clearTimeout(stepFlashTimer.value)
+  }
+  if (stageRevealTimer.value) {
+    clearTimeout(stageRevealTimer.value)
   }
 })
 </script>
