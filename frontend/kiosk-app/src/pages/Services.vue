@@ -263,7 +263,6 @@ const services = ref([])
 const error = ref('')
 const isCreatingTicket = ref(false)
 const selectedServiceIds = ref([])
-const expandedServiceId = ref(null)
 const hoveredServiceId = ref(null)
 const showConfirm = ref(false)
 const showReminder = ref(false)
@@ -628,10 +627,14 @@ const cardStyle = (service, index = 0) => {
   const meta = getServiceMeta(service)
   const span = cardSpans.value[service.id] || 1
   const delay = Math.min(index * 90, 540)
+  const isActive = selectedServiceIds.value.includes(service.id)
+  const accent = isActive ? '#16A34A' : meta.accent
+  const accentSoft = isActive ? 'rgba(22, 163, 74, 0.16)' : meta.accentSoft
+  const accentGlow = isActive ? 'rgba(22, 163, 74, 0.32)' : meta.accentGlow
   return {
-    '--service-accent': meta.accent,
-    '--service-accent-soft': meta.accentSoft,
-    '--service-accent-glow': meta.accentGlow,
+    '--service-accent': accent,
+    '--service-accent-soft': accentSoft,
+    '--service-accent-glow': accentGlow,
     '--row-span': span,
     '--card-delay': `${delay}ms`,
   }
@@ -639,22 +642,16 @@ const cardStyle = (service, index = 0) => {
 
 const isSelected = (serviceId) => selectedServiceIds.value.includes(serviceId)
 
-const isExpanded = (serviceId) => {
-  if (expandedServiceId.value) {
-    return expandedServiceId.value === serviceId
-  }
-  return hoveredServiceId.value === serviceId
-}
+const isExpanded = (serviceId) =>
+  selectedServiceIds.value.includes(serviceId) || hoveredServiceId.value === serviceId
 
 const setHovered = (serviceId) => {
-  if (expandedServiceId.value) return
   const positions = capturePositions()
   hoveredServiceId.value = serviceId
   animateReflow(positions)
 }
 
 const clearHovered = () => {
-  if (expandedServiceId.value) return
   const positions = capturePositions()
   hoveredServiceId.value = null
   animateReflow(positions)
@@ -663,7 +660,6 @@ const clearHovered = () => {
 const clearSelection = () => {
   if (!selectedServiceIds.value.length) return
   selectedServiceIds.value = []
-  expandedServiceId.value = null
   hoveredServiceId.value = null
   showConfirm.value = false
   showReminder.value = false
@@ -791,9 +787,7 @@ const selectService = (service, event) => {
     next.add(service.id)
   }
   selectedServiceIds.value = Array.from(next)
-  expandedServiceId.value = service.id
   if (!selectedServiceIds.value.length) {
-    expandedServiceId.value = null
     showConfirm.value = false
   }
   showReminder.value = false
@@ -870,33 +864,31 @@ const confirmProceed = async () => {
   isCreatingTicket.value = true
   error.value = ''
   try {
-    const tickets = []
-    for (const service of selectedServices.value) {
-      const idempotencyKey =
-        crypto.randomUUID?.() || `${Date.now()}-${resident.id}-${service.id}`
-      const data = await request('/api/kiosk/tickets', {
-        method: 'POST',
-        body: JSON.stringify({
-          resident_id: resident.id,
-          service_id: service.id,
-          kiosk_device_id: 1,
-          idempotency_key: idempotencyKey,
-        }),
-      })
-      tickets.push(data.ticket)
+    const service = primaryService.value || selectedServices.value[0]
+    if (!service) {
+      error.value = 'Missing service selection.'
+      return
     }
-    const requirementsByService = selectedServices.value.map((service) =>
-      getServiceMeta(service).requirements.map(text)
+    const idempotencyKey =
+      crypto.randomUUID?.() || `${Date.now()}-${resident.id}-${service.id}`
+    const data = await request('/api/kiosk/tickets', {
+      method: 'POST',
+      body: JSON.stringify({
+        resident_id: resident.id,
+        service_id: service.id,
+        kiosk_device_id: 1,
+        idempotency_key: idempotencyKey,
+      }),
+    })
+    const requirements = selectedServices.value.flatMap((item) =>
+      getServiceMeta(item).requirements.map(text)
     )
-    localStorage.setItem('kiosk_tickets', JSON.stringify(tickets))
+    const uniqueRequirements = Array.from(new Set(requirements))
+    localStorage.setItem('kiosk_ticket', JSON.stringify(data.ticket))
+    localStorage.setItem('kiosk_service', JSON.stringify(service))
     localStorage.setItem('kiosk_services', JSON.stringify(selectedServices.value))
-    localStorage.setItem('kiosk_service_requirements', JSON.stringify(requirementsByService))
-    if (tickets[0]) {
-      localStorage.setItem('kiosk_ticket', JSON.stringify(tickets[0]))
-    }
-    if (selectedServices.value[0]) {
-      localStorage.setItem('kiosk_service', JSON.stringify(selectedServices.value[0]))
-    }
+    localStorage.setItem('kiosk_service_requirements', JSON.stringify(uniqueRequirements))
+    localStorage.removeItem('kiosk_tickets')
     showConfirm.value = false
     router.push('/ticket')
   } catch (err) {
