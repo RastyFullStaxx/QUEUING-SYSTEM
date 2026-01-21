@@ -6,7 +6,7 @@
     <div v-if="showStageReveal" class="kiosk-stage-reveal" aria-hidden="true"></div>
     <div
       class="relative z-10 min-h-screen flex items-center justify-center px-6 py-10"
-      :class="{ 'kiosk-dim': showLanguagePrompt || showInstructions || showManualEntry || showWelcome || showStepFlash }"
+      :class="{ 'kiosk-dim': showLanguagePrompt || showInstructions || showManualEntry || showStepFlash }"
     >
       <transition name="kiosk-page">
         <div v-if="isReady && !showStepFlash" class="kiosk-scan-shell">
@@ -74,54 +74,6 @@
         </div>
       </transition>
     </div>
-    <transition name="kiosk-modal">
-      <div v-if="showWelcome" class="kiosk-modal">
-        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card">
-          <span class="modal-orb orb-one" aria-hidden="true"></span>
-          <span class="modal-orb orb-two" aria-hidden="true"></span>
-          <button
-            class="kiosk-modal-icon-button"
-            type="button"
-            aria-label="Change language"
-            @click="openLanguagePrompt"
-          >
-            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="9" />
-              <path d="M3 12h18" />
-              <path d="M12 3a13 13 0 0 1 0 18" />
-              <path d="M12 3a13 13 0 0 0 0 18" />
-            </svg>
-          </button>
-          <div class="kiosk-modal-header">
-            <p class="kiosk-modal-kicker">{{ labels.welcomeKicker }}</p>
-            <h2 class="kiosk-modal-title">{{ labels.welcomeTitle }}</h2>
-            <p class="kiosk-modal-subtitle">{{ labels.welcomeSubtitle }}</p>
-          </div>
-          <div class="kiosk-modal-body">
-            <div class="kiosk-journey">
-              <div class="kiosk-journey-step is-active">
-                <span class="kiosk-journey-index">1</span>
-                {{ labels.journeyScan }}
-              </div>
-              <div class="kiosk-journey-step">
-                <span class="kiosk-journey-index">2</span>
-                {{ labels.journeyChoose }}
-              </div>
-              <div class="kiosk-journey-step">
-                <span class="kiosk-journey-index">3</span>
-                {{ labels.journeyTicket }}
-              </div>
-            </div>
-            <p class="kiosk-modal-note">{{ labels.welcomeNote }}</p>
-          </div>
-          <div class="kiosk-modal-actions">
-            <button class="w-full kiosk-button text-lg py-3 rounded-2xl kiosk-action" @click="acknowledgeWelcome">
-              {{ labels.welcomeButton }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </transition>
     <transition name="kiosk-modal">
       <div v-if="showLanguagePrompt" class="kiosk-modal">
         <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card">
@@ -260,7 +212,6 @@ const inputRef = ref(null)
 const manualInputRef = ref(null)
 const language = ref('')
 const instructionsAccepted = ref(false)
-const welcomeAccepted = ref(false)
 const showManualEntry = ref(false)
 const languageDialogOpen = ref(false)
 const showStepFlash = ref(false)
@@ -305,14 +256,6 @@ const copy = {
     instructionsLine2: 'No photos are stored.',
     instructionsLine3: 'Keep the QR steady.',
     understandButton: 'I understand',
-    welcomeKicker: 'Barangay San Miguel',
-    welcomeTitle: 'Welcome to the Community Kiosk',
-    welcomeSubtitle: 'Maligayang pagdating',
-    welcomeNote: 'A guided, three-step flow to get you a queue ticket.',
-    welcomeButton: 'Start',
-    journeyScan: 'Scan',
-    journeyChoose: 'Choose',
-    journeyTicket: 'Ticket',
     languageKicker: 'Language',
     languageTitle: 'Choose your language',
     languageSubtitle: 'Pumili ng wika',
@@ -354,14 +297,6 @@ const copy = {
     instructionsLine2: 'Walang larawang itinatago.',
     instructionsLine3: 'Panatilihing steady ang QR.',
     understandButton: 'Naiintindihan ko',
-    welcomeKicker: 'Barangay San Miguel',
-    welcomeTitle: 'Welcome sa Community Kiosk',
-    welcomeSubtitle: 'Maligayang pagdating',
-    welcomeNote: 'Tatlong hakbang para makuha ang queue ticket.',
-    welcomeButton: 'Magsimula',
-    journeyScan: 'Scan',
-    journeyChoose: 'Piliin',
-    journeyTicket: 'Ticket',
     languageKicker: 'Wika',
     languageTitle: 'Pumili ng wika',
     languageSubtitle: 'Choose your language',
@@ -371,17 +306,13 @@ const copy = {
 
 const labels = computed(() => copy[language.value] || copy.en)
 const showLanguagePrompt = computed(() => !language.value || languageDialogOpen.value)
-const showWelcome = computed(
-  () => Boolean(language.value) && !welcomeAccepted.value && !showLanguagePrompt.value
-)
 const showInstructions = computed(
   () =>
     Boolean(language.value) &&
-    welcomeAccepted.value &&
     !instructionsAccepted.value &&
     !showLanguagePrompt.value
 )
-const isReady = computed(() => Boolean(language.value) && welcomeAccepted.value && instructionsAccepted.value)
+const isReady = computed(() => Boolean(language.value) && instructionsAccepted.value)
 const hasQr = computed(() => Boolean(qrCode.value && qrCode.value.trim()))
 
 const setLanguage = (value) => {
@@ -417,9 +348,6 @@ const acknowledgeInstructions = () => {
   triggerStepFlash()
 }
 
-const acknowledgeWelcome = () => {
-  welcomeAccepted.value = true
-}
 
 const openManualEntry = () => {
   showManualEntry.value = true

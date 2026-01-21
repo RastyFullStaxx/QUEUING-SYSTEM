@@ -18,10 +18,19 @@
           </div>
           <div class="kiosk-service-hero-slot">
             <transition name="kiosk-panel" mode="out-in">
-              <div v-if="selectedService" class="kiosk-service-hero-cta" :style="ctaStyle">
+              <div v-if="selectedServices.length" class="kiosk-service-hero-cta" :style="ctaStyle">
                 <p class="kiosk-service-hero-kicker">{{ labels.selectedLabel }}</p>
-                <h1 class="kiosk-service-hero-title">{{ selectedService.name }}</h1>
+                <h1 class="kiosk-service-hero-title">{{ selectedTitle }}</h1>
                 <p class="kiosk-service-hero-note">{{ labels.selectedNote }}</p>
+                <div class="kiosk-service-hero-list">
+                  <span
+                    v-for="service in selectedServices"
+                    :key="service.id"
+                    class="kiosk-service-hero-chip"
+                  >
+                    {{ service.name }}
+                  </span>
+                </div>
               </div>
               <div v-else class="kiosk-service-hero-default">
                 <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold text-[#0B2C6F] font-hero">
@@ -161,9 +170,9 @@
           </div>
           <button
             class="kiosk-arrow-button kiosk-arrow-button--proceed kiosk-action"
-            :class="{ 'is-disabled': !selectedService }"
+            :class="{ 'is-disabled': !selectedServices.length }"
             type="button"
-            :aria-disabled="!selectedService"
+            :aria-disabled="!selectedServices.length"
             @click="handleProceed"
           >
             <span>{{ labels.proceed }}</span>
@@ -199,7 +208,7 @@
               <div class="service-confirm-chip">
                 <span>{{ labels.confirmChip }}</span>
               </div>
-              <div class="service-confirm-name">{{ selectedService?.name }}</div>
+              <div class="service-confirm-name">{{ selectedSummary }}</div>
               <div class="service-confirm-note">
                 <span>{{ labels.confirmNote }}</span>
               </div>
@@ -253,7 +262,8 @@ const router = useRouter()
 const services = ref([])
 const error = ref('')
 const isCreatingTicket = ref(false)
-const selectedServiceId = ref(null)
+const selectedServiceIds = ref([])
+const expandedServiceId = ref(null)
 const hoveredServiceId = ref(null)
 const showConfirm = ref(false)
 const showReminder = ref(false)
@@ -269,12 +279,13 @@ const copy = {
   en: {
     stepBadge: 'Kiosk Scan - Step 2 of 3',
     stepFlash: 'STEP 2',
-    title: 'Select Service',
-    subtitle: 'Tap a panel to expand and view details before choosing.',
-    hint: 'Hover to preview, tap to select.',
+    title: 'Select Services',
+    subtitle: 'Tap a panel to expand and select one or more services.',
+    hint: 'Tap to select multiple services.',
     selected: 'Selected',
-    selectedLabel: 'Selected service',
-    selectedNote: 'Review the details below before proceeding.',
+    selectedLabel: 'Selected services',
+    selectedNote: 'Review your selections before proceeding.',
+    selectedCountLabel: 'services selected',
     cardHint: 'Tap for details',
     back: 'Go back',
     proceed: 'Proceed',
@@ -282,26 +293,27 @@ const copy = {
     emptyTitle: 'No services available',
     emptyBody: 'Please ask staff for assistance.',
     confirmKicker: 'Confirmation',
-    confirmTitle: 'Proceed with this service?',
-    confirmSubtitle: 'Review your choice before continuing.',
+    confirmTitle: 'Proceed with selected services?',
+    confirmSubtitle: 'Review your selections before continuing.',
     confirmChip: 'You selected',
     confirmNote: 'Please confirm to continue to Step 3.',
     change: 'Change selection',
     confirm: 'Confirm & Continue',
     reminderKicker: 'Reminder',
-    reminderTitle: 'Select a service first',
-    reminderBody: 'Please choose a service before proceeding.',
+    reminderTitle: 'Select at least one service',
+    reminderBody: 'Please choose one or more services before proceeding.',
     reminderButton: 'Got it',
   },
   tl: {
     stepBadge: 'Kiosk Scan - Hakbang 2 sa 3',
     stepFlash: 'HAKBANG 2',
-    title: 'Piliin ang Serbisyo',
-    subtitle: 'I-tap ang panel para buksan at makita ang detalye bago pumili.',
-    hint: 'I-hover para makita, i-tap para piliin.',
+    title: 'Piliin ang mga Serbisyo',
+    subtitle: 'I-tap ang panel para buksan at pumili ng isa o higit pang serbisyo.',
+    hint: 'I-tap para pumili ng marami.',
     selected: 'Napili',
-    selectedLabel: 'Napiling serbisyo',
-    selectedNote: 'Suriin ang detalye bago magpatuloy.',
+    selectedLabel: 'Napiling mga serbisyo',
+    selectedNote: 'Suriin ang mga napili bago magpatuloy.',
+    selectedCountLabel: 'serbisyong napili',
     cardHint: 'I-tap para sa detalye',
     back: 'Bumalik',
     proceed: 'Magpatuloy',
@@ -309,15 +321,15 @@ const copy = {
     emptyTitle: 'Walang serbisyong available',
     emptyBody: 'Mangyaring humingi ng tulong sa staff.',
     confirmKicker: 'Kumpirmasyon',
-    confirmTitle: 'Magpatuloy sa serbisyong ito?',
-    confirmSubtitle: 'Suriin muna ang napili bago magpatuloy.',
+    confirmTitle: 'Magpatuloy sa mga napiling serbisyo?',
+    confirmSubtitle: 'Suriin muna ang mga napili bago magpatuloy.',
     confirmChip: 'Napili mo',
     confirmNote: 'Kumpirmahin para magpatuloy sa Hakbang 3.',
     change: 'Palitan ang pili',
     confirm: 'Kumpirmahin at Magpatuloy',
     reminderKicker: 'Paalala',
-    reminderTitle: 'Pumili muna ng serbisyo',
-    reminderBody: 'Mangyaring pumili ng serbisyo bago magpatuloy.',
+    reminderTitle: 'Pumili ng kahit isang serbisyo',
+    reminderBody: 'Mangyaring pumili ng isa o higit pang serbisyo bago magpatuloy.',
     reminderButton: 'Sige',
   },
 }
@@ -365,21 +377,21 @@ const triggerStepFlash = () => {
 }
 
 const serviceMeta = {
-  BC: {
-    icon: 'shield',
-    accent: '#0B2C6F',
-    accentSoft: 'rgba(11, 44, 111, 0.16)',
-    accentGlow: 'rgba(11, 44, 111, 0.32)',
+  PROOF_RESIDENCY: {
+    icon: 'home',
+    accent: '#1C7C54',
+    accentSoft: 'rgba(28, 124, 84, 0.16)',
+    accentGlow: 'rgba(28, 124, 84, 0.32)',
     tagline: {
-      en: 'Get a barangay clearance for jobs, travel, and official paperwork.',
-      tl: 'Kunin ang barangay clearance para sa trabaho, biyahe, at dokumento.',
+      en: 'Verify your residency for school, work, or ID applications.',
+      tl: 'Patunay ng paninirahan para sa paaralan, trabaho, o ID.',
     },
     summary: {
-      en: 'We will check your records, guide the steps, and release it the same day.',
-      tl: 'Sasala ang rekord, may gabay na proseso, at kadalasang same day.',
+      en: 'We verify your address and issue the certificate promptly.',
+      tl: 'Bine-verify ang address at mabilis na naglalabas ng sertipikasyon.',
     },
     stats: [
-      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '15-25 min' },
+      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '10-15 min' },
       { label: { en: 'Counter', tl: 'Counter' }, value: 'Window A' },
       { label: { en: 'Release', tl: 'Paglabas' }, value: 'Same day' },
     ],
@@ -388,45 +400,22 @@ const serviceMeta = {
       { en: 'Proof of address', tl: 'Patunay ng tirahan' },
     ],
   },
-  BP: {
-    icon: 'briefcase',
-    accent: '#185ADB',
-    accentSoft: 'rgba(24, 90, 219, 0.16)',
-    accentGlow: 'rgba(24, 90, 219, 0.32)',
+  INDIGENCY: {
+    icon: 'shield',
+    accent: '#0B2C6F',
+    accentSoft: 'rgba(11, 44, 111, 0.16)',
+    accentGlow: 'rgba(11, 44, 111, 0.32)',
     tagline: {
-      en: 'Apply or renew your business permit with clear, guided steps.',
-      tl: 'Mag-apply o mag-renew ng business permit na may malinaw na gabay.',
+      en: 'Request a certificate for assistance and government programs.',
+      tl: 'Humingi ng sertipiko para sa tulong at programa ng gobyerno.',
     },
     summary: {
-      en: 'Submit business details, verify requirements, and get quick processing.',
-      tl: 'Ihanda ang detalye, i-verify ang requirements, at mabilis ang proseso.',
+      en: 'We confirm eligibility and release the certificate the same day.',
+      tl: 'Tinitiyak ang eligibility at nilalabas sa parehong araw.',
     },
     stats: [
-      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '20-30 min' },
+      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '15-20 min' },
       { label: { en: 'Counter', tl: 'Counter' }, value: 'Window B' },
-      { label: { en: 'Form', tl: 'Porma' }, value: 'BP-01' },
-    ],
-    requirements: [
-      { en: 'Valid ID', tl: 'Balidong ID' },
-      { en: 'Business details', tl: 'Detalye ng negosyo' },
-    ],
-  },
-  RC: {
-    icon: 'home',
-    accent: '#1C7C54',
-    accentSoft: 'rgba(28, 124, 84, 0.16)',
-    accentGlow: 'rgba(28, 124, 84, 0.32)',
-    tagline: {
-      en: 'Confirm your residency for school, work, and ID applications.',
-      tl: 'Patunay ng paninirahan para sa paaralan, trabaho, at pagkuha ng ID.',
-    },
-    summary: {
-      en: 'We verify your address and issue a residency certificate promptly.',
-      tl: 'Bine-verify ang address at mabilis na naglalabas ng sertipikasyon.',
-    },
-    stats: [
-      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '10-15 min' },
-      { label: { en: 'Counter', tl: 'Counter' }, value: 'Window C' },
       { label: { en: 'Release', tl: 'Paglabas' }, value: 'Same day' },
     ],
     requirements: [
@@ -434,27 +423,96 @@ const serviceMeta = {
       { en: 'Barangay form', tl: 'Barangay form' },
     ],
   },
-  HC: {
+  INCOME_LOAN: {
+    icon: 'briefcase',
+    accent: '#185ADB',
+    accentSoft: 'rgba(24, 90, 219, 0.16)',
+    accentGlow: 'rgba(24, 90, 219, 0.32)',
+    tagline: {
+      en: 'Income certification for loans and financial applications.',
+      tl: 'Income certification para sa loan at financial applications.',
+    },
+    summary: {
+      en: 'Submit details, verify documents, and get processing updates.',
+      tl: 'Ibigay ang detalye, i-verify ang dokumento, at mabilis ang proseso.',
+    },
+    stats: [
+      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '20-30 min' },
+      { label: { en: 'Counter', tl: 'Counter' }, value: 'Window C' },
+      { label: { en: 'Form', tl: 'Porma' }, value: 'LI-01' },
+    ],
+    requirements: [
+      { en: 'Valid ID', tl: 'Balidong ID' },
+      { en: 'Income details', tl: 'Detalye ng kita' },
+    ],
+  },
+  SOLO_PARENT: {
     icon: 'heart',
     accent: '#D84343',
     accentSoft: 'rgba(216, 67, 67, 0.16)',
     accentGlow: 'rgba(216, 67, 67, 0.32)',
     tagline: {
-      en: 'Health clearance for employment, school, and compliance needs.',
-      tl: 'Health clearance para sa trabaho, paaralan, at compliance.',
+      en: 'Solo parent certification for benefits and official records.',
+      tl: 'Sertipikasyon para sa benepisyo at opisyal na tala.',
     },
     summary: {
-      en: 'Follow guided checks and receive your health certificate after review.',
-      tl: 'May gabay na pagsusuri at makukuha ang health certificate pagkatapos.',
+      en: 'We review eligibility and issue the certificate after validation.',
+      tl: 'Sinusuri ang eligibility at inilalabas pagkatapos ng validation.',
     },
     stats: [
-      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '25-35 min' },
+      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '20-25 min' },
       { label: { en: 'Counter', tl: 'Counter' }, value: 'Window D' },
-      { label: { en: 'Release', tl: 'Paglabas' }, value: 'Next day' },
+      { label: { en: 'Release', tl: 'Paglabas' }, value: 'Same day' },
     ],
     requirements: [
       { en: 'Valid ID', tl: 'Balidong ID' },
-      { en: 'Medical history', tl: 'Kasaysayan ng kalusugan' },
+      { en: 'Solo parent documents', tl: 'Dokumento ng solo parent' },
+    ],
+  },
+  SPECIAL_PERMIT: {
+    icon: 'file',
+    accent: '#7C3AED',
+    accentSoft: 'rgba(124, 58, 237, 0.16)',
+    accentGlow: 'rgba(124, 58, 237, 0.32)',
+    tagline: {
+      en: 'Secure special permits with guided requirements.',
+      tl: 'Kumuha ng special permit na may malinaw na requirements.',
+    },
+    summary: {
+      en: 'Submit the request, verify documents, and await approval.',
+      tl: 'Ihain ang request, i-verify ang dokumento, at hintayin ang approval.',
+    },
+    stats: [
+      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '15-25 min' },
+      { label: { en: 'Counter', tl: 'Counter' }, value: 'Window E' },
+      { label: { en: 'Release', tl: 'Paglabas' }, value: 'Same day' },
+    ],
+    requirements: [
+      { en: 'Valid ID', tl: 'Balidong ID' },
+      { en: 'Request letter', tl: 'Liham ng request' },
+    ],
+  },
+  BUILDING_PERMIT: {
+    icon: 'briefcase',
+    accent: '#0F766E',
+    accentSoft: 'rgba(15, 118, 110, 0.16)',
+    accentGlow: 'rgba(15, 118, 110, 0.32)',
+    tagline: {
+      en: 'Apply for building permits with a guided checklist.',
+      tl: 'Mag-apply ng building permit na may malinaw na checklist.',
+    },
+    summary: {
+      en: 'Submit plans, verify documents, and track approvals.',
+      tl: 'Ibigay ang plano, i-verify ang dokumento, at subaybayan ang approval.',
+    },
+    stats: [
+      { label: { en: 'Est. time', tl: 'Tantyang oras' }, value: '30-45 min' },
+      { label: { en: 'Counter', tl: 'Counter' }, value: 'Window F' },
+      { label: { en: 'Form', tl: 'Porma' }, value: 'BP-02' },
+    ],
+    requirements: [
+      { en: 'Valid ID', tl: 'Balidong ID' },
+      { en: 'Building plans', tl: 'Plano ng building' },
     ],
   },
 }
@@ -483,13 +541,31 @@ const defaultMeta = {
   ],
 }
 
-const selectedService = computed(() =>
-  services.value.find((service) => service.id === selectedServiceId.value)
+const selectedServices = computed(() =>
+  services.value.filter((service) => selectedServiceIds.value.includes(service.id))
 )
+
+const primaryService = computed(() => selectedServices.value[0] || null)
+
+const normalizeServiceName = (name = '') =>
+  name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+
+const serviceNameMap = {
+  'proof of residency': 'PROOF_RESIDENCY',
+  'barangay indigency': 'INDIGENCY',
+  'loan of income': 'INCOME_LOAN',
+  'certificate of solo parent': 'SOLO_PARENT',
+  'special permit': 'SPECIAL_PERMIT',
+  'building permit': 'BUILDING_PERMIT',
+}
 
 const getServiceMeta = (service) => {
   const code = (service?.code || '').toUpperCase()
-  return serviceMeta[code] || defaultMeta
+  const nameKey = serviceNameMap[normalizeServiceName(service?.name)]
+  return serviceMeta[code] || serviceMeta[nameKey] || defaultMeta
 }
 
 const capturePositions = () => {
@@ -526,7 +602,18 @@ const animateReflow = async (positions) => {
 }
 
 const selectedMeta = computed(() =>
-  selectedService.value ? getServiceMeta(selectedService.value) : null
+  primaryService.value ? getServiceMeta(primaryService.value) : null
+)
+
+const selectedTitle = computed(() => {
+  if (selectedServices.value.length === 1) {
+    return selectedServices.value[0].name
+  }
+  return `${selectedServices.value.length} ${labels.value.selectedCountLabel}`
+})
+
+const selectedSummary = computed(() =>
+  selectedServices.value.map((service) => service.name).join(', ')
 )
 
 const ctaStyle = computed(() => {
@@ -550,32 +637,33 @@ const cardStyle = (service, index = 0) => {
   }
 }
 
-const isSelected = (serviceId) => selectedServiceId.value === serviceId
+const isSelected = (serviceId) => selectedServiceIds.value.includes(serviceId)
 
 const isExpanded = (serviceId) => {
-  if (selectedServiceId.value) {
-    return selectedServiceId.value === serviceId
+  if (expandedServiceId.value) {
+    return expandedServiceId.value === serviceId
   }
   return hoveredServiceId.value === serviceId
 }
 
 const setHovered = (serviceId) => {
-  if (selectedServiceId.value) return
+  if (expandedServiceId.value) return
   const positions = capturePositions()
   hoveredServiceId.value = serviceId
   animateReflow(positions)
 }
 
 const clearHovered = () => {
-  if (selectedServiceId.value) return
+  if (expandedServiceId.value) return
   const positions = capturePositions()
   hoveredServiceId.value = null
   animateReflow(positions)
 }
 
 const clearSelection = () => {
-  if (!selectedServiceId.value) return
-  selectedServiceId.value = null
+  if (!selectedServiceIds.value.length) return
+  selectedServiceIds.value = []
+  expandedServiceId.value = null
   hoveredServiceId.value = null
   showConfirm.value = false
   showReminder.value = false
@@ -670,16 +758,42 @@ const loadServices = async () => {
     }
     const data = await request('/api/services')
     services.value = data.services || []
+    if (!services.value.length) {
+      services.value = [
+        { id: 1, code: 'PROOF_RESIDENCY', name: 'Proof of residency' },
+        { id: 2, code: 'INDIGENCY', name: 'Barangay Indigency' },
+        { id: 3, code: 'INCOME_LOAN', name: 'Loan of income' },
+        { id: 4, code: 'SOLO_PARENT', name: 'Certificate of Solo parent' },
+        { id: 5, code: 'SPECIAL_PERMIT', name: 'Special permit' },
+        { id: 6, code: 'BUILDING_PERMIT', name: 'Building permit' },
+      ]
+    }
   } catch (err) {
     error.value = err.message
+    services.value = [
+      { id: 1, code: 'PROOF_RESIDENCY', name: 'Proof of residency' },
+      { id: 2, code: 'INDIGENCY', name: 'Barangay Indigency' },
+      { id: 3, code: 'INCOME_LOAN', name: 'Loan of income' },
+      { id: 4, code: 'SOLO_PARENT', name: 'Certificate of Solo parent' },
+      { id: 5, code: 'SPECIAL_PERMIT', name: 'Special permit' },
+      { id: 6, code: 'BUILDING_PERMIT', name: 'Building permit' },
+    ]
   }
 }
 
 const selectService = (service, event) => {
   triggerRipple(event)
   const positions = capturePositions()
-  selectedServiceId.value = selectedServiceId.value === service.id ? null : service.id
-  if (!selectedServiceId.value) {
+  const next = new Set(selectedServiceIds.value)
+  if (next.has(service.id)) {
+    next.delete(service.id)
+  } else {
+    next.add(service.id)
+  }
+  selectedServiceIds.value = Array.from(next)
+  expandedServiceId.value = service.id
+  if (!selectedServiceIds.value.length) {
+    expandedServiceId.value = null
     showConfirm.value = false
   }
   showReminder.value = false
@@ -714,7 +828,7 @@ const refreshCardSpans = (duration = 900) => {
 }
 
 watch(
-  () => selectedServiceId.value,
+  () => selectedServiceIds.value,
   async () => {
     await nextTick()
     refreshCardSpans()
@@ -723,7 +837,7 @@ watch(
 
 
 const handleProceed = () => {
-  if (!selectedService.value) {
+  if (!selectedServices.value.length) {
     showReminder.value = true
     return
   }
@@ -735,7 +849,7 @@ const handleBack = () => {
 }
 
 const openConfirm = () => {
-  if (!selectedService.value) return
+  if (!selectedServices.value.length) return
   showConfirm.value = true
 }
 
@@ -748,7 +862,7 @@ const closeReminder = () => {
 }
 
 const confirmProceed = async () => {
-  if (!selectedService.value) return
+  if (!selectedServices.value.length) return
   if (!resident) {
     error.value = 'Missing resident information.'
     return
@@ -756,23 +870,33 @@ const confirmProceed = async () => {
   isCreatingTicket.value = true
   error.value = ''
   try {
-    const idempotencyKey =
-      crypto.randomUUID?.() || `${Date.now()}-${resident.id}-${selectedService.value.id}`
-    const data = await request('/api/kiosk/tickets', {
-      method: 'POST',
-      body: JSON.stringify({
-        resident_id: resident.id,
-        service_id: selectedService.value.id,
-        kiosk_device_id: 1,
-        idempotency_key: idempotencyKey,
-      }),
-    })
-    localStorage.setItem('kiosk_ticket', JSON.stringify(data.ticket))
-    localStorage.setItem('kiosk_service', JSON.stringify(selectedService.value))
-    localStorage.setItem(
-      'kiosk_service_requirements',
-      JSON.stringify(getServiceMeta(selectedService.value).requirements.map(text))
+    const tickets = []
+    for (const service of selectedServices.value) {
+      const idempotencyKey =
+        crypto.randomUUID?.() || `${Date.now()}-${resident.id}-${service.id}`
+      const data = await request('/api/kiosk/tickets', {
+        method: 'POST',
+        body: JSON.stringify({
+          resident_id: resident.id,
+          service_id: service.id,
+          kiosk_device_id: 1,
+          idempotency_key: idempotencyKey,
+        }),
+      })
+      tickets.push(data.ticket)
+    }
+    const requirementsByService = selectedServices.value.map((service) =>
+      getServiceMeta(service).requirements.map(text)
     )
+    localStorage.setItem('kiosk_tickets', JSON.stringify(tickets))
+    localStorage.setItem('kiosk_services', JSON.stringify(selectedServices.value))
+    localStorage.setItem('kiosk_service_requirements', JSON.stringify(requirementsByService))
+    if (tickets[0]) {
+      localStorage.setItem('kiosk_ticket', JSON.stringify(tickets[0]))
+    }
+    if (selectedServices.value[0]) {
+      localStorage.setItem('kiosk_service', JSON.stringify(selectedServices.value[0]))
+    }
     showConfirm.value = false
     router.push('/ticket')
   } catch (err) {
