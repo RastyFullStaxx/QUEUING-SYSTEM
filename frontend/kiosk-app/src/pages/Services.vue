@@ -181,7 +181,7 @@
 
     <transition name="kiosk-modal">
       <div v-if="showConfirm" class="kiosk-modal" @click.self="closeConfirm">
-        <div class="kiosk-modal-card kiosk-modal-glow service-confirm-card">
+        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card service-confirm-card">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
           <div class="kiosk-modal-header">
@@ -225,7 +225,7 @@
     </transition>
     <transition name="kiosk-modal">
       <div v-if="showReminder" class="kiosk-modal" @click.self="closeReminder">
-        <div class="kiosk-modal-card kiosk-modal-glow service-reminder-card">
+        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card service-reminder-card">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
           <div class="kiosk-modal-header">

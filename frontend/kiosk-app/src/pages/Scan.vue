@@ -76,7 +76,7 @@
     </div>
     <transition name="kiosk-modal">
       <div v-if="showWelcome" class="kiosk-modal">
-        <div class="kiosk-modal-card kiosk-modal-glow">
+        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
           <button
@@ -124,7 +124,7 @@
     </transition>
     <transition name="kiosk-modal">
       <div v-if="showLanguagePrompt" class="kiosk-modal">
-        <div class="kiosk-modal-card kiosk-modal-glow">
+        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
           <div class="kiosk-modal-header">
@@ -144,7 +144,7 @@
     </transition>
     <transition name="kiosk-modal">
       <div v-if="showInstructions" class="kiosk-modal">
-        <div class="kiosk-modal-card kiosk-modal-glow">
+        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
           <div class="kiosk-modal-header">
@@ -209,7 +209,7 @@
     </transition>
     <transition name="kiosk-modal">
       <div v-if="showManualEntry" class="kiosk-modal">
-        <div class="kiosk-modal-card kiosk-modal-glow">
+        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
           <div class="kiosk-modal-header">

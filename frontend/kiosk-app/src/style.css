@@ -849,6 +849,46 @@ body {
   height: 0;
 }
 
+.kiosk-portal-card {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.95)) padding-box,
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(11, 44, 111, 0.2), rgba(255, 216, 123, 0.35)) border-box;
+  border: 1px solid transparent;
+  box-shadow:
+    0 34px 78px rgba(15, 23, 42, 0.2),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.9),
+    inset -1px -1px 0 rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(16px);
+}
+
+.kiosk-portal-card::before,
+.kiosk-portal-card::after {
+  content: "";
+  position: absolute;
+  inset: -40% -30%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.kiosk-portal-card::before {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.2) 1px, transparent 0);
+  background-size: 4px 4px;
+  opacity: 0.35;
+  mix-blend-mode: soft-light;
+}
+
+.kiosk-portal-card::after {
+  background: linear-gradient(120deg, transparent 20%, rgba(255, 255, 255, 0.65) 50%, transparent 80%);
+  transform: translateX(-60%);
+  animation: kiosk-card-sheen 7s ease-in-out infinite;
+  opacity: 0.6;
+}
+
+.kiosk-portal-card > * {
+  position: relative;
+  z-index: 1;
+}
+
 
 .kiosk-modal-header {
   display: grid;
@@ -3358,7 +3398,8 @@ body {
   .kiosk-ticket-holo::after,
   .kiosk-landing-emblem-ring,
   .kiosk-landing-shell::before,
-  .kiosk-landing-shell::after {
+  .kiosk-landing-shell::after,
+  .kiosk-portal-card::after {
     animation: none;
   }
 
