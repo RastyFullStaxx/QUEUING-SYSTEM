@@ -6,7 +6,7 @@
     <div v-if="showStageReveal" class="kiosk-stage-reveal" aria-hidden="true"></div>
     <div
       class="relative z-10 min-h-screen flex items-center justify-center px-6 py-10"
-      :class="{ 'kiosk-dim': showLanguagePrompt || showInstructions || showManualEntry || showStepFlash }"
+      :class="{ 'kiosk-dim': showLanguagePrompt || showInstructions || showManualEntry || showBackConfirm || showStepFlash }"
     >
       <transition name="kiosk-page">
         <div v-if="isReady && !showStepFlash" class="kiosk-scan-shell">
@@ -21,10 +21,20 @@
               {{ labels.heroTitle }}
             </h1>
             <p class="mt-4 text-lg text-slate-700/80 max-w-xl">{{ labels.heroSubtitle }}</p>
+            <p class="kiosk-hero-tip">{{ labels.heroTip }}</p>
           </div>
-          <div class="kiosk-options kiosk-options--single kiosk-fade kiosk-fade-delay-2">
-            <div class="kiosk-option-card kiosk-option-card--alt kiosk-scan-spotlight">
-              <div class="kiosk-option-label">{{ labels.scannerReady }}</div>
+          <div class="kiosk-scan-stage-row kiosk-fade kiosk-fade-delay-2">
+            <button class="kiosk-arrow-button kiosk-arrow-button--back kiosk-action" type="button" @click="openBackConfirm">
+              <span>{{ labels.back }}</span>
+            </button>
+            <div class="kiosk-scan-panel kiosk-option-card kiosk-option-card--alt kiosk-scan-spotlight">
+              <div class="kiosk-scan-panel-header">
+                <div class="kiosk-option-label">{{ labels.scannerReady }}</div>
+                <div class="kiosk-scan-live">
+                  <span class="scan-live-dot" aria-hidden="true"></span>
+                  <span>{{ labels.cameraActive }}</span>
+                </div>
+              </div>
               <input
                 ref="inputRef"
                 v-model="qrCode"
@@ -32,14 +42,19 @@
                 :placeholder="labels.manualPlaceholder"
                 @keyup.enter="onSubmit"
               />
-              <div class="scan-frame scan-frame-focus">
+              <div class="scan-frame scan-frame-hero" :class="{ 'is-locked': hasQr }">
+                <span class="scan-corner corner-tl" aria-hidden="true"></span>
+                <span class="scan-corner corner-tr" aria-hidden="true"></span>
+                <span class="scan-corner corner-bl" aria-hidden="true"></span>
+                <span class="scan-corner corner-br" aria-hidden="true"></span>
                 <div class="scan-grid" aria-hidden="true"></div>
-                <div class="scan-beam"></div>
-                <div class="relative z-10 flex flex-col items-center text-center gap-3 py-6">
-                  <div
-                    class="h-14 w-14 rounded-2xl bg-white/20 text-white flex items-center justify-center shadow-[0_12px_24px_-16px_rgba(15,23,42,0.55)]"
-                  >
-                    <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <div class="scan-beam" :class="{ 'is-locked': hasQr }"></div>
+                <div class="scan-center">
+                  <div class="scan-state-icon" :class="{ 'is-locked': hasQr }">
+                    <svg v-if="hasQr" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M5 12l4 4 10-10" />
+                    </svg>
+                    <svg v-else class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                       <path d="M3 7V3h4" />
                       <path d="M17 3h4v4" />
                       <path d="M21 17v4h-4" />
@@ -47,22 +62,34 @@
                       <path d="M7 12h10" />
                     </svg>
                   </div>
-                  <div class="text-lg font-semibold text-white">{{ labels.readyTitle }}</div>
-                  <p class="text-sm text-white/70">{{ labels.readySubtitle }}</p>
+                  <div class="scan-state-title">{{ scanTitle }}</div>
+                  <p class="scan-state-text">{{ scanSubtitle }}</p>
                 </div>
               </div>
               <div class="scan-status">
                 <span class="scan-status-pill" :class="hasQr ? 'is-locked' : 'is-ready'">
                   {{ hasQr ? labels.statusLocked : labels.statusReady }}
                 </span>
-                <p class="scan-status-text">
-                  {{ hasQr ? labels.statusDetected : labels.statusLooking }}
+                <p class="scan-status-text" :class="{ 'is-searching': !hasQr }">
+                  {{ scanStatusText }}
                 </p>
               </div>
-              <button class="kiosk-inline-link" @click="openManualEntry">
-                {{ labels.manualTrigger }}
-              </button>
+              <div class="kiosk-scan-tips">
+                <span class="kiosk-scan-tip">{{ labels.tipHoldSteady }}</span>
+                <span class="kiosk-scan-tip">{{ labels.tipAvoidGlare }}</span>
+                <span class="kiosk-scan-tip">{{ labels.tipMoveCloser }}</span>
+              </div>
+              <div class="kiosk-manual-card">
+                <div class="kiosk-manual-copy">
+                  <p class="kiosk-manual-kicker">{{ labels.manualPrompt }}</p>
+                  <p class="kiosk-manual-text">{{ labels.manualAction }}</p>
+                </div>
+                <button class="kiosk-manual-button" type="button" @click="openManualEntry">
+                  {{ labels.manualButton }}
+                </button>
+              </div>
             </div>
+            <div aria-hidden="true"></div>
           </div>
           <div
             v-if="error && !showManualEntry"
@@ -197,6 +224,29 @@
         </div>
       </div>
     </transition>
+    <transition name="kiosk-modal">
+      <div v-if="showBackConfirm" class="kiosk-modal" @click.self="closeBackConfirm">
+        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card">
+          <span class="modal-orb orb-one" aria-hidden="true"></span>
+          <span class="modal-orb orb-two" aria-hidden="true"></span>
+          <div class="kiosk-modal-header">
+            <p class="kiosk-modal-kicker">{{ labels.backKicker }}</p>
+            <h2 class="kiosk-modal-title">{{ labels.backTitle }}</h2>
+            <p class="kiosk-modal-subtitle">{{ labels.backSubtitle }}</p>
+          </div>
+          <div class="kiosk-modal-actions">
+            <div class="grid gap-3 sm:grid-cols-2">
+              <button class="kiosk-secondary-button text-lg py-3 rounded-2xl" type="button" @click="closeBackConfirm">
+                {{ labels.backStay }}
+              </button>
+              <button class="kiosk-button text-lg py-3 rounded-2xl kiosk-action" type="button" @click="confirmBack">
+                {{ labels.backConfirm }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -215,6 +265,7 @@ const instructionsAccepted = ref(false)
 const showManualEntry = ref(false)
 const languageDialogOpen = ref(false)
 const showStepFlash = ref(false)
+const showBackConfirm = ref(false)
 const stepFlashTimer = ref(null)
 const showStageReveal = ref(false)
 const stageRevealTimer = ref(null)
@@ -223,7 +274,8 @@ const copy = {
   en: {
     stepBadge: 'Kiosk Scan - Step 1 of 3',
     heroTitle: 'Scan Resident QR',
-    heroSubtitle: 'Hold the QR steady. Verification takes seconds.',
+    heroSubtitle: 'Hold the QR inside the frame. Verification takes seconds.',
+    heroTip: 'Tip: increase screen brightness / avoid glare.',
     stepFlash: 'STEP 1',
     instructionsSubtitle: 'A quick guide before we start.',
     reminderKicker: 'Reminder',
@@ -237,19 +289,33 @@ const copy = {
     scannerPrompt: 'Place QR inside the frame',
     autoFocus: 'Auto focus',
     readyTitle: 'Ready to scan',
-    readySubtitle: 'The input below is active and waiting.',
+    readySubtitle: 'The scanner is active and waiting.',
+    detectedTitle: 'QR found',
+    detectedSubtitle: 'Verifying...',
     manualEntry: 'Manual entry',
     manualPlaceholder: 'Enter or scan QR code',
     validateButton: 'Validate QR Code',
     validateHint: 'Press Enter or tap Validate to continue.',
-    manualTrigger: "Don't have QR code? Manually enter your code here.",
+    manualPrompt: 'Trouble scanning?',
+    manualAction: 'Enter code instead.',
+    manualButton: 'Enter code manually',
+    back: 'Go back',
+    backKicker: 'Back',
+    backTitle: 'Go back to the main menu?',
+    backSubtitle: 'This will end the current scan.',
+    backStay: 'Continue scanning',
+    backConfirm: 'Go back',
     manualKicker: 'Manual entry',
     manualHelper: 'Type the QR code to continue.',
     backToScan: 'Back to scanner',
     statusReady: 'Ready',
     statusLocked: 'Locked',
-    statusLooking: 'Looking for QR...',
-    statusDetected: 'QR detected.',
+    statusLooking: 'Searching for QR',
+    statusDetected: 'QR found — verifying',
+    cameraActive: 'Camera active',
+    tipHoldSteady: 'Hold steady',
+    tipAvoidGlare: 'Avoid glare',
+    tipMoveCloser: 'Move closer',
     instructionsKicker: 'Secure scan',
     instructionsTitle: 'Quick Reminders',
     instructionsLine1: 'Secure scan only.',
@@ -264,7 +330,8 @@ const copy = {
   tl: {
     stepBadge: 'Kiosk Scan - Hakbang 1 sa 3',
     heroTitle: 'I-scan ang Resident QR',
-    heroSubtitle: 'Iharap nang steady ang QR. Mabilis ang beripikasyon.',
+    heroSubtitle: 'Ilagay ang QR sa loob ng frame. Mabilis ang beripikasyon.',
+    heroTip: 'Tip: dagdagan ang brightness / iwasan ang glare.',
     stepFlash: 'HAKBANG 1',
     instructionsSubtitle: 'Mabilis na gabay bago mag-scan.',
     reminderKicker: 'Paalala',
@@ -278,19 +345,33 @@ const copy = {
     scannerPrompt: 'Ilagay ang QR sa loob ng frame',
     autoFocus: 'Auto focus',
     readyTitle: 'Handa nang mag-scan',
-    readySubtitle: 'Aktibo at naghihintay ang input sa ibaba.',
+    readySubtitle: 'Aktibo ang scanner at naghihintay.',
+    detectedTitle: 'Nakita ang QR',
+    detectedSubtitle: 'Bine-verify...',
     manualEntry: 'Manwal na pagpasok',
     manualPlaceholder: 'Ilagay o i-scan ang QR code',
     validateButton: 'I-validate ang QR Code',
     validateHint: 'Pindutin ang Enter o tapikin ang Validate para magpatuloy.',
-    manualTrigger: 'Walang QR code? Manwal na ilagay ang code dito.',
+    manualPrompt: 'Hindi ma-scan?',
+    manualAction: 'Ilagay ang code.',
+    manualButton: 'Maglagay ng code',
+    back: 'Bumalik',
+    backKicker: 'Bumalik',
+    backTitle: 'Bumalik sa main menu?',
+    backSubtitle: 'Matatapos ang kasalukuyang scan.',
+    backStay: 'Magpatuloy sa scan',
+    backConfirm: 'Bumalik',
     manualKicker: 'Manwal na pagpasok',
     manualHelper: 'I-type ang QR code para magpatuloy.',
     backToScan: 'Bumalik sa scanner',
     statusReady: 'Handa',
     statusLocked: 'Nakabasa',
-    statusLooking: 'Naghahanap ng QR...',
-    statusDetected: 'Nakita ang QR.',
+    statusLooking: 'Naghahanap ng QR',
+    statusDetected: 'Nakita ang QR — bine-verify',
+    cameraActive: 'Aktibo ang camera',
+    tipHoldSteady: 'Panatilihing steady',
+    tipAvoidGlare: 'Iwasan ang glare',
+    tipMoveCloser: 'Lumapit',
     instructionsKicker: 'Ligtas na scan',
     instructionsTitle: 'Mabilis na paalala',
     instructionsLine1: 'Ligtas na scan lamang.',
@@ -314,6 +395,9 @@ const showInstructions = computed(
 )
 const isReady = computed(() => Boolean(language.value) && instructionsAccepted.value)
 const hasQr = computed(() => Boolean(qrCode.value && qrCode.value.trim()))
+const scanTitle = computed(() => (hasQr.value ? labels.value.detectedTitle : labels.value.readyTitle))
+const scanSubtitle = computed(() => (hasQr.value ? labels.value.detectedSubtitle : labels.value.readySubtitle))
+const scanStatusText = computed(() => (hasQr.value ? labels.value.statusDetected : labels.value.statusLooking))
 
 const setLanguage = (value) => {
   language.value = value
@@ -358,6 +442,19 @@ const openManualEntry = () => {
 const closeManualEntry = () => {
   showManualEntry.value = false
   setTimeout(() => inputRef.value?.focus(), 50)
+}
+
+const openBackConfirm = () => {
+  showBackConfirm.value = true
+}
+
+const closeBackConfirm = () => {
+  showBackConfirm.value = false
+}
+
+const confirmBack = () => {
+  showBackConfirm.value = false
+  router.push('/welcome')
 }
 
 const onSubmit = async () => {
