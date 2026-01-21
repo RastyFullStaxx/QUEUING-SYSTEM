@@ -258,26 +258,171 @@ body {
 }
 
 .kiosk-landing {
-  width: min(1200px, 92vw);
+  width: min(1120px, 92vw);
   display: grid;
   gap: 2.4rem;
   align-items: center;
+  justify-items: center;
+}
+
+.kiosk-landing-shell {
+  position: relative;
+  width: min(740px, 92vw);
+  padding: 4px;
+  border-radius: 36px;
+  background: transparent;
+  box-shadow: 0 32px 90px rgba(10, 25, 60, 0.28);
+}
+
+.kiosk-landing-shell::before {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: 44px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.9),
+    rgba(255, 255, 255, 0.5),
+    rgba(242, 195, 0, 0.7),
+    rgba(255, 255, 255, 0.9),
+    rgba(145, 175, 230, 0.85),
+    rgba(255, 255, 255, 0.9)
+  );
+  filter: blur(18px);
+  opacity: 0.75;
+  z-index: 0;
+  animation: landing-glow-flow 12s linear infinite;
+}
+
+.kiosk-landing-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 36px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(242, 195, 0, 0.85),
+    rgba(255, 255, 255, 0.95),
+    rgba(145, 175, 230, 0.9),
+    rgba(255, 255, 255, 0.95)
+  );
+  padding: 3px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  z-index: 0;
+  animation: landing-glow-flow 16s linear infinite;
 }
 
 .kiosk-landing-card {
+  width: 100%;
   position: relative;
-  padding: 2.8rem 3rem;
+  padding: 2.4rem 1.8rem;
   border-radius: 32px;
   background:
-    radial-gradient(700px circle at 12% 12%, rgba(11, 44, 111, 0.12), transparent 55%),
-    radial-gradient(600px circle at 90% 82%, rgba(242, 195, 0, 0.18), transparent 60%),
-    rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--kiosk-border);
-  box-shadow: var(--kiosk-shadow);
-  backdrop-filter: blur(16px);
+    radial-gradient(700px circle at 12% 12%, rgba(11, 44, 111, 0.16), transparent 55%),
+    radial-gradient(600px circle at 90% 82%, rgba(242, 195, 0, 0.22), transparent 60%),
+    rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(30px) saturate(140%);
   display: grid;
   gap: 1.6rem;
   overflow: hidden;
+  text-align: center;
+  justify-items: center;
+  z-index: 1;
+}
+
+.kiosk-landing-card::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background:
+    radial-gradient(520px circle at 14% 12%, rgba(255, 255, 255, 0.75), transparent 60%),
+    radial-gradient(420px circle at 85% 82%, rgba(242, 195, 0, 0.28), transparent 65%);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.kiosk-landing-card::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -1px 0 rgba(11, 44, 111, 0.08);
+  pointer-events: none;
+}
+
+.kiosk-landing-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.kiosk-landing-hero {
+  display: grid;
+  place-items: center;
+  margin-top: 0.2rem;
+}
+
+.kiosk-landing-emblem {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.98), rgba(242, 195, 0, 0.3));
+  box-shadow:
+    0 24px 46px -24px rgba(11, 44, 111, 0.55),
+    0 0 28px rgba(242, 195, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.kiosk-landing-emblem-ring {
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  border: 1px dashed rgba(11, 44, 111, 0.32);
+  animation: landing-emblem-pulse 3.8s ease-in-out infinite;
+}
+
+.kiosk-landing-emblem-ring.is-delayed {
+  inset: -28px;
+  animation-delay: 1.4s;
+  border-color: rgba(242, 195, 0, 0.5);
+}
+
+.kiosk-landing-emblem-core {
+  width: 74px;
+  height: 74px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #0b2c6f 0%, #1d4ed8 45%, #2563eb 100%);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  box-shadow:
+    0 16px 30px -14px rgba(11, 44, 111, 0.65),
+    0 0 20px rgba(37, 99, 235, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.kiosk-landing-emblem-core svg {
+  width: 32px;
+  height: 32px;
+}
+
+.kiosk-landing-glow {
+  width: min(360px, 70%);
+  height: 10px;
+  margin-top: 0.9rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(242, 195, 0, 0.35), transparent 70%);
+  filter: blur(4px);
+  opacity: 0.7;
 }
 
 .kiosk-landing-kicker {
@@ -292,12 +437,21 @@ body {
   font-size: clamp(2.4rem, 4vw, 3.6rem);
   font-weight: 700;
   color: #0b1f3a;
+  text-shadow: 0 18px 36px rgba(11, 44, 111, 0.16);
+  max-width: 34rem;
+  line-height: 1.12;
+}
+
+.kiosk-landing-title span {
+  display: block;
 }
 
 .kiosk-landing-subtitle {
   font-size: 1.05rem;
   color: #55657b;
   max-width: 34rem;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .kiosk-landing-actions {
@@ -305,6 +459,7 @@ body {
   flex-wrap: wrap;
   gap: 1rem;
   align-items: center;
+  justify-content: center;
 }
 
 .kiosk-landing-reminder {
@@ -366,12 +521,6 @@ body {
   border: 1px dashed rgba(15, 23, 42, 0.12);
   color: #546377;
   font-size: 0.95rem;
-}
-
-@media (min-width: 960px) {
-  .kiosk-landing {
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  }
 }
 
 @media (max-width: 720px) {
@@ -699,6 +848,7 @@ body {
   width: 0;
   height: 0;
 }
+
 
 .kiosk-modal-header {
   display: grid;
@@ -3122,6 +3272,27 @@ body {
   }
 }
 
+@keyframes landing-glow-flow {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes landing-emblem-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.75;
+  }
+}
+
 @keyframes proceed-dots {
   0%,
   100% {
@@ -3184,7 +3355,10 @@ body {
   .kiosk-ticket-number::after,
   .kiosk-ticket-luxe,
   .kiosk-ticket-grain,
-  .kiosk-ticket-holo::after {
+  .kiosk-ticket-holo::after,
+  .kiosk-landing-emblem-ring,
+  .kiosk-landing-shell::before,
+  .kiosk-landing-shell::after {
     animation: none;
   }
 
