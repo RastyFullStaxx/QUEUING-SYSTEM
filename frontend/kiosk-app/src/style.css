@@ -1333,43 +1333,80 @@ body {
   width: min(720px, 92vw);
   background:
     radial-gradient(rgba(255, 255, 255, 0.18) 1px, transparent 0) 0 0 / 4px 4px,
+    radial-gradient(380px circle at 8% 8%, rgba(255, 255, 255, 0.7), transparent 60%),
+    radial-gradient(320px circle at 92% 12%, rgba(242, 195, 0, 0.18), transparent 65%),
     linear-gradient(rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.96)) padding-box,
-    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(11, 44, 111, 0.18), rgba(255, 216, 123, 0.32)) border-box;
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(11, 44, 111, 0.2), rgba(255, 216, 123, 0.35)) border-box;
   border-radius: 32px;
   border: 1px solid transparent;
   padding: 2.6rem 2.8rem 2.4rem;
   box-shadow:
-    0 36px 80px -50px rgba(11, 31, 58, 0.5),
-    inset 1px 1px 0 rgba(255, 255, 255, 0.8);
+    0 40px 90px -56px rgba(11, 31, 58, 0.55),
+    0 18px 40px -32px rgba(11, 44, 111, 0.22),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(11, 44, 111, 0.08);
   display: grid;
   gap: 1.8rem;
   position: relative;
+  overflow: hidden;
 }
 
-.kiosk-ticket-card > * {
+.kiosk-ticket-card > :not(.kiosk-ticket-luxe):not(.kiosk-ticket-grain):not(.kiosk-ticket-watermark) {
   position: relative;
   z-index: 1;
 }
 
+.kiosk-ticket-luxe {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0) 45%, rgba(242, 195, 0, 0.22) 70%, rgba(11, 44, 111, 0.18)),
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.12) 0 1px,
+      rgba(255, 255, 255, 0) 1px 3px
+    );
+  opacity: 0.55;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  z-index: 0;
+  animation: ticket-luxe-sheen 9s ease-in-out infinite;
+}
+
+.kiosk-ticket-grain {
+  position: absolute;
+  inset: -40%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='1' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.22'/%3E%3C/svg%3E");
+  opacity: 0.35;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  z-index: 0;
+  animation: ticket-grain-float 10s ease-in-out infinite;
+}
+
+.kiosk-ticket-watermark {
+  position: absolute;
+  inset: 18% 12% auto auto;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(11, 44, 111, 0.12), transparent 65%),
+    repeating-radial-gradient(
+      circle,
+      rgba(11, 44, 111, 0.12) 0 2px,
+      rgba(11, 44, 111, 0.02) 2px 6px
+    );
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(0.2px);
+}
+
 .kiosk-ticket-card::before,
 .kiosk-ticket-card::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #d3e7ff;
-  transform: translateY(-50%);
-  box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.06);
-}
-
-.kiosk-ticket-card::before {
-  left: -13px;
-}
-
-.kiosk-ticket-card::after {
-  right: -13px;
+  content: none;
 }
 
 .kiosk-ticket-wrapper {
@@ -1438,6 +1475,80 @@ body {
       rgba(11, 44, 111, 0.05) 3px 6px
     );
   opacity: 0.6;
+  position: relative;
+  overflow: hidden;
+}
+
+.kiosk-ticket-barcode::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  opacity: 0.6;
+  animation: ticket-barcode-scan 4.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.kiosk-ticket-holo {
+  height: 10px;
+  width: 100%;
+  border-radius: 999px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.1),
+      rgba(242, 195, 0, 0.6),
+      rgba(59, 130, 246, 0.5),
+      rgba(255, 255, 255, 0.2)
+    );
+  box-shadow:
+    0 10px 24px -18px rgba(11, 44, 111, 0.7),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+.kiosk-ticket-holo::after {
+  content: "";
+  position: absolute;
+  inset: -140% -20%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  opacity: 0.7;
+  animation: ticket-holo-shift 5.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.kiosk-ticket-divider {
+  height: 2px;
+  width: 100%;
+  border-radius: 999px;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(11, 44, 111, 0.25) 0 10px,
+    rgba(11, 44, 111, 0.05) 10px 20px
+  );
+  opacity: 0.6;
+  position: relative;
+}
+
+.kiosk-ticket-divider::before,
+.kiosk-ticket-divider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(11, 44, 111, 0.15);
+  transform: translateY(-50%);
+}
+
+.kiosk-ticket-divider::before {
+  left: -4px;
+}
+
+.kiosk-ticket-divider::after {
+  right: -4px;
 }
 
 .kiosk-ticket-number {
@@ -1449,6 +1560,18 @@ body {
   gap: 0.4rem;
   text-align: center;
   box-shadow: 0 22px 46px -30px rgba(11, 44, 111, 0.75);
+  position: relative;
+  overflow: hidden;
+}
+
+.kiosk-ticket-number::after {
+  content: "";
+  position: absolute;
+  inset: -40% -20%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.28), transparent 70%);
+  opacity: 0.7;
+  animation: kiosk-cta-scan 6.2s ease-in-out infinite;
+  pointer-events: none;
 }
 
 .kiosk-ticket-number-label {
@@ -1464,15 +1587,17 @@ body {
   font-weight: 800;
   letter-spacing: 0.2em;
   font-family: "Space Grotesk", "Sora", "Trebuchet MS", sans-serif;
+  text-shadow: 0 8px 20px rgba(11, 44, 111, 0.45);
 }
 
 .kiosk-ticket-meta {
   display: grid;
   gap: 0.6rem;
-  background: rgba(15, 23, 42, 0.04);
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.03), rgba(15, 23, 42, 0.06));
   border-radius: 20px;
   padding: 1.4rem 1.6rem;
   border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .kiosk-ticket-row {
@@ -1481,10 +1606,44 @@ body {
   gap: 1rem;
   font-weight: 600;
   color: #475569;
+  padding: 0.35rem 0.4rem;
+  border-radius: 12px;
+}
+
+.kiosk-ticket-row:not(:last-child) {
+  border-bottom: 1px dashed rgba(11, 44, 111, 0.16);
+  padding-bottom: 0.6rem;
 }
 
 .kiosk-ticket-row span:last-child {
   color: #0b1f3a;
+}
+
+.kiosk-ticket-stamp {
+  align-self: center;
+  justify-self: end;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  border: 1px dashed rgba(11, 44, 111, 0.35);
+  color: rgba(11, 44, 111, 0.75);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  background: rgba(255, 255, 255, 0.75);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  transform: rotate(-2deg);
+  position: relative;
+}
+
+.kiosk-ticket-stamp::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 999px;
+  border: 1px solid rgba(11, 44, 111, 0.12);
+  opacity: 0.7;
+  pointer-events: none;
 }
 
 .kiosk-ticket-note {
@@ -1544,6 +1703,44 @@ body {
   gap: 0.4rem;
   color: #0b2c6f;
   font-weight: 700;
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  background: rgba(11, 44, 111, 0.08);
+  border: 1px solid rgba(11, 44, 111, 0.12);
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.kiosk-ticket-link:hover {
+  background: rgba(11, 44, 111, 0.14);
+  box-shadow: 0 12px 26px -20px rgba(11, 44, 111, 0.55);
+}
+
+.kiosk-ticket-download {
+  transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.kiosk-ticket-download:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 36px -24px rgba(11, 44, 111, 0.55);
+}
+
+@media (max-width: 640px) {
+  .kiosk-ticket-header {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .kiosk-ticket-actions {
+    width: min(360px, 100%);
+    flex-direction: column;
+  }
+
+  .kiosk-ticket-link,
+  .kiosk-ticket-download {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .kiosk-service-grid {
@@ -2772,6 +2969,57 @@ body {
   }
 }
 
+@keyframes ticket-luxe-sheen {
+  0%,
+  100% {
+    transform: translateX(-12%);
+    opacity: 0.45;
+  }
+  50% {
+    transform: translateX(12%);
+    opacity: 0.7;
+  }
+}
+
+@keyframes ticket-grain-float {
+  0%,
+  100% {
+    transform: translate3d(-2%, -1%, 0);
+  }
+  50% {
+    transform: translate3d(2%, 1%, 0);
+  }
+}
+
+@keyframes ticket-holo-shift {
+  0%,
+  100% {
+    transform: translateX(-35%);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateX(35%);
+    opacity: 0.85;
+  }
+}
+
+@keyframes ticket-barcode-scan {
+  0% {
+    transform: translateX(-80%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.6;
+  }
+  60% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateX(80%);
+    opacity: 0;
+  }
+}
+
 @keyframes kiosk-cta-glow {
   0%,
   100% {
@@ -2931,7 +3179,12 @@ body {
   .kiosk-service-blob,
   .kiosk-step-flash,
   .kiosk-step-flash-text,
-  .kiosk-stage-reveal {
+  .kiosk-stage-reveal,
+  .kiosk-ticket-barcode::after,
+  .kiosk-ticket-number::after,
+  .kiosk-ticket-luxe,
+  .kiosk-ticket-grain,
+  .kiosk-ticket-holo::after {
     animation: none;
   }
 

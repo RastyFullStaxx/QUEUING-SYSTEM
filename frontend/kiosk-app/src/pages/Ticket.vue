@@ -12,6 +12,9 @@
         </div>
       </div>
       <div class="kiosk-ticket-card">
+      <div class="kiosk-ticket-luxe" aria-hidden="true"></div>
+      <div class="kiosk-ticket-grain" aria-hidden="true"></div>
+      <div class="kiosk-ticket-watermark" aria-hidden="true"></div>
       <div class="kiosk-ticket-header">
         <div class="kiosk-ticket-icon">
           <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -32,6 +35,8 @@
       </div>
 
       <div class="kiosk-ticket-barcode" aria-hidden="true"></div>
+      <div class="kiosk-ticket-holo" aria-hidden="true"></div>
+      <div class="kiosk-ticket-divider" aria-hidden="true"></div>
 
       <div class="kiosk-ticket-meta">
         <div class="kiosk-ticket-row">
@@ -47,6 +52,9 @@
           <span>{{ issuedAt }}</span>
         </div>
       </div>
+      <div class="kiosk-ticket-stamp" aria-hidden="true">
+        Issued by Kiosk
+      </div>
 
       <div class="kiosk-ticket-reqs">
         <p class="kiosk-ticket-reqs-title">Requirements</p>
@@ -61,13 +69,13 @@
       <p class="kiosk-ticket-note">Please wait for your number to be called.</p>
 
       <div class="kiosk-ticket-actions">
-        <router-link class="kiosk-ticket-link" to="/welcome">
+        <router-link class="kiosk-ticket-link kiosk-action" to="/welcome">
           <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 18l-6-6 6-6" />
           </svg>
           Main Menu
         </router-link>
-        <button class="kiosk-ticket-download" type="button" @click="downloadTicket">
+        <button class="kiosk-ticket-download kiosk-action" type="button" @click="downloadTicket">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 3v12" />
             <path d="M7 10l5 5 5-5" />
