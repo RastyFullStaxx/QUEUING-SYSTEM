@@ -21,10 +21,12 @@ $pdo = Connection::make([
 ]);
 
 $services = [
-    ['name' => 'Barangay Clearance', 'code' => 'BC'],
-    ['name' => 'Business Permit', 'code' => 'BP'],
-    ['name' => 'Residency Certificate', 'code' => 'RC'],
-    ['name' => 'Health Certificate', 'code' => 'HC'],
+    ['name' => 'Proof of residency', 'code' => 'PROOF_RESIDENCY'],
+    ['name' => 'Barangay Indigency', 'code' => 'INDIGENCY'],
+    ['name' => 'Loan of income', 'code' => 'INCOME_LOAN'],
+    ['name' => 'Certificate of Solo parent', 'code' => 'SOLO_PARENT'],
+    ['name' => 'Special permit', 'code' => 'SPECIAL_PERMIT'],
+    ['name' => 'Building permit', 'code' => 'BUILDING_PERMIT'],
 ];
 
 foreach ($services as $service) {

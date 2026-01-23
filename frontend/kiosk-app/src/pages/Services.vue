@@ -39,10 +39,6 @@
                 <p class="kiosk-service-subtitle">
                   <span>{{ labels.subtitle }}</span>
                 </p>
-                <p class="kiosk-service-greeting">{{ greeting }}</p>
-                <div class="kiosk-service-hint">
-                  <span>{{ labels.hint }}</span>
-                </div>
               </div>
             </transition>
           </div>
@@ -104,6 +100,24 @@
                   <svg v-else-if="getServiceMeta(service).icon === 'heart'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20.8 7.8a4.5 4.5 0 0 0-6.4 0L12 10.2l-2.4-2.4a4.5 4.5 0 1 0-6.4 6.4l2.4 2.4L12 22l6.4-5.4 2.4-2.4a4.5 4.5 0 0 0 0-6.4z" />
                   </svg>
+                  <svg v-else-if="getServiceMeta(service).icon === 'banknote'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="6" width="18" height="12" rx="2" />
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M6 10h1" />
+                    <path d="M17 14h1" />
+                  </svg>
+                  <svg v-else-if="getServiceMeta(service).icon === 'badge'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2l2.2 4.5L19 7.2l-3.5 3.4.8 4.9L12 13.8l-4.3 1.7.8-4.9L5 7.2l4.8-.7L12 2z" />
+                  </svg>
+                  <svg v-else-if="getServiceMeta(service).icon === 'building'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="8" height="16" rx="1" />
+                    <rect x="13" y="8" width="8" height="12" rx="1" />
+                    <path d="M7 8h0.01" />
+                    <path d="M7 12h0.01" />
+                    <path d="M7 16h0.01" />
+                    <path d="M17 12h0.01" />
+                    <path d="M17 16h0.01" />
+                  </svg>
                   <svg v-else class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
                     <path d="M14 3v5h5" />
@@ -122,49 +136,49 @@
                 </div>
               </div>
 
-              <div class="kiosk-service-tagline">
-                <span>{{ text(getServiceMeta(service).tagline) }}</span>
-              </div>
-              <div class="kiosk-service-card-hint" :class="{ 'is-hidden': isExpanded(service.id) }">
-                <span>{{ labels.cardHint }}</span>
-                <svg class="kiosk-service-hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M7 10l5 5 5-5" />
-                </svg>
-              </div>
-
-              <div class="kiosk-service-details">
-                <div class="kiosk-service-stats">
-                  <div v-for="stat in getServiceMeta(service).stats" :key="stat.label.en" class="kiosk-service-stat">
-                    <div class="kiosk-service-stat-label">
-                      <span>{{ text(stat.label) }}</span>
-                    </div>
-                    <div class="kiosk-service-stat-value">{{ stat.value }}</div>
-                  </div>
+                <div class="kiosk-service-tagline">
+                  <span>{{ text(getServiceMeta(service).tagline) }}</span>
                 </div>
-                <div class="kiosk-service-requirements">
-                  <div class="kiosk-service-requirements-title">
-                    <span>{{ labels.requirements }}</span>
+                <div class="kiosk-service-card-hint" :class="{ 'is-hidden': isExpanded(service.id) }">
+                  <span>{{ labels.cardHint }}</span>
+                  <svg class="kiosk-service-hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M7 10l5 5 5-5" />
+                  </svg>
+                </div>
+
+                <div class="kiosk-service-details">
+                  <div class="kiosk-service-stats">
+                    <div v-for="stat in getServiceMeta(service).stats" :key="stat.label.en" class="kiosk-service-stat">
+                      <div class="kiosk-service-stat-label">
+                        <span>{{ text(stat.label) }}</span>
+                      </div>
+                      <div class="kiosk-service-stat-value">{{ stat.value }}</div>
+                    </div>
                   </div>
-                  <div class="kiosk-service-requirements-list">
-                    <div
-                      v-for="item in getServiceMeta(service).requirements"
-                      :key="item.en"
-                      class="kiosk-service-requirements-item"
-                    >
-                      <span class="kiosk-service-check">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                          <path d="M5 12l4 4 10-10" />
-                        </svg>
-                      </span>
-                      <div>
-                        <p class="kiosk-service-req-text">{{ text(item) }}</p>
+                  <div class="kiosk-service-requirements">
+                    <div class="kiosk-service-requirements-title">
+                      <span>{{ labels.requirements }}</span>
+                    </div>
+                    <div class="kiosk-service-requirements-list">
+                      <div
+                        v-for="item in getServiceMeta(service).requirements"
+                        :key="item.en"
+                        class="kiosk-service-requirements-item"
+                      >
+                        <span class="kiosk-service-check">
+                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12l4 4 10-10" />
+                          </svg>
+                        </span>
+                        <div>
+                          <p class="kiosk-service-req-text">{{ text(item) }}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <span class="kiosk-service-ripple" aria-hidden="true"></span>
-              <span class="kiosk-service-blob" aria-hidden="true"></span>
+                <span class="kiosk-service-ripple" aria-hidden="true"></span>
+                <span class="kiosk-service-blob" aria-hidden="true"></span>
 
             </button>
           </div>
@@ -280,7 +294,6 @@ const copy = {
     stepFlash: 'STEP 2',
     title: 'Select Services',
     subtitle: 'Tap a panel to expand and select one or more services.',
-    hint: 'Tap to select multiple services.',
     selected: 'Selected',
     selectedLabel: 'Selected services',
     selectedNote: 'Review your selections before proceeding.',
@@ -308,7 +321,6 @@ const copy = {
     stepFlash: 'HAKBANG 2',
     title: 'Piliin ang mga Serbisyo',
     subtitle: 'I-tap ang panel para buksan at pumili ng isa o higit pang serbisyo.',
-    hint: 'I-tap para pumili ng marami.',
     selected: 'Napili',
     selectedLabel: 'Napiling mga serbisyo',
     selectedNote: 'Suriin ang mga napili bago magpatuloy.',
@@ -338,25 +350,6 @@ const language = ref(storedLanguage === 'tl' ? 'tl' : 'en')
 const labels = computed(() => copy[language.value] || copy.en)
 const isTagalog = computed(() => language.value === 'tl')
 const text = (pair) => (isTagalog.value ? pair.tl : pair.en)
-const greetingText = {
-  en: {
-    morning: 'Good morning! Choose a service and we will guide you through.',
-    afternoon: 'Good afternoon! Pick a service to get started.',
-    evening: 'Good evening! Choose a service and we will assist you.',
-  },
-  tl: {
-    morning: 'Magandang umaga! Pumili ng serbisyo at tutulungan ka namin.',
-    afternoon: 'Magandang hapon! Pumili ng serbisyo para magsimula.',
-    evening: 'Magandang gabi! Pumili ng serbisyo at gagabayan ka namin.',
-  },
-}
-const greeting = computed(() => {
-  const hour = new Date().getHours()
-  const slot = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
-  const group = greetingText[language.value] || greetingText.en
-  return group[slot]
-})
-
 const triggerStepFlash = () => {
   if (stepFlashTimer.value) {
     clearTimeout(stepFlashTimer.value)
@@ -423,7 +416,7 @@ const serviceMeta = {
     ],
   },
   INCOME_LOAN: {
-    icon: 'briefcase',
+    icon: 'banknote',
     accent: '#185ADB',
     accentSoft: 'rgba(24, 90, 219, 0.16)',
     accentGlow: 'rgba(24, 90, 219, 0.32)',
@@ -469,7 +462,7 @@ const serviceMeta = {
     ],
   },
   SPECIAL_PERMIT: {
-    icon: 'file',
+    icon: 'badge',
     accent: '#7C3AED',
     accentSoft: 'rgba(124, 58, 237, 0.16)',
     accentGlow: 'rgba(124, 58, 237, 0.32)',
@@ -492,7 +485,7 @@ const serviceMeta = {
     ],
   },
   BUILDING_PERMIT: {
-    icon: 'briefcase',
+    icon: 'building',
     accent: '#0F766E',
     accentSoft: 'rgba(15, 118, 110, 0.16)',
     accentGlow: 'rgba(15, 118, 110, 0.32)',

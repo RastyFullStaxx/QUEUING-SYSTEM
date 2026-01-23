@@ -2,10 +2,12 @@
 
 INSERT INTO services (name, code, active, created_at)
 VALUES
-  ('Barangay Clearance', 'CLR', 1, NOW()),
-  ('Business Permit', 'BUS', 1, NOW()),
-  ('Certificate of Residency', 'RES', 1, NOW()),
-  ('Certificate of Indigency', 'IND', 1, NOW())
+  ('Proof of residency', 'PROOF_RESIDENCY', 1, NOW()),
+  ('Barangay Indigency', 'INDIGENCY', 1, NOW()),
+  ('Loan of income', 'INCOME_LOAN', 1, NOW()),
+  ('Certificate of Solo parent', 'SOLO_PARENT', 1, NOW()),
+  ('Special permit', 'SPECIAL_PERMIT', 1, NOW()),
+  ('Building permit', 'BUILDING_PERMIT', 1, NOW())
 ON DUPLICATE KEY UPDATE
   name = VALUES(name),
   active = VALUES(active);
@@ -37,7 +39,7 @@ VALUES
   (
     'A-1001',
     (SELECT id FROM residents WHERE email = 'rasty@example.com'),
-    (SELECT id FROM services WHERE code = 'CLR'),
+    (SELECT id FROM services WHERE code = 'SPECIAL_PERMIT'),
     'waiting',
     NOW() - INTERVAL 20 MINUTE,
     CURDATE(),
@@ -48,7 +50,7 @@ VALUES
   (
     'A-1002',
     (SELECT id FROM residents WHERE email = 'alyssa.cruz@example.com'),
-    (SELECT id FROM services WHERE code = 'BUS'),
+    (SELECT id FROM services WHERE code = 'BUILDING_PERMIT'),
     'serving',
     NOW() - INTERVAL 12 MINUTE,
     CURDATE(),
@@ -59,7 +61,7 @@ VALUES
   (
     'B-2001',
     (SELECT id FROM residents WHERE email = 'rasty@example.com'),
-    (SELECT id FROM services WHERE code = 'RES'),
+    (SELECT id FROM services WHERE code = 'PROOF_RESIDENCY'),
     'done',
     NOW() - INTERVAL 1 DAY,
     CURDATE() - INTERVAL 1 DAY,
@@ -70,7 +72,7 @@ VALUES
   (
     'B-2002',
     (SELECT id FROM residents WHERE email = 'mika.santos@example.com'),
-    (SELECT id FROM services WHERE code = 'IND'),
+    (SELECT id FROM services WHERE code = 'INDIGENCY'),
     'cancelled',
     NOW() - INTERVAL 2 DAY,
     CURDATE() - INTERVAL 2 DAY,
@@ -81,7 +83,7 @@ VALUES
   (
     'A-1003',
     (SELECT id FROM residents WHERE email = 'rasty@example.com'),
-    (SELECT id FROM services WHERE code = 'BUS'),
+    (SELECT id FROM services WHERE code = 'BUILDING_PERMIT'),
     'waiting',
     NOW() - INTERVAL 10 MINUTE,
     CURDATE(),
@@ -92,7 +94,7 @@ VALUES
   (
     'A-1004',
     (SELECT id FROM residents WHERE email = 'alyssa.cruz@example.com'),
-    (SELECT id FROM services WHERE code = 'CLR'),
+    (SELECT id FROM services WHERE code = 'SPECIAL_PERMIT'),
     'waiting',
     NOW() - INTERVAL 8 MINUTE,
     CURDATE(),
@@ -103,7 +105,7 @@ VALUES
   (
     'A-1005',
     (SELECT id FROM residents WHERE email = 'mika.santos@example.com'),
-    (SELECT id FROM services WHERE code = 'RES'),
+    (SELECT id FROM services WHERE code = 'PROOF_RESIDENCY'),
     'waiting',
     NOW() - INTERVAL 6 MINUTE,
     CURDATE(),
@@ -114,7 +116,7 @@ VALUES
   (
     'A-1006',
     (SELECT id FROM residents WHERE email = 'rasty@example.com'),
-    (SELECT id FROM services WHERE code = 'IND'),
+    (SELECT id FROM services WHERE code = 'INDIGENCY'),
     'serving',
     NOW() - INTERVAL 4 MINUTE,
     CURDATE(),
@@ -125,7 +127,7 @@ VALUES
   (
     'A-1007',
     (SELECT id FROM residents WHERE email = 'rasty@example.com'),
-    (SELECT id FROM services WHERE code = 'RES'),
+    (SELECT id FROM services WHERE code = 'PROOF_RESIDENCY'),
     'waiting',
     NOW() - INTERVAL 3 MINUTE,
     CURDATE(),
@@ -136,7 +138,7 @@ VALUES
   (
     'A-1008',
     (SELECT id FROM residents WHERE email = 'mika.santos@example.com'),
-    (SELECT id FROM services WHERE code = 'BUS'),
+    (SELECT id FROM services WHERE code = 'BUILDING_PERMIT'),
     'waiting',
     NOW() - INTERVAL 2 MINUTE,
     CURDATE(),
@@ -147,7 +149,7 @@ VALUES
   (
     'A-1009',
     (SELECT id FROM residents WHERE email = 'alyssa.cruz@example.com'),
-    (SELECT id FROM services WHERE code = 'CLR'),
+    (SELECT id FROM services WHERE code = 'SPECIAL_PERMIT'),
     'waiting',
     NOW() - INTERVAL 1 MINUTE,
     CURDATE(),
@@ -158,7 +160,7 @@ VALUES
   (
     'B-2005',
     (SELECT id FROM residents WHERE email = 'rasty@example.com'),
-    (SELECT id FROM services WHERE code = 'BUS'),
+    (SELECT id FROM services WHERE code = 'BUILDING_PERMIT'),
     'done',
     NOW() - INTERVAL 3 HOUR,
     CURDATE(),
@@ -169,7 +171,7 @@ VALUES
   (
     'B-2006',
     (SELECT id FROM residents WHERE email = 'mika.santos@example.com'),
-    (SELECT id FROM services WHERE code = 'RES'),
+    (SELECT id FROM services WHERE code = 'PROOF_RESIDENCY'),
     'done',
     NOW() - INTERVAL 2 HOUR,
     CURDATE(),
@@ -180,7 +182,7 @@ VALUES
   (
     'B-2007',
     (SELECT id FROM residents WHERE email = 'alyssa.cruz@example.com'),
-    (SELECT id FROM services WHERE code = 'IND'),
+    (SELECT id FROM services WHERE code = 'INDIGENCY'),
     'done',
     NOW() - INTERVAL 90 MINUTE,
     CURDATE(),
@@ -191,7 +193,7 @@ VALUES
   (
     'B-2003',
     (SELECT id FROM residents WHERE email = 'alyssa.cruz@example.com'),
-    (SELECT id FROM services WHERE code = 'BUS'),
+    (SELECT id FROM services WHERE code = 'BUILDING_PERMIT'),
     'done',
     NOW() - INTERVAL 3 DAY,
     CURDATE() - INTERVAL 3 DAY,
@@ -202,7 +204,7 @@ VALUES
   (
     'B-2004',
     (SELECT id FROM residents WHERE email = 'rasty@example.com'),
-    (SELECT id FROM services WHERE code = 'CLR'),
+    (SELECT id FROM services WHERE code = 'SPECIAL_PERMIT'),
     'cancelled',
     NOW() - INTERVAL 4 DAY,
     CURDATE() - INTERVAL 4 DAY,
