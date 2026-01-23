@@ -566,7 +566,7 @@
           </div>
         </section>
 
-        <div id="resident-verification" class="admin-card mt-10" v-show="activeSection === 'resident-verification'">
+        <div id="resident-verification" class="admin-card mt-6" v-show="activeSection === 'resident-verification'">
           <div class="tool-header">
             <div class="tool-title">
               <span class="tool-icon">
@@ -654,10 +654,11 @@
               <div class="resident-table-header">
                 <div>
                   <h3>Resident directory</h3>
-                  <p>Showing {{ residents.length }} of {{ residentStats.total }} residents.</p>
+                  <p>{{ residentRangeLabel }}</p>
                 </div>
                 <div class="resident-table-meta">
                   <span class="resident-chip">Results {{ residents.length }}</span>
+                  <span class="resident-chip is-muted">Total {{ residentStats.total }}</span>
                   <span v-if="statusFilter" class="resident-chip is-muted">{{ statusFilter }}</span>
                   <span v-if="search" class="resident-chip is-muted">Search: "{{ search }}"</span>
                 </div>
@@ -690,7 +691,7 @@
                         </div>
                       </td>
                     </tr>
-                    <tr v-for="resident in residents" :key="resident.id" class="border-b border-[#F3F4F6]" :class="rowClass(resident.status)">
+                    <tr v-for="resident in residentPageRows" :key="resident.id" class="border-b border-[#F3F4F6]" :class="rowClass(resident.status)">
                       <td class="py-4">
                         <div class="resident-identity">
                           <div class="resident-avatar">{{ residentInitials(resident) }}</div>
@@ -714,30 +715,6 @@
                           <button class="resident-action is-outline" type="button" @click="openEditResidentModal(resident)">
                             Edit
                           </button>
-                          <button
-                            v-if="resident.status !== 'approved'"
-                            class="resident-action is-success"
-                            type="button"
-                            @click="updateStatus(resident.id, 'approved')"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            v-if="resident.status !== 'rejected'"
-                            class="resident-action is-danger"
-                            type="button"
-                            @click="updateStatus(resident.id, 'rejected')"
-                          >
-                            Reject
-                          </button>
-                          <button
-                            v-if="resident.status !== 'pending'"
-                            class="resident-action is-warning"
-                            type="button"
-                            @click="updateStatus(resident.id, 'pending')"
-                          >
-                            Pending
-                          </button>
                           <button class="resident-action is-ghost" type="button" @click="openDeleteResidentModal(resident)">
                             Delete
                           </button>
@@ -747,6 +724,28 @@
                   </tbody>
                 </table>
                 <p v-if="residentError" class="mt-4 text-base text-[#C0392B]">{{ residentError }}</p>
+              </div>
+              <div class="resident-pagination">
+                <span class="resident-range">{{ residentRangeLabel }}</span>
+                <div class="resident-page-controls">
+                  <button
+                    class="resident-tertiary"
+                    type="button"
+                    :disabled="residentPage === 1"
+                    @click="previousResidentPage"
+                  >
+                    Prev
+                  </button>
+                  <span class="resident-page-label">Page {{ residentPage }} of {{ residentTotalPages }}</span>
+                  <button
+                    class="resident-tertiary"
+                    type="button"
+                    :disabled="residentPage === residentTotalPages"
+                    @click="nextResidentPage"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -831,7 +830,7 @@
           </div>
         </div>
 
-          <section id="services" class="admin-card mt-10" v-show="activeSection === 'services'">
+          <section id="services" class="admin-card mt-6" v-show="activeSection === 'services'">
         <div class="tool-header">
           <div class="tool-title">
             <span class="tool-icon">
@@ -904,7 +903,7 @@
         </div>
       </section>
 
-          <section id="queue-control" class="admin-card mt-10" v-show="activeSection === 'queue-control'">
+          <section id="queue-control" class="admin-card mt-6" v-show="activeSection === 'queue-control'">
         <div class="tool-header">
           <div class="tool-title">
             <span class="tool-icon is-gold">
@@ -986,7 +985,7 @@
           <p v-if="queueError" class="mt-3 text-base text-[#C0392B]">{{ queueError }}</p>
         </div>
       </section>
-        <section id="transactions" class="admin-card mt-10" v-show="activeSection === 'transactions'">
+        <section id="transactions" class="admin-card mt-6" v-show="activeSection === 'transactions'">
           <div class="tool-header">
             <div class="tool-title">
               <span class="tool-icon is-gold">
@@ -1056,7 +1055,7 @@
           </div>
         </section>
 
-          <section id="kiosk-devices" class="admin-card mt-10" v-show="activeSection === 'kiosk-devices'">
+          <section id="kiosk-devices" class="admin-card mt-6" v-show="activeSection === 'kiosk-devices'">
         <div class="tool-header">
           <div class="tool-title">
             <span class="tool-icon">
@@ -1122,7 +1121,7 @@
         </div>
       </section>
 
-          <section id="audit-logs" class="admin-card mt-10" v-show="activeSection === 'audit-logs'">
+          <section id="audit-logs" class="admin-card mt-6" v-show="activeSection === 'audit-logs'">
         <div class="tool-header">
           <div class="tool-title">
             <span class="tool-icon">
@@ -1180,7 +1179,7 @@
           <p v-if="auditError" class="mt-3 text-base text-[#C0392B]">{{ auditError }}</p>
         </div>
       </section>
-        <div id="admin-users" class="admin-card mt-10" v-if="isSuperAdmin && activeSection === 'admin-users'">
+        <div id="admin-users" class="admin-card mt-6" v-if="isSuperAdmin && activeSection === 'admin-users'">
       <div class="tool-header">
         <div class="tool-title">
           <span class="tool-icon">
@@ -1261,7 +1260,6 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   getResidents,
-  updateResidentStatus,
   createResident as apiCreateResident,
   updateResident as apiUpdateResident,
   deleteResident as apiDeleteResident,
@@ -1299,6 +1297,8 @@ const isLoadingResidents = ref(false)
 const residentError = ref('')
 const statusFilter = ref('')
 const search = ref('')
+const residentPage = ref(1)
+const residentPageSize = 10
 const isResidentModalOpen = ref(false)
 const residentModalMode = ref('create')
 const residentForm = ref({
@@ -1367,6 +1367,23 @@ const residentModalTitle = computed(() =>
 const residentSubmitLabel = computed(() =>
   residentModalMode.value === 'create' ? 'Create resident' : 'Save changes'
 )
+
+const residentTotalPages = computed(() =>
+  Math.max(1, Math.ceil(residents.value.length / residentPageSize))
+)
+
+const residentPageRows = computed(() => {
+  const start = (residentPage.value - 1) * residentPageSize
+  return residents.value.slice(start, start + residentPageSize)
+})
+
+const residentRangeLabel = computed(() => {
+  const total = residents.value.length
+  if (!total) return 'No residents to display'
+  const start = (residentPage.value - 1) * residentPageSize + 1
+  const end = Math.min(total, start + residentPageSize - 1)
+  return `Showing ${start}-${end} of ${total} residents`
+})
 
 const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
 
@@ -2147,6 +2164,19 @@ const closeResidentModal = () => {
   residentTarget.value = null
 }
 
+const setResidentPage = (page) => {
+  const next = Math.min(Math.max(page, 1), residentTotalPages.value)
+  residentPage.value = next
+}
+
+const nextResidentPage = () => {
+  setResidentPage(residentPage.value + 1)
+}
+
+const previousResidentPage = () => {
+  setResidentPage(residentPage.value - 1)
+}
+
 const submitResidentForm = async () => {
   residentFormError.value = ''
   const payload = {
@@ -2222,6 +2252,9 @@ const loadResidents = async () => {
   try {
     const data = await getResidents({ status: statusFilter.value, search: search.value })
     residents.value = data.residents || []
+    if (residentPage.value > residentTotalPages.value) {
+      residentPage.value = residentTotalPages.value
+    }
   } catch (err) {
     residentError.value = err.message
   } finally {
@@ -2245,17 +2278,8 @@ const loadAllResidents = async () => {
 const resetResidentFilters = async () => {
   statusFilter.value = ''
   search.value = ''
+  residentPage.value = 1
   await refreshResidents()
-}
-
-const updateStatus = async (id, status) => {
-  residentError.value = ''
-  try {
-    await updateResidentStatus(id, status)
-    await refreshResidents()
-  } catch (err) {
-    residentError.value = err.message
-  }
 }
 
 const loadServices = async () => {
@@ -2567,7 +2591,7 @@ onBeforeUnmount(() => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.75rem;
   padding: 2.5rem 2rem 3.5rem;
   background:
     radial-gradient(1200px 420px at 12% -20%, rgba(11, 44, 111, 0.18), transparent 60%),
@@ -2726,7 +2750,7 @@ onBeforeUnmount(() => {
 
 .admin-page {
   width: 100%;
-  padding: 1.25rem 0 2.75rem;
+  padding: 0.6rem 0 2.75rem;
   position: relative;
   z-index: 1;
 }
@@ -2952,14 +2976,15 @@ onBeforeUnmount(() => {
 
 .resident-layout {
   display: grid;
-  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
   gap: 1.5rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 .resident-side {
   display: grid;
   gap: 1.25rem;
+  grid-template-rows: auto 1fr;
 }
 
 .resident-overview {
@@ -3016,8 +3041,9 @@ onBeforeUnmount(() => {
   gap: 0.35rem;
   padding: 0.85rem;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: #14387a;
+  color: #f8fafc;
 }
 
 .resident-metric-card strong {
@@ -3027,27 +3053,34 @@ onBeforeUnmount(() => {
 
 .resident-metric-card small {
   font-size: 0.85rem;
-  color: rgba(226, 232, 240, 0.8);
+  color: rgba(226, 232, 240, 0.85);
 }
 
 .resident-metric-card.is-success {
-  background: rgba(46, 125, 50, 0.2);
-  border-color: rgba(46, 125, 50, 0.5);
+  background: #2e7d32;
+  border-color: rgba(46, 125, 50, 0.7);
+  color: #ffffff;
+}
+
+.resident-metric-card.is-success small,
+.resident-metric-card.is-danger small {
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .resident-metric-card.is-warning {
-  background: rgba(242, 195, 0, 0.25);
-  border-color: rgba(242, 195, 0, 0.5);
+  background: #f2c300;
+  border-color: rgba(242, 195, 0, 0.8);
   color: #0b2c6f;
 }
 
 .resident-metric-card.is-warning small {
-  color: rgba(11, 44, 111, 0.75);
+  color: rgba(11, 44, 111, 0.8);
 }
 
 .resident-metric-card.is-danger {
-  background: rgba(192, 57, 43, 0.2);
-  border-color: rgba(192, 57, 43, 0.5);
+  background: #c0392b;
+  border-color: rgba(192, 57, 43, 0.7);
+  color: #ffffff;
 }
 
 .resident-filters-card {
@@ -3056,6 +3089,8 @@ onBeforeUnmount(() => {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
 }
 
 .resident-filters-header {
@@ -3079,6 +3114,7 @@ onBeforeUnmount(() => {
 .resident-filter-grid {
   margin-top: 1rem;
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
 }
 
@@ -3099,7 +3135,8 @@ onBeforeUnmount(() => {
 }
 
 .resident-filter-actions {
-  margin-top: 1rem;
+  margin-top: auto;
+  padding-top: 1rem;
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
@@ -3150,12 +3187,21 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
 }
 
+.resident-tertiary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
 .resident-table-card {
   border-radius: 22px;
   padding: 1.25rem;
   background: #ffffff;
   border: 1px solid #e5e7eb;
   box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
 }
 
 .resident-table-header {
@@ -3200,6 +3246,7 @@ onBeforeUnmount(() => {
 
 .resident-table-wrapper {
   overflow-x: auto;
+  min-height: 360px;
 }
 
 .resident-identity {
@@ -3279,6 +3326,33 @@ onBeforeUnmount(() => {
   border-color: #e5e7eb;
   color: #c0392b;
   background: #ffffff;
+}
+
+.resident-pagination {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.resident-range {
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.resident-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.resident-page-label {
+  font-weight: 600;
+  color: #0b2c6f;
 }
 
 .modal-overlay {
@@ -4409,7 +4483,7 @@ onBeforeUnmount(() => {
   }
 
   .admin-page {
-    padding-top: 1rem;
+    padding-top: 0.6rem;
     padding-bottom: 2.25rem;
   }
 
@@ -4452,7 +4526,7 @@ onBeforeUnmount(() => {
   }
 
   .admin-page {
-    padding-top: 0.75rem;
+    padding-top: 0.5rem;
     padding-bottom: 2rem;
   }
 
@@ -4481,6 +4555,10 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
+  .resident-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
   .resident-table-header {
     flex-direction: column;
     align-items: flex-start;
@@ -4488,6 +4566,14 @@ onBeforeUnmount(() => {
 
   .modal-grid {
     grid-template-columns: 1fr;
+  }
+
+  .resident-table-wrapper {
+    min-height: 240px;
+  }
+
+  .resident-pagination {
+    align-items: flex-start;
   }
 }
 
