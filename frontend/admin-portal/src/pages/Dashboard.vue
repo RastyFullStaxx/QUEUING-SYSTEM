@@ -890,11 +890,17 @@
                   <div class="service-action-grid">
                     <label class="service-field">
                       <span>Search</span>
-                      <input v-model="serviceSearch" type="text" placeholder="Name or code" class="service-input" />
+                      <input
+                        v-model="serviceSearch"
+                        type="text"
+                        placeholder="Name or code"
+                        class="service-input"
+                        @input="servicePage = 1"
+                      />
                     </label>
                     <label class="service-field">
                       <span>Status</span>
-                      <select v-model="serviceStatusFilter" class="service-input">
+                      <select v-model="serviceStatusFilter" class="service-input" @change="servicePage = 1">
                         <option value="all">All statuses</option>
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
@@ -949,7 +955,7 @@
                           </div>
                         </td>
                       </tr>
-                      <tr v-for="service in serviceFiltered" :key="service.id" class="border-b border-[#F3F4F6]" :class="rowClass(service.active ? 'active' : 'inactive')">
+                      <tr v-for="service in servicePageRows" :key="service.id" class="border-b border-[#F3F4F6]" :class="rowClass(service.active ? 'active' : 'inactive')">
                         <td class="py-3">
                           <div class="service-identity">
                             <div class="service-badge">{{ service.code }}</div>
@@ -985,6 +991,23 @@
                     </tbody>
                   </table>
                   <p v-if="serviceError" class="mt-3 text-base text-[#C0392B]">{{ serviceError }}</p>
+                </div>
+                <div class="service-pagination">
+                  <span class="service-range">{{ serviceRangeLabel }}</span>
+                  <div class="service-page-controls">
+                    <button class="resident-tertiary" type="button" :disabled="servicePage === 1" @click="previousServicePage">
+                      Prev
+                    </button>
+                    <span class="service-page-label">Page {{ servicePage }} of {{ serviceTotalPages }}</span>
+                    <button
+                      class="resident-tertiary"
+                      type="button"
+                      :disabled="servicePage === serviceTotalPages"
+                      @click="nextServicePage"
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1029,87 +1052,226 @@
           </section>
 
           <section id="queue-control" class="admin-card mt-6" v-show="activeSection === 'queue-control'">
-        <div class="tool-header">
-          <div class="tool-title">
-            <span class="tool-icon is-gold">
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M5 7h14M5 12h10M5 17h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-                <path d="M17 14v6l3-3-3-3Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-            </span>
-            <h2 class="tool-heading">Queue Control</h2>
-          </div>
-          <div class="tool-accent" aria-hidden="true">
-            <span class="tool-accent-bar is-primary"></span>
-            <span class="tool-accent-bar is-gold"></span>
-            <span class="tool-accent-bar is-neutral"></span>
-          </div>
-        </div>
-        <div class="control-strip mt-4 flex flex-wrap gap-3">
-          <input v-model="queueServiceId" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base w-32" placeholder="Service ID" />
-          <select v-model="queueStatus" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base">
-            <option value="">All</option>
-            <option value="waiting">Waiting</option>
-            <option value="serving">Serving</option>
-            <option value="done">Done</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-          <button class="bg-[#F2C300] text-black rounded-xl px-4 py-2 text-base font-semibold" @click="callNext">
-            Call next
-          </button>
-          <button class="bg-[#0B2C6F] text-white rounded-xl px-4 py-2 text-base" @click="loadQueue">
-            Refresh
-          </button>
-        </div>
-        <div class="mt-4 overflow-x-auto">
-          <table class="w-full text-base">
-            <thead class="text-left text-[#6B7280]">
-              <tr class="border-b border-[#E5E7EB]">
-                <th class="py-2">Ticket</th>
-                <th class="py-2">Service</th>
-                <th class="py-2">Status</th>
-                <th class="py-2 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="isLoadingQueue">
-                <td colspan="4" class="py-4">
-                  <div class="table-state">
-                    <span class="table-state-icon"></span>
-                    <span>Loading tickets...</span>
+            <div class="tool-header">
+              <div class="tool-title">
+                <span class="tool-icon is-gold">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M5 7h14M5 12h10M5 17h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                    <path d="M17 14v6l3-3-3-3Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <h2 class="tool-heading">Queue Control</h2>
+              </div>
+              <div class="tool-accent" aria-hidden="true">
+                <span class="tool-accent-bar is-primary"></span>
+                <span class="tool-accent-bar is-gold"></span>
+                <span class="tool-accent-bar is-neutral"></span>
+              </div>
+            </div>
+
+            <div class="queue-layout mt-6">
+              <div class="queue-side">
+                <div class="queue-call-card">
+                  <p class="queue-kicker">Call logic</p>
+                  <h3 class="queue-title">Call next ticket</h3>
+                  <p class="queue-subtitle">
+                    The queue monitor calls the earliest waiting ticket per service. Confirm the next candidate here.
+                  </p>
+                  <label class="queue-field">
+                    <span>Service</span>
+                    <select v-model="callNextServiceId" class="queue-input">
+                      <option value="">Select service</option>
+                      <option v-for="service in services" :key="service.id" :value="service.id">
+                        {{ service.name }} ({{ service.code }})
+                      </option>
+                    </select>
+                  </label>
+                  <div class="queue-preview">
+                    <div class="queue-preview-item">
+                      <span>Next ticket</span>
+                      <strong>{{ queueNextCandidate ? queueNextCandidate.ticket_no : '--' }}</strong>
+                    </div>
+                    <div class="queue-preview-item">
+                      <span>Waiting</span>
+                      <strong>{{ queueWaitingList.length }}</strong>
+                    </div>
+                    <div class="queue-preview-item">
+                      <span>Oldest issued</span>
+                      <strong>{{ queueNextCandidate ? formatTime(queueNextCandidate.issued_at) : '--' }}</strong>
+                    </div>
                   </div>
-                </td>
-              </tr>
-              <tr v-else-if="queueTickets.length === 0">
-                <td colspan="4" class="py-4">
-                  <div class="table-state">
-                    <span class="table-state-icon"></span>
-                    <span>No tickets found.</span>
+                  <div class="queue-call-actions">
+                    <button class="resident-primary" type="button" @click="callNext">
+                      Call next
+                    </button>
+                    <button class="resident-tertiary" type="button" @click="loadQueue">
+                      Refresh queue
+                    </button>
                   </div>
-                </td>
-              </tr>
-              <tr v-for="ticket in queueTickets" :key="ticket.id" class="border-b border-[#F3F4F6]" :class="rowClass(ticket.status)">
-                <td class="py-2">{{ ticket.ticket_no }}</td>
-                <td class="py-2">{{ ticket.service_id }}</td>
-                <td class="py-2">
-                  <span class="status-pill" :class="statusClass(ticket.status)">
-                    {{ ticket.status }}
-                  </span>
-                </td>
-                <td class="py-2 text-right">
-                  <button class="text-base border border-[#2E7D32] text-[#2E7D32] px-3 py-1 rounded-full" @click="serveTicket(ticket)">
-                    Serve
-                  </button>
-                  <button class="ml-2 text-base border border-[#C0392B] text-[#C0392B] px-3 py-1 rounded-full" @click="cancelTicket(ticket)">
-                    Cancel
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-if="queueError" class="mt-3 text-base text-[#C0392B]">{{ queueError }}</p>
-        </div>
-      </section>
+                  <p class="queue-call-note">{{ queueDecisionNote }}</p>
+                </div>
+
+                <div class="queue-filter-card">
+                  <div class="queue-filter-header">
+                    <div>
+                      <h4>Queue filters</h4>
+                      <p>Sort and search before actioning tickets.</p>
+                    </div>
+                    <button class="resident-secondary" type="button" @click="loadQueue">Refresh list</button>
+                  </div>
+                  <div class="queue-filter-grid">
+                    <label class="queue-field">
+                      <span>Search</span>
+                      <input
+                        v-model="queueSearch"
+                        type="text"
+                        placeholder="Ticket, resident, or service"
+                        class="queue-input"
+                        @input="queuePage = 1"
+                      />
+                    </label>
+                    <label class="queue-field">
+                      <span>Service</span>
+                      <select v-model="queueServiceId" class="queue-input" @change="queuePage = 1">
+                        <option value="">All services</option>
+                        <option v-for="service in services" :key="service.id" :value="service.id">
+                          {{ service.name }}
+                        </option>
+                      </select>
+                    </label>
+                    <label class="queue-field">
+                      <span>Status</span>
+                      <select v-model="queueStatus" class="queue-input" @change="queuePage = 1">
+                        <option value="">All statuses</option>
+                        <option value="waiting">Waiting</option>
+                        <option value="serving">Serving</option>
+                        <option value="done">Done</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </label>
+                    <label class="queue-field">
+                      <span>Sort by</span>
+                      <select v-model="queueSortKey" class="queue-input" @change="queuePage = 1">
+                        <option value="smart">Smart order</option>
+                        <option value="issued_at">Issued time</option>
+                        <option value="ticket_no">Ticket number</option>
+                        <option value="service_id">Service</option>
+                        <option value="status">Status</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="queue-filter-actions">
+                    <button class="resident-tertiary" type="button" @click="toggleQueueSortDirection">
+                      Sort: {{ queueSortDirection === 'asc' ? 'Ascending' : 'Descending' }}
+                    </button>
+                    <button class="resident-tertiary" type="button" @click="resetQueueFilters">Clear filters</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="queue-table-card">
+                <div class="queue-table-header">
+                  <div>
+                    <h3>Queue board</h3>
+                    <p>{{ queueRangeLabel }}</p>
+                  </div>
+                  <div class="queue-table-meta">
+                    <span class="queue-chip">Total {{ queueTickets.length }}</span>
+                    <span class="queue-chip is-muted">Filtered {{ queueSortedTickets.length }}</span>
+                  </div>
+                </div>
+                <div class="queue-table-wrapper">
+                  <table class="w-full text-base">
+                    <thead class="text-left text-[#6B7280]">
+                      <tr class="border-b border-[#E5E7EB]">
+                        <th class="py-2">Ticket</th>
+                        <th class="py-2">Service</th>
+                        <th class="py-2">Status</th>
+                        <th class="py-2">Issued</th>
+                        <th class="py-2 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-if="isLoadingQueue">
+                        <td colspan="5" class="py-4">
+                          <div class="table-state">
+                            <span class="table-state-icon"></span>
+                            <span>Loading tickets...</span>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr v-else-if="queueSortedTickets.length === 0">
+                        <td colspan="5" class="py-4">
+                          <div class="table-state">
+                            <span class="table-state-icon"></span>
+                            <span>No tickets match the filters.</span>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr v-for="ticket in queuePageRows" :key="ticket.id" class="border-b border-[#F3F4F6]" :class="rowClass(ticket.status)">
+                        <td class="py-3">
+                          <div class="queue-ticket">
+                            <span class="queue-ticket-no">{{ ticket.ticket_no }}</span>
+                            <small>Resident #{{ ticket.resident_id }}</small>
+                          </div>
+                        </td>
+                        <td class="py-3">
+                          <div class="queue-service">
+                            <span class="queue-service-name">
+                              {{ services.find((service) => service.id === ticket.service_id)?.name || `Service #${ticket.service_id}` }}
+                            </span>
+                            <small>{{ services.find((service) => service.id === ticket.service_id)?.code || '' }}</small>
+                          </div>
+                        </td>
+                        <td class="py-3">
+                          <span class="status-pill" :class="statusClass(ticket.status)">
+                            {{ ticket.status }}
+                          </span>
+                        </td>
+                        <td class="py-3">{{ formatTime(ticket.issued_at) }}</td>
+                        <td class="py-3 text-right">
+                          <div class="queue-action-group">
+                            <button
+                              class="queue-action is-success"
+                              type="button"
+                              @click="serveTicket(ticket)"
+                            >
+                              Serve
+                            </button>
+                            <button
+                              class="queue-action is-danger"
+                              type="button"
+                              @click="cancelTicket(ticket)"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p v-if="queueError" class="mt-3 text-base text-[#C0392B]">{{ queueError }}</p>
+                </div>
+                <div class="queue-pagination">
+                  <span class="queue-range">{{ queueRangeLabel }}</span>
+                  <div class="queue-page-controls">
+                    <button class="resident-tertiary" type="button" :disabled="queuePage === 1" @click="previousQueuePage">
+                      Prev
+                    </button>
+                    <span class="queue-page-label">Page {{ queuePage }} of {{ queueTotalPages }}</span>
+                    <button
+                      class="resident-tertiary"
+                      type="button"
+                      :disabled="queuePage === queueTotalPages"
+                      @click="nextQueuePage"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         <section id="transactions" class="admin-card mt-6" v-show="activeSection === 'transactions'">
           <div class="tool-header">
             <div class="tool-title">
@@ -1445,6 +1607,8 @@ const isLoadingServices = ref(false)
 const serviceError = ref('')
 const serviceSearch = ref('')
 const serviceStatusFilter = ref('all')
+const servicePage = ref(1)
+const servicePageSize = 10
 const isServiceModalOpen = ref(false)
 const serviceModalMode = ref('create')
 const serviceForm = ref({ name: '', code: '', active: 1 })
@@ -1460,6 +1624,12 @@ const isLoadingQueue = ref(false)
 const queueError = ref('')
 const queueServiceId = ref('')
 const queueStatus = ref('')
+const queueSearch = ref('')
+const queueSortKey = ref('smart')
+const queueSortDirection = ref('asc')
+const queuePage = ref(1)
+const queuePageSize = 10
+const callNextServiceId = ref('')
 const transactions = ref([])
 const isLoadingTransactions = ref(false)
 const transactionError = ref('')
@@ -1543,9 +1713,110 @@ const serviceFiltered = computed(() => {
 const serviceRangeLabel = computed(() => {
   const total = services.value.length
   const visible = serviceFiltered.value.length
-  if (!total) return 'No services available'
-  if (total === visible) return `Showing ${total} services`
-  return `Showing ${visible} of ${total} services`
+  if (!visible) return 'No services to display'
+  const start = (servicePage.value - 1) * servicePageSize + 1
+  const end = Math.min(visible, start + servicePageSize - 1)
+  if (total === visible) return `Showing ${start}-${end} of ${total} services`
+  return `Showing ${start}-${end} of ${visible} services (total ${total})`
+})
+
+const serviceTotalPages = computed(() =>
+  Math.max(1, Math.ceil(serviceFiltered.value.length / servicePageSize))
+)
+
+const servicePageRows = computed(() => {
+  const start = (servicePage.value - 1) * servicePageSize
+  return serviceFiltered.value.slice(start, start + servicePageSize)
+})
+
+const queueFilteredTickets = computed(() => {
+  const term = queueSearch.value.trim().toLowerCase()
+  return queueTickets.value.filter((ticket) => {
+    if (queueServiceId.value) {
+      const serviceId = parseInt(queueServiceId.value, 10)
+      if (ticket.service_id !== serviceId) return false
+    }
+    if (queueStatus.value && ticket.status !== queueStatus.value) return false
+    if (!term) return true
+    const ticketNo = String(ticket.ticket_no || '').toLowerCase()
+    const residentId = String(ticket.resident_id || '').toLowerCase()
+    const serviceId = String(ticket.service_id || '').toLowerCase()
+    return ticketNo.includes(term) || residentId.includes(term) || serviceId.includes(term)
+  })
+})
+
+const queueSortedTickets = computed(() => {
+  const items = [...queueFilteredTickets.value]
+  const direction = queueSortDirection.value === 'desc' ? -1 : 1
+  const statusPriority = {
+    serving: 0,
+    waiting: 1,
+    done: 2,
+    cancelled: 3,
+  }
+  const compareValues = (a, b) => (a > b ? 1 : a < b ? -1 : 0)
+
+  items.sort((a, b) => {
+    if (queueSortKey.value === 'smart') {
+      const statusDiff = compareValues(statusPriority[a.status] ?? 99, statusPriority[b.status] ?? 99)
+      if (statusDiff !== 0) return statusDiff * direction
+      const timeDiff = compareValues(new Date(a.issued_at || 0).getTime(), new Date(b.issued_at || 0).getTime())
+      if (timeDiff !== 0) return timeDiff * direction
+      return compareValues(String(a.ticket_no || ''), String(b.ticket_no || '')) * direction
+    }
+    if (queueSortKey.value === 'status') {
+      const statusDiff = compareValues(statusPriority[a.status] ?? 99, statusPriority[b.status] ?? 99)
+      if (statusDiff !== 0) return statusDiff * direction
+    }
+    if (queueSortKey.value === 'service_id') {
+      const serviceDiff = compareValues(a.service_id || 0, b.service_id || 0)
+      if (serviceDiff !== 0) return serviceDiff * direction
+    }
+    if (queueSortKey.value === 'ticket_no') {
+      const ticketDiff = compareValues(String(a.ticket_no || ''), String(b.ticket_no || ''))
+      if (ticketDiff !== 0) return ticketDiff * direction
+    }
+    if (queueSortKey.value === 'issued_at') {
+      const timeDiff = compareValues(new Date(a.issued_at || 0).getTime(), new Date(b.issued_at || 0).getTime())
+      if (timeDiff !== 0) return timeDiff * direction
+    }
+    const fallback = compareValues(new Date(a.issued_at || 0).getTime(), new Date(b.issued_at || 0).getTime())
+    return fallback * direction
+  })
+  return items
+})
+
+const queueTotalPages = computed(() =>
+  Math.max(1, Math.ceil(queueSortedTickets.value.length / queuePageSize))
+)
+
+const queuePageRows = computed(() => {
+  const start = (queuePage.value - 1) * queuePageSize
+  return queueSortedTickets.value.slice(start, start + queuePageSize)
+})
+
+const queueRangeLabel = computed(() => {
+  const total = queueSortedTickets.value.length
+  if (!total) return 'No tickets to display'
+  const start = (queuePage.value - 1) * queuePageSize + 1
+  const end = Math.min(total, start + queuePageSize - 1)
+  return `Showing ${start}-${end} of ${total} tickets`
+})
+
+const queueWaitingList = computed(() => {
+  if (!callNextServiceId.value) return []
+  const serviceId = parseInt(callNextServiceId.value, 10)
+  return queueTickets.value
+    .filter((ticket) => ticket.status === 'waiting' && ticket.service_id === serviceId)
+    .sort((a, b) => new Date(a.issued_at || 0).getTime() - new Date(b.issued_at || 0).getTime())
+})
+
+const queueNextCandidate = computed(() => queueWaitingList.value[0] || null)
+
+const queueDecisionNote = computed(() => {
+  if (!callNextServiceId.value) return 'Select a service to preview the next ticket to be called.'
+  if (!queueWaitingList.value.length) return 'No waiting tickets for the selected service yet.'
+  return 'Calling uses the earliest waiting ticket by issued time, matching the queue monitor.'
 })
 
 const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
@@ -2340,6 +2611,37 @@ const previousResidentPage = () => {
   setResidentPage(residentPage.value - 1)
 }
 
+const setQueuePage = (page) => {
+  const next = Math.min(Math.max(page, 1), queueTotalPages.value)
+  queuePage.value = next
+}
+
+const nextQueuePage = () => {
+  setQueuePage(queuePage.value + 1)
+}
+
+const previousQueuePage = () => {
+  setQueuePage(queuePage.value - 1)
+}
+
+const toggleQueueSortDirection = () => {
+  queueSortDirection.value = queueSortDirection.value === 'asc' ? 'desc' : 'asc'
+  queuePage.value = 1
+}
+
+const setServicePage = (page) => {
+  const next = Math.min(Math.max(page, 1), serviceTotalPages.value)
+  servicePage.value = next
+}
+
+const nextServicePage = () => {
+  setServicePage(servicePage.value + 1)
+}
+
+const previousServicePage = () => {
+  setServicePage(servicePage.value - 1)
+}
+
 const openCreateServiceModal = () => {
   serviceModalMode.value = 'create'
   serviceForm.value = { name: '', code: '', active: 1 }
@@ -2510,6 +2812,9 @@ const loadServices = async () => {
   try {
     const data = await getServices()
     services.value = data.services || []
+    if (servicePage.value > serviceTotalPages.value) {
+      servicePage.value = serviceTotalPages.value
+    }
   } catch (err) {
     serviceError.value = err.message
   } finally {
@@ -2530,6 +2835,7 @@ const toggleService = async (service) => {
 const resetServiceFilters = () => {
   serviceSearch.value = ''
   serviceStatusFilter.value = 'all'
+  servicePage.value = 1
 }
 
 const loadKiosks = async () => {
@@ -2560,13 +2866,25 @@ const loadQueue = async () => {
   queueError.value = ''
   isLoadingQueue.value = true
   try {
-    const data = await getQueue({ service_id: queueServiceId.value, status: queueStatus.value })
+    const data = await getQueue()
     queueTickets.value = data.tickets || []
+    if (queuePage.value > queueTotalPages.value) {
+      queuePage.value = queueTotalPages.value
+    }
   } catch (err) {
     queueError.value = err.message
   } finally {
     isLoadingQueue.value = false
   }
+}
+
+const resetQueueFilters = () => {
+  queueServiceId.value = ''
+  queueStatus.value = ''
+  queueSearch.value = ''
+  queueSortKey.value = 'smart'
+  queueSortDirection.value = 'asc'
+  queuePage.value = 1
 }
 
 const loadAllQueueTickets = async () => {
@@ -2597,11 +2915,11 @@ const loadTransactions = async () => {
 const callNext = async () => {
   queueError.value = ''
   try {
-    if (!queueServiceId.value) {
-      queueError.value = 'Service ID is required'
+    if (!callNextServiceId.value) {
+      queueError.value = 'Service is required to call the next ticket'
       return
     }
-    await queueNext(parseInt(queueServiceId.value, 10))
+    await queueNext(parseInt(callNextServiceId.value, 10))
     await loadQueue()
   } catch (err) {
     queueError.value = err.message
@@ -3738,7 +4056,7 @@ onBeforeUnmount(() => {
   border: 1px solid #e5e7eb;
   box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
 }
 
 .service-table-header {
@@ -3851,6 +4169,337 @@ onBeforeUnmount(() => {
   border-color: rgba(192, 57, 43, 0.4);
   color: #c0392b;
   background: #fff5f5;
+}
+
+.service-pagination {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.service-range {
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.service-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.service-page-label {
+  font-weight: 600;
+  color: #0b2c6f;
+}
+
+.queue-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.queue-side {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-rows: auto 1fr;
+}
+
+.queue-call-card {
+  border-radius: 24px;
+  padding: 1.5rem;
+  background: linear-gradient(145deg, #0b2c6f 0%, #123d86 60%);
+  color: #f8fafc;
+  box-shadow: 0 18px 40px rgba(11, 44, 111, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.queue-call-card::after {
+  content: '';
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 1px solid rgba(242, 195, 0, 0.6);
+  right: -40px;
+  top: -40px;
+  pointer-events: none;
+}
+
+.queue-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.queue-title {
+  margin-top: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.queue-subtitle {
+  margin-top: 0.6rem;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.queue-field {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.queue-input {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  padding: 0.65rem 0.85rem;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: #f8fafc;
+}
+
+.queue-input option {
+  color: #0b2c6f;
+}
+
+.queue-preview {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.queue-preview-item {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.3rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.queue-preview-item span {
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.queue-preview-item strong {
+  font-size: 1.2rem;
+}
+
+.queue-call-actions {
+  margin-top: 1.1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.queue-call-note {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.queue-filter-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.queue-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.queue-filter-header h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.queue-filter-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.queue-filter-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.queue-filter-card .queue-field {
+  color: #374151;
+}
+
+.queue-filter-card .queue-input {
+  background: #f8fafc;
+  color: #111827;
+  border-color: #e5e7eb;
+}
+
+.queue-filter-actions {
+  margin-top: auto;
+  padding-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.queue-table-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.queue-table-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.queue-table-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.queue-table-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.queue-table-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.queue-chip {
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+.queue-chip.is-muted {
+  background: #ffffff;
+  color: #6b7280;
+}
+
+.queue-table-wrapper {
+  overflow-x: auto;
+  min-height: 360px;
+}
+
+.queue-ticket {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.queue-ticket-no {
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.queue-ticket small {
+  color: #6b7280;
+}
+
+.queue-service {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.queue-service-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.queue-service small {
+  color: #6b7280;
+}
+
+.queue-action-group {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.queue-action {
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  background: #ffffff;
+}
+
+.queue-action.is-success {
+  border-color: rgba(46, 125, 50, 0.4);
+  color: #2e7d32;
+  background: #f0faf2;
+}
+
+.queue-action.is-danger {
+  border-color: rgba(192, 57, 43, 0.4);
+  color: #c0392b;
+  background: #fff5f5;
+}
+
+.queue-pagination {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.queue-range {
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.queue-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.queue-page-label {
+  font-weight: 600;
+  color: #0b2c6f;
 }
 
 .modal-overlay {
@@ -5020,6 +5669,10 @@ onBeforeUnmount(() => {
   .service-layout {
     grid-template-columns: 1fr;
   }
+
+  .queue-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -5074,6 +5727,19 @@ onBeforeUnmount(() => {
     align-items: flex-start;
   }
 
+  .queue-preview {
+    grid-template-columns: 1fr;
+  }
+
+  .queue-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .queue-table-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .resident-table-header {
     flex-direction: column;
     align-items: flex-start;
@@ -5092,6 +5758,10 @@ onBeforeUnmount(() => {
   }
 
   .service-table-wrapper {
+    min-height: 240px;
+  }
+
+  .queue-table-wrapper {
     min-height: 240px;
   }
 }
