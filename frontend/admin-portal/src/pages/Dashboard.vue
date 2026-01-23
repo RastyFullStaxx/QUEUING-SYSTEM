@@ -122,28 +122,28 @@
               <div class="hero-stat">
                 <p class="hero-stat-label">Active queue</p>
                 <div class="hero-stat-value">
-                  <span>{{ activeQueueCount }}</span>
+                  <span>{{ todayActiveQueueCount }}</span>
                   <span class="hero-stat-unit">tickets</span>
                 </div>
-                <p class="hero-stat-note">{{ queuePressureNote }}</p>
+                <p class="hero-stat-note">{{ todayQueuePressureNote }}</p>
               </div>
               <div class="hero-mini-grid">
                 <div class="hero-mini">
                   <span>Waiting</span>
-                  <strong>{{ queueStatusCounts.waiting }}</strong>
+                  <strong>{{ todayQueueStatusCounts.waiting }}</strong>
                 </div>
                 <div class="hero-mini">
                   <span>Serving</span>
-                  <strong>{{ queueStatusCounts.serving }}</strong>
+                  <strong>{{ todayQueueStatusCounts.serving }}</strong>
                 </div>
                 <div class="hero-mini">
                   <span>Avg wait</span>
-                  <strong>{{ averageWaitLabel }}</strong>
+                  <strong>{{ todayAverageWaitLabel }}</strong>
                 </div>
               </div>
               <div class="hero-meter">
                 <div class="hero-meter-track">
-                  <span class="hero-meter-fill" :style="{ width: `${queuePressurePercent}%` }"></span>
+                  <span class="hero-meter-fill" :style="{ width: `${todayQueuePressurePercent}%` }"></span>
                 </div>
                 <div class="hero-meter-labels">
                   <span>Low</span>
@@ -1215,6 +1215,13 @@ const parseDateInput = (value) => {
   return Number.isNaN(date.getTime()) ? null : date
 }
 
+const isDateInRange = (value, range) => {
+  if (!value || !range) return false
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return false
+  return date >= range.start && date <= range.end
+}
+
 const analyticsDateRange = computed(() => {
   const today = new Date()
   const endToday = endOfDay(today)
@@ -1381,6 +1388,133 @@ const queuePressureNote = computed(() => {
   if (active >= 12) return 'High demand. Activate extra counters if available.'
   if (active >= 6) return 'Moderate load. Keep a steady serving pace.'
   return 'Light traffic. Keep monitoring the queue.'
+})
+
+const todayRange = computed(() => {
+  const anchor = lastUpdatedAt.value ? new Date(lastUpdatedAt.value) : new Date()
+  return {
+    start: startOfDay(anchor),
+    end: endOfDay(anchor),
+  }
+})
+
+const todayTickets = computed(() => {
+  const range = todayRange.value
+  return allQueueTickets.value.filter((ticket) => isDateInRange(ticket.issued_at, range))
+})
+
+const todayQueueStatusCounts = computed(() => {
+  const counts = { waiting: 0, serving: 0, done: 0, cancelled: 0, total: todayTickets.value.length }
+  todayTickets.value.forEach((ticket) => {
+    if (ticket.status === 'waiting') counts.waiting += 1
+    if (ticket.status === 'serving') counts.serving += 1
+    if (ticket.status === 'done') counts.done += 1
+    if (ticket.status === 'cancelled') counts.cancelled += 1
+  })
+  counts.total = todayTickets.value.length
+  return counts
+})
+
+const todayActiveQueueCount = computed(() => todayQueueStatusCounts.value.waiting + todayQueueStatusCounts.value.serving)
+
+const todayAverageWaitMinutes = computed(() => {
+  const range = todayRange.value
+  const relevantLogs = auditLogs.value.filter((log) => {
+    if (!log?.created_at) return false
+    if (!isDateInRange(log.created_at, range)) return false
+    return log.action === 'queue.updated' || log.action === 'queue.completed'
+  })
+  if (!relevantLogs.length) return null
+
+  const completedEntries = []
+  relevantLogs.forEach((log) => {
+    const meta = log.meta_json && typeof log.meta_json === 'object' ? log.meta_json : {}
+    if (log.action === 'queue.updated') {
+      if (meta.status !== 'done') return
+      completedEntries.push({
+        completed_at: log.created_at,
+        ticket_id: meta.ticket_id ? Number(meta.ticket_id) : null,
+        ticket_no: meta.ticket_no || null,
+      })
+      return
+    }
+    if (log.action === 'queue.completed') {
+      if (!meta.ticket_no) return
+      completedEntries.push({
+        completed_at: log.created_at,
+        ticket_id: null,
+        ticket_no: meta.ticket_no,
+      })
+    }
+  })
+
+  if (!completedEntries.length) return null
+
+  const ticketsById = new Map()
+  const ticketsByNo = new Map()
+  allQueueTickets.value.forEach((ticket) => {
+    if (ticket.id) ticketsById.set(ticket.id, ticket)
+    if (ticket.ticket_no) ticketsByNo.set(ticket.ticket_no, ticket)
+  })
+
+  const completionTimes = []
+  let fallbackDurationMinutes = null
+  completedEntries.forEach((entry) => {
+    let ticket = null
+    if (entry.ticket_id && ticketsById.has(entry.ticket_id)) {
+      ticket = ticketsById.get(entry.ticket_id)
+    } else if (entry.ticket_no && ticketsByNo.has(entry.ticket_no)) {
+      ticket = ticketsByNo.get(entry.ticket_no)
+    }
+    if (!ticket) return
+    const completedAt = new Date(entry.completed_at)
+    if (Number.isNaN(completedAt.getTime())) return
+    completionTimes.push(completedAt.getTime())
+    if (fallbackDurationMinutes === null && ticket.issued_at) {
+      const issuedAt = new Date(ticket.issued_at)
+      if (!Number.isNaN(issuedAt.getTime()) && completedAt.getTime() > issuedAt.getTime()) {
+        fallbackDurationMinutes = (completedAt.getTime() - issuedAt.getTime()) / 60000
+      }
+    }
+  })
+
+  if (!completionTimes.length) return null
+
+  completionTimes.sort((a, b) => a - b)
+  let totalMinutes = 0
+  let countMinutes = 0
+  const maxGapMinutes = 30
+  for (let i = 1; i < completionTimes.length; i += 1) {
+    const gapMinutes = (completionTimes[i] - completionTimes[i - 1]) / 60000
+    if (gapMinutes <= 0 || gapMinutes > maxGapMinutes) continue
+    totalMinutes += gapMinutes
+    countMinutes += 1
+  }
+  if (countMinutes > 0) return Math.round((totalMinutes / countMinutes) * 10) / 10
+  if (fallbackDurationMinutes !== null) return Math.round(fallbackDurationMinutes * 10) / 10
+  return null
+})
+
+const todayAverageWaitLabel = computed(() => {
+  if (todayAverageWaitMinutes.value === null || todayAverageWaitMinutes.value === undefined) return '--'
+  return `${todayAverageWaitMinutes.value} min`
+})
+
+const todayQueuePressurePercent = computed(() => {
+  const scale = 20
+  const value = todayActiveQueueCount.value
+  return Math.min(100, Math.round((value / scale) * 100))
+})
+
+const todayQueuePressureNote = computed(() => {
+  const active = todayActiveQueueCount.value
+  if (!active) return 'Queue is clear today. Counters can focus on walk-ins.'
+  if (todayAverageWaitMinutes.value !== null && todayAverageWaitMinutes.value >= 30) {
+    return `Average wait is ${todayAverageWaitMinutes.value} min today. Consider opening another counter.`
+  }
+  if (active >= 12) return 'High demand today. Activate extra counters if available.'
+  if (active >= 6) return 'Moderate load today. Keep a steady serving pace.'
+  return 'Light traffic today. Keep monitoring the queue.'
 })
 
 const activeServiceCount = computed(() => services.value.filter((service) => service.active).length)
