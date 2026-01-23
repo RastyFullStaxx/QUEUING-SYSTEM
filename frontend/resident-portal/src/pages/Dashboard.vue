@@ -186,13 +186,21 @@ const residentIdPadded = computed(() => {
 
 const residentIdDisplay = computed(() => `BSM-RES-${residentIdPadded.value}`)
 
-const residentCodeValue = computed(() => `BSM-QR-${residentIdPadded.value}`)
+const qrTokenValue = computed(() => {
+  const token = resident.value?.qr_token
+  if (token) {
+    return String(token).toUpperCase()
+  }
+  return residentIdPadded.value
+})
+
+const residentCodeValue = computed(() => `BSM-QR-${qrTokenValue.value}`)
 
 const residentCode = computed(() => {
   return status.value === 'approved' ? residentCodeValue.value : 'Locked until approval'
 })
 
-const qrPayload = computed(() => `BSM|RESIDENT|${residentIdPadded.value}|${residentCodeValue.value}`)
+const qrPayload = computed(() => `BSM|RESIDENT|${residentIdPadded.value}|${qrTokenValue.value}`)
 const qrSvg = ref('')
 const qrPngUrl = ref('')
 

@@ -74,6 +74,54 @@ function require_admin_role(PDO $pdo, int $adminId, string $role): bool
     return true;
 }
 
+function generate_resident_qr_token(PDO $pdo): string
+{
+    for ($i = 0; $i < 5; $i++) {
+        $token = strtoupper(bin2hex(random_bytes(8)));
+        $stmt = $pdo->prepare('SELECT id FROM residents WHERE qr_token = ?');
+        $stmt->execute([$token]);
+        if (!$stmt->fetch()) {
+            return $token;
+        }
+    }
+
+    return strtoupper(bin2hex(random_bytes(8)));
+}
+
+function parse_resident_qr_code(string $code): array
+{
+    $code = trim($code);
+    if ($code === '') {
+        return ['resident_id' => 0, 'qr_token' => null];
+    }
+
+    if (preg_match('/^BSM\\|RESIDENT\\|(\\d+)\\|(.+)$/i', $code, $matches)) {
+        $residentId = (int) $matches[1];
+        $token = trim($matches[2]);
+        if (stripos($token, 'BSM-QR-') === 0) {
+            $token = substr($token, 7);
+        }
+        $token = preg_replace('/[^a-z0-9]/i', '', $token);
+        $token = $token !== '' ? strtoupper($token) : null;
+
+        return ['resident_id' => $residentId, 'qr_token' => $token];
+    }
+
+    if (preg_match('/^BSM-QR-([A-Z0-9]+)$/i', $code, $matches)) {
+        return ['resident_id' => 0, 'qr_token' => strtoupper($matches[1])];
+    }
+
+    if (preg_match('/^BSM-RES-(\\d+)$/i', $code, $matches)) {
+        return ['resident_id' => (int) $matches[1], 'qr_token' => null];
+    }
+
+    if (preg_match('/^\\d+$/', $code)) {
+        return ['resident_id' => (int) $code, 'qr_token' => null];
+    }
+
+    return ['resident_id' => 0, 'qr_token' => null];
+}
+
 function log_audit(PDO $pdo, string $actorType, int $actorId, string $action, array $meta = []): void
 {
     $stmt = $pdo->prepare('INSERT INTO audit_logs (actor_type, actor_id, action, meta_json, created_at) VALUES (?, ?, ?, ?, NOW())');
@@ -110,8 +158,9 @@ if ($path === '/api/auth/resident/register' && $method === 'POST') {
     }
 
     $hash = password_hash($password, PASSWORD_DEFAULT);
-    $stmt = $pdo->prepare('INSERT INTO residents (first_name, last_name, email, password_hash, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())');
-    $stmt->execute([$firstName, $lastName, $email, $hash, 'pending']);
+    $qrToken = generate_resident_qr_token($pdo);
+    $stmt = $pdo->prepare('INSERT INTO residents (first_name, last_name, email, password_hash, qr_token, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())');
+    $stmt->execute([$firstName, $lastName, $email, $hash, $qrToken, 'pending']);
     $residentId = (int) $pdo->lastInsertId();
     $token = issue_token('resident', $residentId, $appKey);
 
@@ -123,6 +172,7 @@ if ($path === '/api/auth/resident/register' && $method === 'POST') {
             'last_name' => $lastName,
             'email' => $email,
             'status' => 'pending',
+            'qr_token' => $qrToken,
         ],
     ], 201);
     exit;
@@ -150,6 +200,7 @@ if ($path === '/api/auth/resident/login' && $method === 'POST') {
             'last_name' => $resident['last_name'],
             'email' => $resident['email'],
             'status' => $resident['status'],
+            'qr_token' => $resident['qr_token'],
         ],
     ]);
     exit;
@@ -161,7 +212,7 @@ if ($path === '/api/resident/me' && $method === 'GET') {
         exit;
     }
 
-    $stmt = $pdo->prepare('SELECT id, first_name, last_name, email, status FROM residents WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, first_name, last_name, email, status, qr_token FROM residents WHERE id = ?');
     $stmt->execute([(int) $payload['id']]);
     $resident = $stmt->fetch();
     if (!$resident) {
@@ -270,6 +321,17 @@ if (preg_match('#^/api/admin/residents/(\\d+)/status$#', $path, $matches) && $me
     $residentId = (int) $matches[1];
     $stmt = $pdo->prepare('UPDATE residents SET status = ?, updated_at = NOW() WHERE id = ?');
     $stmt->execute([$status, $residentId]);
+
+    if ($status === 'approved') {
+        $stmt = $pdo->prepare('SELECT qr_token FROM residents WHERE id = ?');
+        $stmt->execute([$residentId]);
+        $tokenRow = $stmt->fetch();
+        if ($tokenRow && !$tokenRow['qr_token']) {
+            $qrToken = generate_resident_qr_token($pdo);
+            $stmt = $pdo->prepare('UPDATE residents SET qr_token = ? WHERE id = ?');
+            $stmt->execute([$qrToken, $residentId]);
+        }
+    }
 
     log_audit($pdo, 'admin', (int) $payload['id'], 'resident.status.updated', [
         'resident_id' => $residentId,
@@ -717,20 +779,33 @@ if ($path === '/api/services' && $method === 'GET') {
 if ($path === '/api/kiosk/validate-qr' && $method === 'POST') {
     $body = read_json_body();
     $residentId = (int) ($body['resident_id'] ?? 0);
+    $qrToken = null;
     if (!$residentId && !empty($body['qr_code'])) {
-        $residentId = (int) $body['qr_code'];
+        $parsed = parse_resident_qr_code((string) $body['qr_code']);
+        $residentId = (int) ($parsed['resident_id'] ?? 0);
+        $qrToken = $parsed['qr_token'] ?? null;
     }
 
-    if (!$residentId) {
+    if (!$residentId && !$qrToken) {
         json_response(['error' => 'resident_id or qr_code is required'], 422);
         exit;
     }
 
-    $stmt = $pdo->prepare('SELECT id, first_name, last_name, status FROM residents WHERE id = ?');
-    $stmt->execute([$residentId]);
+    if ($qrToken && !$residentId) {
+        $stmt = $pdo->prepare('SELECT id, first_name, last_name, status, qr_token FROM residents WHERE qr_token = ?');
+        $stmt->execute([$qrToken]);
+    } else {
+        $stmt = $pdo->prepare('SELECT id, first_name, last_name, status, qr_token FROM residents WHERE id = ?');
+        $stmt->execute([$residentId]);
+    }
     $resident = $stmt->fetch();
     if (!$resident) {
-        json_response(['approved' => false, 'resident' => null, 'allowed_services' => []]);
+        json_response(['error' => 'Resident not found'], 404);
+        exit;
+    }
+
+    if ($qrToken && $resident['qr_token'] && strtoupper($resident['qr_token']) !== $qrToken) {
+        json_response(['error' => 'Invalid QR code'], 401);
         exit;
     }
 

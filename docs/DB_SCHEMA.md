@@ -4,6 +4,7 @@
 - id (PK)
 - first_name, last_name, email (unique)
 - password_hash
+- qr_token (unique)
 - status (pending/approved/rejected)
 - created_at, updated_at
 
