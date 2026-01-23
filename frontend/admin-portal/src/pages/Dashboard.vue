@@ -1477,70 +1477,199 @@
         </section>
 
           <section id="kiosk-devices" class="admin-card mt-6" v-show="activeSection === 'kiosk-devices'">
-        <div class="tool-header">
-          <div class="tool-title">
-            <span class="tool-icon">
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="4" y="3" width="16" height="18" rx="3" stroke="currentColor" stroke-width="1.6" />
-                <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-              </svg>
-            </span>
-            <h2 class="tool-heading">Kiosk Devices</h2>
-          </div>
-          <div class="tool-accent" aria-hidden="true">
-            <span class="tool-accent-bar is-primary"></span>
-            <span class="tool-accent-bar is-gold"></span>
-            <span class="tool-accent-bar is-neutral"></span>
-          </div>
-        </div>
-        <div class="control-strip mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <input v-model="newKiosk.device_id" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Device ID" />
-          <input v-model="newKiosk.name" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Name" />
-          <button class="bg-[#F2C300] text-black rounded-xl text-base font-semibold" @click="createKiosk">
-            Add kiosk
-          </button>
-          <button class="bg-[#0B2C6F] text-white rounded-xl text-base" @click="loadKiosks">
-            Refresh
-          </button>
-        </div>
-        <div class="mt-4 overflow-x-auto">
-          <table class="w-full text-base">
-            <thead class="text-left text-[#6B7280]">
-              <tr class="border-b border-[#E5E7EB]">
-                <th class="py-2">Device ID</th>
-                <th class="py-2">Name</th>
-                <th class="py-2">Token</th>
-                <th class="py-2">Last seen</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="isLoadingKiosks">
-                <td colspan="4" class="py-4">
-                  <div class="table-state">
-                    <span class="table-state-icon"></span>
-                    <span>Loading kiosks...</span>
+            <div class="tool-header">
+              <div class="tool-title">
+                <span class="tool-icon">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <rect x="4" y="3" width="16" height="18" rx="3" stroke="currentColor" stroke-width="1.6" />
+                    <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <h2 class="tool-heading">Kiosk Devices</h2>
+              </div>
+              <div class="tool-accent" aria-hidden="true">
+                <span class="tool-accent-bar is-primary"></span>
+                <span class="tool-accent-bar is-gold"></span>
+                <span class="tool-accent-bar is-neutral"></span>
+              </div>
+            </div>
+
+            <div class="kiosk-layout mt-6">
+              <div class="kiosk-side">
+                <div class="kiosk-overview">
+                  <p class="kiosk-kicker">Device readiness</p>
+                  <h3 class="kiosk-title">Kiosk availability dashboard</h3>
+                  <p class="kiosk-subtitle">
+                    Track devices in real time and onboard new kiosks with consistent metadata.
+                  </p>
+                  <div class="kiosk-metric-grid">
+                    <div class="kiosk-metric-card">
+                      <span>Total kiosks</span>
+                      <strong>{{ kiosks.length }}</strong>
+                      <small>Registered devices</small>
+                    </div>
+                    <div class="kiosk-metric-card is-success">
+                      <span>Online</span>
+                      <strong>{{ onlineKioskCount }}</strong>
+                      <small>Reporting within 20 min</small>
+                    </div>
+                    <div class="kiosk-metric-card is-danger">
+                      <span>Offline</span>
+                      <strong>{{ offlineKioskCount }}</strong>
+                      <small>Needs attention</small>
+                    </div>
+                  <div class="kiosk-metric-card is-accent">
+                    <span>Last update</span>
+                    <strong>{{ kioskLatestSeenLabel }}</strong>
+                    <small>Most recent check-in</small>
                   </div>
-                </td>
-              </tr>
-              <tr v-else-if="kiosks.length === 0">
-                <td colspan="4" class="py-4">
-                  <div class="table-state">
-                    <span class="table-state-icon"></span>
-                    <span>No kiosks found.</span>
                   </div>
-                </td>
-              </tr>
-              <tr v-for="kiosk in kiosks" :key="kiosk.id" class="border-b border-[#F3F4F6]" :class="rowClass('neutral')">
-                <td class="py-2">{{ kiosk.device_id }}</td>
-                <td class="py-2">{{ kiosk.name }}</td>
-                <td class="py-2 text-base">{{ kiosk.token }}</td>
-                <td class="py-2">{{ kiosk.last_seen_at || '-' }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-if="kioskError" class="mt-3 text-base text-[#C0392B]">{{ kioskError }}</p>
-        </div>
-      </section>
+                </div>
+
+                <div class="kiosk-action-card">
+                  <div class="kiosk-action-header">
+                    <div>
+                      <h4>Register a kiosk</h4>
+                      <p>Assign a device ID and friendly name.</p>
+                    </div>
+                    <button class="resident-secondary" type="button" @click="loadKiosks">Refresh list</button>
+                  </div>
+                  <div class="kiosk-action-grid">
+                    <label class="kiosk-field">
+                      <span>Device ID</span>
+                      <input v-model="newKiosk.device_id" class="kiosk-input" placeholder="Device ID" />
+                    </label>
+                    <label class="kiosk-field">
+                      <span>Display name</span>
+                      <input v-model="newKiosk.name" class="kiosk-input" placeholder="Name" />
+                    </label>
+                  </div>
+                  <div class="kiosk-action-footer">
+                    <button class="resident-primary" type="button" @click="createKiosk">Add kiosk</button>
+                    <button class="resident-tertiary" type="button" @click="resetKioskFilters">Clear filters</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="kiosk-table-card">
+                <div class="kiosk-table-header">
+                  <div>
+                    <h3>Kiosk directory</h3>
+                    <p>{{ kioskRangeLabel }}</p>
+                  </div>
+                  <div class="kiosk-table-meta">
+                    <span class="kiosk-chip">Total {{ kiosks.length }}</span>
+                    <span class="kiosk-chip is-muted">Online {{ onlineKioskCount }}</span>
+                    <span class="kiosk-chip is-muted">Offline {{ offlineKioskCount }}</span>
+                  </div>
+                </div>
+                <div class="kiosk-filter-row">
+                  <label class="kiosk-field">
+                    <span>Search</span>
+                    <input
+                      v-model="kioskSearch"
+                      class="kiosk-input"
+                      placeholder="Device, name, or token"
+                      @input="kioskPage = 1"
+                    />
+                  </label>
+                  <label class="kiosk-field">
+                    <span>Status</span>
+                    <select v-model="kioskStatusFilter" class="kiosk-input" @change="kioskPage = 1">
+                      <option value="all">All statuses</option>
+                      <option value="online">Online</option>
+                      <option value="offline">Offline</option>
+                    </select>
+                  </label>
+                  <label class="kiosk-field">
+                    <span>Sort by</span>
+                    <select v-model="kioskSortKey" class="kiosk-input" @change="kioskPage = 1">
+                      <option value="last_seen_at">Last seen</option>
+                      <option value="name">Name</option>
+                      <option value="device_id">Device ID</option>
+                      <option value="status">Status</option>
+                    </select>
+                  </label>
+                  <div class="kiosk-filter-actions">
+                    <button class="resident-tertiary" type="button" @click="toggleKioskSortDirection">
+                      Sort: {{ kioskSortDirection === 'asc' ? 'Ascending' : 'Descending' }}
+                    </button>
+                  </div>
+                </div>
+                <div class="kiosk-table-wrapper">
+                  <table class="w-full text-base">
+                    <thead class="text-left text-[#6B7280]">
+                      <tr class="border-b border-[#E5E7EB]">
+                        <th class="py-2">Device</th>
+                        <th class="py-2">Name</th>
+                        <th class="py-2">Status</th>
+                        <th class="py-2">Token</th>
+                        <th class="py-2">Last seen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-if="isLoadingKiosks">
+                        <td colspan="5" class="py-4">
+                          <div class="table-state">
+                            <span class="table-state-icon"></span>
+                            <span>Loading kiosks...</span>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr v-else-if="kioskSorted.length === 0">
+                        <td colspan="5" class="py-4">
+                          <div class="table-state">
+                            <span class="table-state-icon"></span>
+                            <span>No kiosks match the filters.</span>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr v-for="kiosk in kioskPageRows" :key="kiosk.id" class="border-b border-[#F3F4F6]" :class="rowClass(kiosk.online ? 'active' : 'inactive')">
+                        <td class="py-3">
+                          <div class="kiosk-device">
+                            <span class="kiosk-device-id">{{ kiosk.device_id }}</span>
+                            <small>ID #{{ kiosk.id }}</small>
+                          </div>
+                        </td>
+                        <td class="py-3">
+                          <span class="kiosk-name">{{ kiosk.name }}</span>
+                        </td>
+                        <td class="py-3">
+                          <span class="status-pill" :class="statusClass(kiosk.online ? 'active' : 'inactive')">
+                            {{ kiosk.online ? 'Online' : 'Offline' }}
+                          </span>
+                        </td>
+                        <td class="py-3">
+                          <span class="kiosk-token">{{ kiosk.token }}</span>
+                        </td>
+                        <td class="py-3">
+                          <span class="kiosk-last">{{ kiosk.lastSeenLabel }}</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p v-if="kioskError" class="mt-3 text-base text-[#C0392B]">{{ kioskError }}</p>
+                </div>
+                <div class="kiosk-pagination">
+                  <span class="kiosk-range">{{ kioskRangeLabel }}</span>
+                  <div class="kiosk-page-controls">
+                    <button class="resident-tertiary" type="button" :disabled="kioskPage === 1" @click="previousKioskPage">
+                      Prev
+                    </button>
+                    <span class="kiosk-page-label">Page {{ kioskPage }} of {{ kioskTotalPages }}</span>
+                    <button
+                      class="resident-tertiary"
+                      type="button"
+                      :disabled="kioskPage === kioskTotalPages"
+                      @click="nextKioskPage"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
           <section id="audit-logs" class="admin-card mt-6" v-show="activeSection === 'audit-logs'">
         <div class="tool-header">
@@ -1753,6 +1882,12 @@ const kiosks = ref([])
 const isLoadingKiosks = ref(false)
 const kioskError = ref('')
 const newKiosk = ref({ device_id: '', name: '' })
+const kioskSearch = ref('')
+const kioskStatusFilter = ref('all')
+const kioskSortKey = ref('last_seen_at')
+const kioskSortDirection = ref('desc')
+const kioskPage = ref(1)
+const kioskPageSize = 10
 const queueTickets = ref([])
 const isLoadingQueue = ref(false)
 const queueError = ref('')
@@ -2446,6 +2581,74 @@ const onlineKioskCount = computed(() => kioskStatusList.value.filter((kiosk) => 
 
 const offlineKioskCount = computed(() => Math.max(0, kioskStatusList.value.length - onlineKioskCount.value))
 
+const kioskFiltered = computed(() => {
+  const term = kioskSearch.value.trim().toLowerCase()
+  return kioskStatusList.value.filter((kiosk) => {
+    const matchesStatus =
+      kioskStatusFilter.value === 'all' ||
+      (kioskStatusFilter.value === 'online' && kiosk.online) ||
+      (kioskStatusFilter.value === 'offline' && !kiosk.online)
+    if (!matchesStatus) return false
+    if (!term) return true
+    const deviceId = String(kiosk.device_id || '').toLowerCase()
+    const name = String(kiosk.name || '').toLowerCase()
+    const token = String(kiosk.token || '').toLowerCase()
+    return deviceId.includes(term) || name.includes(term) || token.includes(term)
+  })
+})
+
+const kioskSorted = computed(() => {
+  const items = [...kioskFiltered.value]
+  const direction = kioskSortDirection.value === 'desc' ? -1 : 1
+  const compareValues = (a, b) => (a > b ? 1 : a < b ? -1 : 0)
+  items.sort((a, b) => {
+    if (kioskSortKey.value === 'status') {
+      const statusDiff = compareValues(a.online ? 0 : 1, b.online ? 0 : 1)
+      if (statusDiff !== 0) return statusDiff * direction
+    }
+    if (kioskSortKey.value === 'name') {
+      const nameDiff = compareValues(String(a.name || ''), String(b.name || ''))
+      if (nameDiff !== 0) return nameDiff * direction
+    }
+    if (kioskSortKey.value === 'device_id') {
+      const deviceDiff = compareValues(String(a.device_id || ''), String(b.device_id || ''))
+      if (deviceDiff !== 0) return deviceDiff * direction
+    }
+    if (kioskSortKey.value === 'last_seen_at') {
+      const timeDiff = compareValues(new Date(a.last_seen_at || 0).getTime(), new Date(b.last_seen_at || 0).getTime())
+      if (timeDiff !== 0) return timeDiff * direction
+    }
+    const fallback = compareValues(String(a.device_id || ''), String(b.device_id || ''))
+    return fallback * direction
+  })
+  return items
+})
+
+const kioskLatestSeenLabel = computed(() => {
+  if (!kioskStatusList.value.length) return '--'
+  const sorted = [...kioskStatusList.value].sort(
+    (a, b) => new Date(b.last_seen_at || 0).getTime() - new Date(a.last_seen_at || 0).getTime()
+  )
+  return sorted[0]?.lastSeenLabel || '--'
+})
+
+const kioskTotalPages = computed(() =>
+  Math.max(1, Math.ceil(kioskSorted.value.length / kioskPageSize))
+)
+
+const kioskPageRows = computed(() => {
+  const start = (kioskPage.value - 1) * kioskPageSize
+  return kioskSorted.value.slice(start, start + kioskPageSize)
+})
+
+const kioskRangeLabel = computed(() => {
+  const total = kioskSorted.value.length
+  if (!total) return 'No kiosks to display'
+  const start = (kioskPage.value - 1) * kioskPageSize + 1
+  const end = Math.min(total, start + kioskPageSize - 1)
+  return `Showing ${start}-${end} of ${total} kiosks`
+})
+
 const trafficBuckets = computed(() => {
   if (!analyticsTickets.value.length) return []
   const slots = Array.from({ length: 8 }, (_, index) => ({ index, count: 0 }))
@@ -2857,6 +3060,24 @@ const handleTransactionFilterChange = () => {
   loadTransactions()
 }
 
+const setKioskPage = (page) => {
+  const next = Math.min(Math.max(page, 1), kioskTotalPages.value)
+  kioskPage.value = next
+}
+
+const nextKioskPage = () => {
+  setKioskPage(kioskPage.value + 1)
+}
+
+const previousKioskPage = () => {
+  setKioskPage(kioskPage.value - 1)
+}
+
+const toggleKioskSortDirection = () => {
+  kioskSortDirection.value = kioskSortDirection.value === 'asc' ? 'desc' : 'asc'
+  kioskPage.value = 1
+}
+
 const setServicePage = (page) => {
   const next = Math.min(Math.max(page, 1), serviceTotalPages.value)
   servicePage.value = next
@@ -3072,6 +3293,9 @@ const loadKiosks = async () => {
   try {
     const data = await getKiosks()
     kiosks.value = data.kiosks || []
+    if (kioskPage.value > kioskTotalPages.value) {
+      kioskPage.value = kioskTotalPages.value
+    }
   } catch (err) {
     kioskError.value = err.message
   } finally {
@@ -3088,6 +3312,14 @@ const createKiosk = async () => {
   } catch (err) {
     kioskError.value = err.message
   }
+}
+
+const resetKioskFilters = () => {
+  kioskSearch.value = ''
+  kioskStatusFilter.value = 'all'
+  kioskSortKey.value = 'last_seen_at'
+  kioskSortDirection.value = 'desc'
+  kioskPage.value = 1
 }
 
 const loadQueue = async () => {
@@ -5014,6 +5246,289 @@ onBeforeUnmount(() => {
   color: #0b2c6f;
 }
 
+.kiosk-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.kiosk-side {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-rows: auto 1fr;
+}
+
+.kiosk-overview {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 1.5rem;
+  background: linear-gradient(140deg, #eaf2ff 0%, #ffffff 65%);
+  border: 1px solid rgba(11, 44, 111, 0.2);
+  color: #0b2c6f;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+}
+
+.kiosk-overview::after {
+  content: '';
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 1px solid rgba(11, 44, 111, 0.2);
+  right: -40px;
+  top: -40px;
+  pointer-events: none;
+}
+
+.kiosk-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(11, 44, 111, 0.7);
+}
+
+.kiosk-title {
+  margin-top: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.kiosk-subtitle {
+  margin-top: 0.6rem;
+  color: rgba(11, 44, 111, 0.75);
+}
+
+.kiosk-metric-grid {
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.kiosk-metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border-radius: 16px;
+  background: #0b2c6f;
+  color: #ffffff;
+  border: 1px solid rgba(11, 44, 111, 0.6);
+}
+
+.kiosk-metric-card strong {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.kiosk-metric-card small {
+  font-size: 0.85rem;
+  color: rgba(248, 250, 252, 0.85);
+}
+
+.kiosk-metric-card.is-success {
+  background: #2e7d32;
+  border-color: rgba(46, 125, 50, 0.7);
+}
+
+.kiosk-metric-card.is-danger {
+  background: #c0392b;
+  border-color: rgba(192, 57, 43, 0.7);
+}
+
+.kiosk-metric-card.is-accent {
+  background: #f2c300;
+  color: #0b2c6f;
+  border-color: rgba(242, 195, 0, 0.85);
+}
+
+.kiosk-metric-card.is-accent small {
+  color: rgba(11, 44, 111, 0.8);
+}
+
+.kiosk-action-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.kiosk-action-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.kiosk-action-header h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.kiosk-action-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.kiosk-action-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.kiosk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.kiosk-input {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 0.65rem 0.85rem;
+  font-size: 1rem;
+  background: #f8fafc;
+}
+
+.kiosk-action-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.kiosk-table-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+}
+
+.kiosk-table-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.kiosk-table-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.kiosk-table-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.kiosk-table-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.kiosk-chip {
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+.kiosk-chip.is-muted {
+  background: #ffffff;
+  color: #6b7280;
+}
+
+.kiosk-filter-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.kiosk-filter-actions {
+  display: flex;
+  align-items: flex-end;
+}
+
+.kiosk-table-wrapper {
+  overflow-x: auto;
+  min-height: 360px;
+}
+
+.kiosk-device {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.kiosk-device-id {
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.kiosk-device small {
+  color: #6b7280;
+}
+
+.kiosk-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.kiosk-token {
+  font-weight: 600;
+  color: #0b2c6f;
+}
+
+.kiosk-last {
+  color: #6b7280;
+}
+
+.kiosk-pagination {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.kiosk-range {
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.kiosk-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.kiosk-page-label {
+  font-weight: 600;
+  color: #0b2c6f;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -6189,6 +6704,10 @@ onBeforeUnmount(() => {
   .transaction-layout {
     grid-template-columns: 1fr;
   }
+
+  .kiosk-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -6269,6 +6788,23 @@ onBeforeUnmount(() => {
     align-items: flex-start;
   }
 
+  .kiosk-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kiosk-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .kiosk-filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .kiosk-table-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .resident-table-header {
     flex-direction: column;
     align-items: flex-start;
@@ -6295,6 +6831,10 @@ onBeforeUnmount(() => {
   }
 
   .transaction-table-wrapper {
+    min-height: 240px;
+  }
+
+  .kiosk-table-wrapper {
     min-height: 240px;
   }
 }
