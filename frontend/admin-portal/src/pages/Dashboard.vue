@@ -1672,63 +1672,179 @@
           </section>
 
           <section id="audit-logs" class="admin-card mt-6" v-show="activeSection === 'audit-logs'">
-        <div class="tool-header">
-          <div class="tool-title">
-            <span class="tool-icon">
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M6 3h9l3 3v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" />
-                <path d="M9 10h6M9 14h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-              </svg>
-            </span>
-            <h2 class="tool-heading">Audit Logs</h2>
-          </div>
-          <div class="tool-accent" aria-hidden="true">
-            <span class="tool-accent-bar is-primary"></span>
-            <span class="tool-accent-bar is-gold"></span>
-            <span class="tool-accent-bar is-neutral"></span>
-          </div>
-        </div>
-        <div class="control-strip mt-4 flex justify-end">
-          <button class="bg-[#0B2C6F] text-white rounded-full px-4 py-2 text-base" @click="loadAuditLogs">
-            Refresh
-          </button>
-        </div>
-        <div class="mt-4 overflow-x-auto">
-          <table class="w-full text-base">
-            <thead class="text-left text-[#6B7280]">
-              <tr class="border-b border-[#E5E7EB]">
-                <th class="py-2">When</th>
-                <th class="py-2">Action</th>
-                <th class="py-2">Actor</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="isLoadingLogs">
-                <td colspan="3" class="py-4">
-                  <div class="table-state">
-                    <span class="table-state-icon"></span>
-                    <span>Loading logs...</span>
+            <div class="tool-header">
+              <div class="tool-title">
+                <span class="tool-icon">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M6 3h9l3 3v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" />
+                    <path d="M9 10h6M9 14h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <h2 class="tool-heading">Audit Logs</h2>
+              </div>
+              <div class="tool-accent" aria-hidden="true">
+                <span class="tool-accent-bar is-primary"></span>
+                <span class="tool-accent-bar is-gold"></span>
+                <span class="tool-accent-bar is-neutral"></span>
+              </div>
+            </div>
+
+            <div class="audit-layout mt-6">
+              <div class="audit-side">
+                <div class="audit-overview">
+                  <p class="audit-kicker">System trail</p>
+                  <h3 class="audit-title">Operational audit stream</h3>
+                  <p class="audit-subtitle">
+                    Track every action across admins, kiosks, and residents with searchable history.
+                  </p>
+                  <div class="audit-metric-grid">
+                    <div class="audit-metric-card">
+                      <span>Total logs</span>
+                      <strong>{{ auditCounts.total }}</strong>
+                      <small>Captured events</small>
+                    </div>
+                    <div class="audit-metric-card is-success">
+                      <span>Admin actions</span>
+                      <strong>{{ auditCounts.admin }}</strong>
+                      <small>Staff activity</small>
+                    </div>
+                    <div class="audit-metric-card is-accent">
+                      <span>Kiosk actions</span>
+                      <strong>{{ auditCounts.kiosk }}</strong>
+                      <small>Device events</small>
+                    </div>
+                    <div class="audit-metric-card is-neutral">
+                      <span>Recent log</span>
+                      <strong>{{ auditLatestLabel }}</strong>
+                      <small>Last activity</small>
+                    </div>
                   </div>
-                </td>
-              </tr>
-              <tr v-else-if="auditLogs.length === 0">
-                <td colspan="3" class="py-4">
-                  <div class="table-state">
-                    <span class="table-state-icon"></span>
-                    <span>No logs found.</span>
+                </div>
+
+                <div class="audit-filter-card">
+                  <div class="audit-filter-header">
+                    <div>
+                      <h4>Log filters</h4>
+                      <p>Search by action, actor, or ID.</p>
+                    </div>
+                    <button class="resident-secondary" type="button" @click="loadAuditLogs">Refresh logs</button>
                   </div>
-                </td>
-              </tr>
-              <tr v-for="log in auditLogs" :key="log.id" class="border-b border-[#F3F4F6]" :class="rowClass('neutral')">
-                <td class="py-2">{{ formatDate(log.created_at) }}</td>
-                <td class="py-2">{{ log.action }}</td>
-                <td class="py-2">{{ log.actor_type }} #{{ log.actor_id }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-if="auditError" class="mt-3 text-base text-[#C0392B]">{{ auditError }}</p>
-        </div>
-      </section>
+                  <div class="audit-filter-grid">
+                    <label class="audit-field">
+                      <span>Search</span>
+                      <input
+                        v-model="auditSearch"
+                        class="audit-input"
+                        placeholder="Action or actor"
+                        @input="auditPage = 1"
+                      />
+                    </label>
+                    <label class="audit-field">
+                      <span>Actor type</span>
+                      <select v-model="auditActorFilter" class="audit-input" @change="auditPage = 1">
+                        <option value="all">All actors</option>
+                        <option value="admin">admin</option>
+                        <option value="kiosk">kiosk</option>
+                        <option value="resident">resident</option>
+                      </select>
+                    </label>
+                    <label class="audit-field">
+                      <span>Sort by</span>
+                      <select v-model="auditSortKey" class="audit-input" @change="auditPage = 1">
+                        <option value="created_at">Date</option>
+                        <option value="action">Action</option>
+                        <option value="actor_type">Actor</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="audit-filter-actions">
+                    <button class="resident-tertiary" type="button" @click="toggleAuditSortDirection">
+                      Sort: {{ auditSortDirection === 'asc' ? 'Ascending' : 'Descending' }}
+                    </button>
+                    <button class="resident-tertiary" type="button" @click="resetAuditFilters">Clear filters</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="audit-table-card">
+                <div class="audit-table-header">
+                  <div>
+                    <h3>Audit logbook</h3>
+                    <p>{{ auditRangeLabel }}</p>
+                  </div>
+                  <div class="audit-table-meta">
+                    <span class="audit-chip">Total {{ auditCounts.total }}</span>
+                    <span class="audit-chip is-muted">Filtered {{ auditSorted.length }}</span>
+                  </div>
+                </div>
+                <div class="audit-table-wrapper">
+                  <table class="w-full text-base">
+                    <thead class="text-left text-[#6B7280]">
+                      <tr class="border-b border-[#E5E7EB]">
+                        <th class="py-2">When</th>
+                        <th class="py-2">Action</th>
+                        <th class="py-2">Actor</th>
+                        <th class="py-2">Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-if="isLoadingLogs">
+                        <td colspan="4" class="py-4">
+                          <div class="table-state">
+                            <span class="table-state-icon"></span>
+                            <span>Loading logs...</span>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr v-else-if="auditSorted.length === 0">
+                        <td colspan="4" class="py-4">
+                          <div class="table-state">
+                            <span class="table-state-icon"></span>
+                            <span>No logs match the filters.</span>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr v-for="log in auditPageRows" :key="log.id" class="border-b border-[#F3F4F6]" :class="rowClass('neutral')">
+                        <td class="py-3">
+                          <div class="audit-time">
+                            <span>{{ formatDate(log.created_at) }}</span>
+                            <small>{{ formatTime(log.created_at) }}</small>
+                          </div>
+                        </td>
+                        <td class="py-3">
+                          <span class="audit-action">{{ formatAction(log.action) }}</span>
+                        </td>
+                        <td class="py-3">
+                          <span class="audit-actor">{{ log.actor_type }} #{{ log.actor_id }}</span>
+                        </td>
+                        <td class="py-3">
+                          <span class="audit-meta">{{ log.meta_json ? 'Has metadata' : 'No metadata' }}</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p v-if="auditError" class="mt-3 text-base text-[#C0392B]">{{ auditError }}</p>
+                </div>
+                <div class="audit-pagination">
+                  <span class="audit-range">{{ auditRangeLabel }}</span>
+                  <div class="audit-page-controls">
+                    <button class="resident-tertiary" type="button" :disabled="auditPage === 1" @click="previousAuditPage">
+                      Prev
+                    </button>
+                    <span class="audit-page-label">Page {{ auditPage }} of {{ auditTotalPages }}</span>
+                    <button
+                      class="resident-tertiary"
+                      type="button"
+                      :disabled="auditPage === auditTotalPages"
+                      @click="nextAuditPage"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         <div id="admin-users" class="admin-card mt-6" v-if="isSuperAdmin && activeSection === 'admin-users'">
           <div class="tool-header">
             <div class="tool-title">
@@ -2114,6 +2230,12 @@ const transactionPageSize = 10
 const auditLogs = ref([])
 const isLoadingLogs = ref(false)
 const auditError = ref('')
+const auditSearch = ref('')
+const auditActorFilter = ref('all')
+const auditSortKey = ref('created_at')
+const auditSortDirection = ref('desc')
+const auditPage = ref(1)
+const auditPageSize = 10
 const admins = ref([])
 const isLoadingAdmins = ref(false)
 const adminError = ref('')
@@ -2354,6 +2476,81 @@ const transactionRangeLabel = computed(() => {
   const start = (transactionPage.value - 1) * transactionPageSize + 1
   const end = Math.min(total, start + transactionPageSize - 1)
   return `Showing ${start}-${end} of ${total} transactions`
+})
+
+const auditCounts = computed(() => {
+  const counts = { total: auditLogs.value.length, admin: 0, kiosk: 0, resident: 0 }
+  auditLogs.value.forEach((log) => {
+    if (log.actor_type === 'admin') counts.admin += 1
+    if (log.actor_type === 'kiosk') counts.kiosk += 1
+    if (log.actor_type === 'resident') counts.resident += 1
+  })
+  return counts
+})
+
+const auditFiltered = computed(() => {
+  const term = auditSearch.value.trim().toLowerCase()
+  return auditLogs.value.filter((log) => {
+    const matchesActor = auditActorFilter.value === 'all' || log.actor_type === auditActorFilter.value
+    if (!matchesActor) return false
+    if (!term) return true
+    const action = String(log.action || '').toLowerCase()
+    const actorType = String(log.actor_type || '').toLowerCase()
+    const actorId = String(log.actor_id || '').toLowerCase()
+    return action.includes(term) || actorType.includes(term) || actorId.includes(term)
+  })
+})
+
+const auditSorted = computed(() => {
+  const items = [...auditFiltered.value]
+  const direction = auditSortDirection.value === 'desc' ? -1 : 1
+  const compareValues = (a, b) => (a > b ? 1 : a < b ? -1 : 0)
+  items.sort((a, b) => {
+    if (auditSortKey.value === 'action') {
+      const actionDiff = compareValues(String(a.action || ''), String(b.action || ''))
+      if (actionDiff !== 0) return actionDiff * direction
+    }
+    if (auditSortKey.value === 'actor_type') {
+      const actorDiff = compareValues(String(a.actor_type || ''), String(b.actor_type || ''))
+      if (actorDiff !== 0) return actorDiff * direction
+    }
+    if (auditSortKey.value === 'created_at') {
+      const timeDiff = compareValues(new Date(a.created_at || 0).getTime(), new Date(b.created_at || 0).getTime())
+      if (timeDiff !== 0) return timeDiff * direction
+    }
+    const fallback = compareValues(new Date(a.created_at || 0).getTime(), new Date(b.created_at || 0).getTime())
+    return fallback * direction
+  })
+  return items
+})
+
+const auditTotalPages = computed(() =>
+  Math.max(1, Math.ceil(auditSorted.value.length / auditPageSize))
+)
+
+const auditPageRows = computed(() => {
+  const start = (auditPage.value - 1) * auditPageSize
+  return auditSorted.value.slice(start, start + auditPageSize)
+})
+
+const auditRangeLabel = computed(() => {
+  const total = auditSorted.value.length
+  if (!total) return 'No logs to display'
+  const start = (auditPage.value - 1) * auditPageSize + 1
+  const end = Math.min(total, start + auditPageSize - 1)
+  return `Showing ${start}-${end} of ${total} logs`
+})
+
+const auditLatestLabel = computed(() => {
+  if (!auditLogs.value.length) return '--'
+  const latest = auditLogs.value.reduce((best, log) => {
+    if (!best) return log
+    const bestTime = new Date(best.created_at || 0).getTime()
+    const logTime = new Date(log.created_at || 0).getTime()
+    return logTime > bestTime ? log : best
+  }, null)
+  if (!latest?.created_at) return '--'
+  return `${formatDate(latest.created_at)} ${formatTime(latest.created_at)}`
 })
 
 const adminCounts = computed(() => {
@@ -3352,6 +3549,32 @@ const toggleKioskSortDirection = () => {
   kioskPage.value = 1
 }
 
+const setAuditPage = (page) => {
+  const next = Math.min(Math.max(page, 1), auditTotalPages.value)
+  auditPage.value = next
+}
+
+const nextAuditPage = () => {
+  setAuditPage(auditPage.value + 1)
+}
+
+const previousAuditPage = () => {
+  setAuditPage(auditPage.value - 1)
+}
+
+const toggleAuditSortDirection = () => {
+  auditSortDirection.value = auditSortDirection.value === 'asc' ? 'desc' : 'asc'
+  auditPage.value = 1
+}
+
+const resetAuditFilters = () => {
+  auditSearch.value = ''
+  auditActorFilter.value = 'all'
+  auditSortKey.value = 'created_at'
+  auditSortDirection.value = 'desc'
+  auditPage.value = 1
+}
+
 const setAdminPage = (page) => {
   const next = Math.min(Math.max(page, 1), adminTotalPages.value)
   adminPage.value = next
@@ -3783,6 +4006,9 @@ const loadAuditLogs = async () => {
   try {
     const data = await getAuditLogs(100)
     auditLogs.value = data.logs || []
+    if (auditPage.value > auditTotalPages.value) {
+      auditPage.value = auditTotalPages.value
+    }
   } catch (err) {
     auditError.value = err.message
   } finally {
@@ -6206,6 +6432,268 @@ onBeforeUnmount(() => {
   color: #0b2c6f;
 }
 
+.audit-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.audit-side {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-rows: auto 1fr;
+}
+
+.audit-overview {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 1.5rem;
+  background: linear-gradient(140deg, #f1f5ff 0%, #ffffff 65%);
+  border: 1px solid rgba(11, 44, 111, 0.2);
+  color: #0b2c6f;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+}
+
+.audit-overview::after {
+  content: '';
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 1px solid rgba(11, 44, 111, 0.2);
+  right: -40px;
+  top: -40px;
+  pointer-events: none;
+}
+
+.audit-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(11, 44, 111, 0.7);
+}
+
+.audit-title {
+  margin-top: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.audit-subtitle {
+  margin-top: 0.6rem;
+  color: rgba(11, 44, 111, 0.75);
+}
+
+.audit-metric-grid {
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.audit-metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border-radius: 16px;
+  background: #0b2c6f;
+  color: #ffffff;
+  border: 1px solid rgba(11, 44, 111, 0.6);
+}
+
+.audit-metric-card strong {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.audit-metric-card small {
+  font-size: 0.85rem;
+  color: rgba(248, 250, 252, 0.85);
+}
+
+.audit-metric-card.is-success {
+  background: #2e7d32;
+  border-color: rgba(46, 125, 50, 0.7);
+}
+
+.audit-metric-card.is-accent {
+  background: #f2c300;
+  color: #0b2c6f;
+  border-color: rgba(242, 195, 0, 0.85);
+}
+
+.audit-metric-card.is-neutral {
+  background: #e5e7eb;
+  color: #0b2c6f;
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+.audit-filter-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.audit-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.audit-filter-header h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.audit-filter-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.audit-filter-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.audit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.audit-input {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 0.65rem 0.85rem;
+  font-size: 1rem;
+  background: #f8fafc;
+}
+
+.audit-filter-actions {
+  margin-top: auto;
+  padding-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.audit-table-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.audit-table-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.audit-table-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.audit-table-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.audit-table-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.audit-chip {
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+.audit-chip.is-muted {
+  background: #ffffff;
+  color: #6b7280;
+}
+
+.audit-table-wrapper {
+  overflow-x: auto;
+  min-height: 360px;
+}
+
+.audit-time {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.audit-time small {
+  color: #6b7280;
+}
+
+.audit-action {
+  font-weight: 600;
+  color: #111827;
+}
+
+.audit-actor {
+  color: #374151;
+}
+
+.audit-meta {
+  color: #6b7280;
+}
+
+.audit-pagination {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.audit-range {
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.audit-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.audit-page-label {
+  font-weight: 600;
+  color: #0b2c6f;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -7386,6 +7874,10 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
+  .audit-layout {
+    grid-template-columns: 1fr;
+  }
+
   .admin-users-layout {
     grid-template-columns: 1fr;
   }
@@ -7486,6 +7978,19 @@ onBeforeUnmount(() => {
     align-items: flex-start;
   }
 
+  .audit-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .audit-table-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .admin-users-metric-grid {
     grid-template-columns: 1fr;
   }
@@ -7530,6 +8035,10 @@ onBeforeUnmount(() => {
   }
 
   .kiosk-table-wrapper {
+    min-height: 240px;
+  }
+
+  .audit-table-wrapper {
     min-height: 240px;
   }
 
