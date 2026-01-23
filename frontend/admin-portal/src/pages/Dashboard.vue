@@ -1730,76 +1730,277 @@
         </div>
       </section>
         <div id="admin-users" class="admin-card mt-6" v-if="isSuperAdmin && activeSection === 'admin-users'">
-      <div class="tool-header">
-        <div class="tool-title">
-          <span class="tool-icon">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z" stroke="currentColor" stroke-width="1.6" />
-              <path d="M4 21a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-            </svg>
-          </span>
-          <h2 class="tool-heading">Admin Users</h2>
-        </div>
-        <div class="tool-accent" aria-hidden="true">
-          <span class="tool-accent-bar is-primary"></span>
-          <span class="tool-accent-bar is-gold"></span>
-          <span class="tool-accent-bar is-neutral"></span>
-        </div>
-      </div>
-      <div class="control-strip mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <input v-model="newAdmin.name" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Name" />
-        <input v-model="newAdmin.email" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Email" />
-        <input v-model="newAdmin.password" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Password" />
-        <select v-model="newAdmin.role" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base">
-          <option value="staff_admin">staff_admin</option>
-          <option value="super_admin">super_admin</option>
-        </select>
-        <input v-model="newAdmin.service_ids" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base sm:col-span-2 lg:col-span-2" placeholder="Service IDs (comma)" />
-        <button class="bg-[#F2C300] text-black rounded-xl text-base font-semibold" @click="createAdmin">
-          Add admin
-        </button>
-        <button class="bg-[#0B2C6F] text-white rounded-xl text-base" @click="loadAdmins">
-          Refresh
-        </button>
-      </div>
-      <div class="mt-4 overflow-x-auto">
-        <table class="w-full text-base">
-          <thead class="text-left text-[#6B7280]">
-            <tr class="border-b border-[#E5E7EB]">
-              <th class="py-2">Name</th>
-              <th class="py-2">Email</th>
-              <th class="py-2">Role</th>
-              <th class="py-2">Services</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="isLoadingAdmins">
-              <td colspan="4" class="py-4">
-                <div class="table-state">
-                  <span class="table-state-icon"></span>
-                  <span>Loading admins...</span>
+          <div class="tool-header">
+            <div class="tool-title">
+              <span class="tool-icon">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z" stroke="currentColor" stroke-width="1.6" />
+                  <path d="M4 21a8 8 0 0 1 16 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                </svg>
+              </span>
+              <h2 class="tool-heading">Admin Users</h2>
+            </div>
+            <div class="tool-accent" aria-hidden="true">
+              <span class="tool-accent-bar is-primary"></span>
+              <span class="tool-accent-bar is-gold"></span>
+              <span class="tool-accent-bar is-neutral"></span>
+            </div>
+          </div>
+
+          <div class="admin-users-layout mt-6">
+            <div class="admin-users-side">
+              <div class="admin-users-overview">
+                <p class="admin-users-kicker">Access control</p>
+                <h3 class="admin-users-title">Admin roster</h3>
+                <p class="admin-users-subtitle">
+                  Maintain leadership access and keep staff roles aligned with service assignments.
+                </p>
+                <div class="admin-users-metric-grid">
+                  <div class="admin-users-metric-card">
+                    <span>Total admins</span>
+                    <strong>{{ adminCounts.total }}</strong>
+                    <small>Active accounts</small>
+                  </div>
+                  <div class="admin-users-metric-card is-accent">
+                    <span>Super admins</span>
+                    <strong>{{ adminCounts.super }}</strong>
+                    <small>Full access</small>
+                  </div>
+                  <div class="admin-users-metric-card is-success">
+                    <span>Staff admins</span>
+                    <strong>{{ adminCounts.staff }}</strong>
+                    <small>Assigned services</small>
+                  </div>
+                  <div class="admin-users-metric-card is-neutral">
+                    <span>Last updated</span>
+                    <strong>{{ lastUpdatedLabel }}</strong>
+                    <small>Roster refresh</small>
+                  </div>
                 </div>
-              </td>
-            </tr>
-            <tr v-else-if="admins.length === 0">
-              <td colspan="4" class="py-4">
-                <div class="table-state">
-                  <span class="table-state-icon"></span>
-                  <span>No admins found.</span>
+              </div>
+
+              <div class="admin-users-form-card">
+                <div class="admin-users-form-header">
+                  <div>
+                    <h4>Create admin</h4>
+                    <p>Invite a new admin to manage services.</p>
+                  </div>
+                  <button class="resident-secondary" type="button" @click="loadAdmins">Refresh list</button>
                 </div>
-              </td>
-            </tr>
-            <tr v-for="admin in admins" :key="admin.id" class="border-b border-[#F3F4F6]" :class="rowClass('neutral')">
-              <td class="py-2">{{ admin.name }}</td>
-              <td class="py-2">{{ admin.email }}</td>
-              <td class="py-2">{{ admin.role }}</td>
-              <td class="py-2 text-base">{{ admin.service_ids.join(', ') }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <p v-if="adminError" class="mt-3 text-base text-[#C0392B]">{{ adminError }}</p>
-      </div>
-    </div>
+                <div class="admin-users-form-grid">
+                  <label class="admin-users-field">
+                    <span>Name</span>
+                    <input v-model="newAdmin.name" class="admin-users-input" placeholder="Name" />
+                  </label>
+                  <label class="admin-users-field">
+                    <span>Email</span>
+                    <input v-model="newAdmin.email" class="admin-users-input" placeholder="Email" />
+                  </label>
+                  <label class="admin-users-field">
+                    <span>Password</span>
+                    <input v-model="newAdmin.password" class="admin-users-input" placeholder="Password" />
+                  </label>
+                  <label class="admin-users-field">
+                    <span>Role</span>
+                    <select v-model="newAdmin.role" class="admin-users-input">
+                      <option value="staff_admin">staff_admin</option>
+                      <option value="super_admin">super_admin</option>
+                    </select>
+                  </label>
+                  <label class="admin-users-field admin-users-field-full">
+                    <span>Service IDs</span>
+                    <input
+                      v-model="newAdmin.service_ids"
+                      class="admin-users-input"
+                      placeholder="Comma-separated IDs (staff only)"
+                    />
+                  </label>
+                </div>
+                <div class="admin-users-form-actions">
+                  <button class="resident-primary" type="button" @click="createAdmin">Add admin</button>
+                  <button class="resident-tertiary" type="button" @click="resetAdminFilters">Clear filters</button>
+                </div>
+              </div>
+
+              <div class="admin-users-filter-card">
+                <div class="admin-users-filter-header">
+                  <div>
+                    <h4>Roster filters</h4>
+                    <p>Search and sort the admin list.</p>
+                  </div>
+                </div>
+                <div class="admin-users-filter-grid">
+                  <label class="admin-users-field">
+                    <span>Search</span>
+                    <input
+                      v-model="adminSearch"
+                      class="admin-users-input"
+                      placeholder="Name or email"
+                      @input="adminPage = 1"
+                    />
+                  </label>
+                  <label class="admin-users-field">
+                    <span>Role</span>
+                    <select v-model="adminRoleFilter" class="admin-users-input" @change="adminPage = 1">
+                      <option value="all">All roles</option>
+                      <option value="super_admin">super_admin</option>
+                      <option value="staff_admin">staff_admin</option>
+                    </select>
+                  </label>
+                  <label class="admin-users-field">
+                    <span>Sort by</span>
+                    <select v-model="adminSortKey" class="admin-users-input" @change="adminPage = 1">
+                      <option value="created_at">Created date</option>
+                      <option value="name">Name</option>
+                      <option value="role">Role</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="admin-users-filter-actions">
+                  <button class="resident-tertiary" type="button" @click="toggleAdminSortDirection">
+                    Sort: {{ adminSortDirection === 'asc' ? 'Ascending' : 'Descending' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="admin-users-table-card">
+              <div class="admin-users-table-header">
+                <div>
+                  <h3>Admin directory</h3>
+                  <p>{{ adminRangeLabel }}</p>
+                </div>
+                <div class="admin-users-table-meta">
+                  <span class="admin-users-chip">Total {{ adminCounts.total }}</span>
+                  <span class="admin-users-chip is-muted">Super {{ adminCounts.super }}</span>
+                  <span class="admin-users-chip is-muted">Staff {{ adminCounts.staff }}</span>
+                </div>
+              </div>
+              <div class="admin-users-table-wrapper">
+                <table class="w-full text-base">
+                  <thead class="text-left text-[#6B7280]">
+                    <tr class="border-b border-[#E5E7EB]">
+                      <th class="py-2">Admin</th>
+                      <th class="py-2">Email</th>
+                      <th class="py-2">Role</th>
+                      <th class="py-2">Services</th>
+                      <th class="py-2">Created</th>
+                      <th class="py-2 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-if="isLoadingAdmins">
+                      <td colspan="6" class="py-4">
+                        <div class="table-state">
+                          <span class="table-state-icon"></span>
+                          <span>Loading admins...</span>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr v-else-if="adminSorted.length === 0">
+                      <td colspan="6" class="py-4">
+                        <div class="table-state">
+                          <span class="table-state-icon"></span>
+                          <span>No admins match the filters.</span>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr v-for="admin in adminPageRows" :key="admin.id" class="border-b border-[#F3F4F6]" :class="rowClass('neutral')">
+                      <td class="py-3">
+                        <div class="admin-users-identity">
+                          <div class="admin-users-avatar">{{ getAdminInitials(admin) }}</div>
+                          <div>
+                            <p class="admin-users-name">{{ admin.name }}</p>
+                            <p class="admin-users-id">ID #{{ admin.id }}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="py-3">{{ admin.email }}</td>
+                      <td class="py-3">
+                        <span class="status-pill" :class="admin.role === 'super_admin' ? 'is-info' : 'is-neutral'">
+                          {{ admin.role }}
+                        </span>
+                      </td>
+                      <td class="py-3 text-base">{{ formatServiceAssignments(admin) }}</td>
+                      <td class="py-3">{{ formatDate(admin.created_at) }}</td>
+                      <td class="py-3 text-right">
+                        <button class="admin-users-action" type="button" @click="openEditAdminModal(admin)">
+                          Edit
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p v-if="adminError" class="mt-3 text-base text-[#C0392B]">{{ adminError }}</p>
+              </div>
+              <div class="admin-users-pagination">
+                <span class="admin-users-range">{{ adminRangeLabel }}</span>
+                <div class="admin-users-page-controls">
+                  <button class="resident-tertiary" type="button" :disabled="adminPage === 1" @click="previousAdminPage">
+                    Prev
+                  </button>
+                  <span class="admin-users-page-label">Page {{ adminPage }} of {{ adminTotalPages }}</span>
+                  <button
+                    class="resident-tertiary"
+                    type="button"
+                    :disabled="adminPage === adminTotalPages"
+                    @click="nextAdminPage"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="isAdminModalOpen" class="modal-overlay" @click.self="closeAdminModal">
+            <div class="modal-card" role="dialog" aria-modal="true">
+              <div class="modal-header">
+                <div>
+                  <h3>Edit admin</h3>
+                  <p>Update admin details or service assignments.</p>
+                </div>
+                <button class="modal-close" type="button" @click="closeAdminModal">Close</button>
+              </div>
+              <form class="modal-body" @submit.prevent="submitAdminForm">
+                <div class="modal-grid">
+                  <label class="modal-field">
+                    <span>Name</span>
+                    <input v-model="adminForm.name" type="text" required />
+                  </label>
+                  <label class="modal-field">
+                    <span>Email</span>
+                    <input v-model="adminForm.email" type="email" required />
+                  </label>
+                  <label class="modal-field">
+                    <span>Role</span>
+                    <select v-model="adminForm.role">
+                      <option value="staff_admin">staff_admin</option>
+                      <option value="super_admin">super_admin</option>
+                    </select>
+                  </label>
+                  <label class="modal-field">
+                    <span>Password</span>
+                    <input v-model="adminForm.password" type="password" autocomplete="new-password" />
+                    <small>Leave blank to keep the existing password.</small>
+                  </label>
+                  <label class="modal-field modal-full">
+                    <span>Service IDs</span>
+                    <input v-model="adminForm.service_ids" type="text" />
+                    <small>Comma-separated IDs for staff admins.</small>
+                  </label>
+                </div>
+                <p v-if="adminFormError" class="modal-error">{{ adminFormError }}</p>
+                <div class="modal-actions">
+                  <button class="resident-tertiary" type="button" @click="closeAdminModal">Cancel</button>
+                  <button class="resident-primary" type="submit" :disabled="isAdminSaving">
+                    {{ isAdminSaving ? 'Saving...' : 'Save changes' }}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1818,6 +2019,7 @@ import {
   updateService as apiUpdateService,
   getAdmins,
   createAdmin as apiCreateAdmin,
+  updateAdmin as apiUpdateAdmin,
   getKiosks,
   createKiosk as apiCreateKiosk,
   getQueue,
@@ -1915,6 +2117,17 @@ const auditError = ref('')
 const admins = ref([])
 const isLoadingAdmins = ref(false)
 const adminError = ref('')
+const adminSearch = ref('')
+const adminRoleFilter = ref('all')
+const adminSortKey = ref('created_at')
+const adminSortDirection = ref('desc')
+const adminPage = ref(1)
+const adminPageSize = 10
+const isAdminModalOpen = ref(false)
+const adminForm = ref({ name: '', email: '', role: 'staff_admin', password: '', service_ids: '' })
+const adminFormError = ref('')
+const isAdminSaving = ref(false)
+const adminTarget = ref(null)
 const newAdmin = ref({
   name: '',
   email: '',
@@ -2141,6 +2354,67 @@ const transactionRangeLabel = computed(() => {
   const start = (transactionPage.value - 1) * transactionPageSize + 1
   const end = Math.min(total, start + transactionPageSize - 1)
   return `Showing ${start}-${end} of ${total} transactions`
+})
+
+const adminCounts = computed(() => {
+  const counts = { total: admins.value.length, super: 0, staff: 0 }
+  admins.value.forEach((admin) => {
+    if (admin.role === 'super_admin') counts.super += 1
+    if (admin.role === 'staff_admin') counts.staff += 1
+  })
+  return counts
+})
+
+const adminFiltered = computed(() => {
+  const term = adminSearch.value.trim().toLowerCase()
+  return admins.value.filter((admin) => {
+    const matchesRole = adminRoleFilter.value === 'all' || admin.role === adminRoleFilter.value
+    if (!matchesRole) return false
+    if (!term) return true
+    const name = String(admin.name || '').toLowerCase()
+    const email = String(admin.email || '').toLowerCase()
+    return name.includes(term) || email.includes(term)
+  })
+})
+
+const adminSorted = computed(() => {
+  const items = [...adminFiltered.value]
+  const direction = adminSortDirection.value === 'desc' ? -1 : 1
+  const compareValues = (a, b) => (a > b ? 1 : a < b ? -1 : 0)
+  items.sort((a, b) => {
+    if (adminSortKey.value === 'name') {
+      const nameDiff = compareValues(String(a.name || ''), String(b.name || ''))
+      if (nameDiff !== 0) return nameDiff * direction
+    }
+    if (adminSortKey.value === 'role') {
+      const roleDiff = compareValues(String(a.role || ''), String(b.role || ''))
+      if (roleDiff !== 0) return roleDiff * direction
+    }
+    if (adminSortKey.value === 'created_at') {
+      const timeDiff = compareValues(new Date(a.created_at || 0).getTime(), new Date(b.created_at || 0).getTime())
+      if (timeDiff !== 0) return timeDiff * direction
+    }
+    const fallback = compareValues(String(a.email || ''), String(b.email || ''))
+    return fallback * direction
+  })
+  return items
+})
+
+const adminTotalPages = computed(() =>
+  Math.max(1, Math.ceil(adminSorted.value.length / adminPageSize))
+)
+
+const adminPageRows = computed(() => {
+  const start = (adminPage.value - 1) * adminPageSize
+  return adminSorted.value.slice(start, start + adminPageSize)
+})
+
+const adminRangeLabel = computed(() => {
+  const total = adminSorted.value.length
+  if (!total) return 'No admins to display'
+  const start = (adminPage.value - 1) * adminPageSize + 1
+  const end = Math.min(total, start + adminPageSize - 1)
+  return `Showing ${start}-${end} of ${total} admins`
 })
 
 const queueWaitingList = computed(() => {
@@ -3078,6 +3352,90 @@ const toggleKioskSortDirection = () => {
   kioskPage.value = 1
 }
 
+const setAdminPage = (page) => {
+  const next = Math.min(Math.max(page, 1), adminTotalPages.value)
+  adminPage.value = next
+}
+
+const nextAdminPage = () => {
+  setAdminPage(adminPage.value + 1)
+}
+
+const previousAdminPage = () => {
+  setAdminPage(adminPage.value - 1)
+}
+
+const toggleAdminSortDirection = () => {
+  adminSortDirection.value = adminSortDirection.value === 'asc' ? 'desc' : 'asc'
+  adminPage.value = 1
+}
+
+const openEditAdminModal = (admin) => {
+  adminTarget.value = admin
+  adminForm.value = {
+    name: admin.name || '',
+    email: admin.email || '',
+    role: admin.role || 'staff_admin',
+    password: '',
+    service_ids: Array.isArray(admin.service_ids) ? admin.service_ids.join(', ') : '',
+  }
+  adminFormError.value = ''
+  isAdminSaving.value = false
+  isAdminModalOpen.value = true
+}
+
+const closeAdminModal = () => {
+  isAdminModalOpen.value = false
+  adminFormError.value = ''
+  isAdminSaving.value = false
+  adminTarget.value = null
+}
+
+const submitAdminForm = async () => {
+  if (!adminTarget.value) return
+  adminFormError.value = ''
+  const serviceIds = adminForm.value.service_ids
+    ? adminForm.value.service_ids
+        .split(',')
+        .map((id) => parseInt(id.trim(), 10))
+        .filter(Boolean)
+    : []
+  const payload = {
+    name: adminForm.value.name.trim(),
+    email: adminForm.value.email.trim(),
+    role: adminForm.value.role,
+    service_ids: adminForm.value.role === 'super_admin' ? [] : serviceIds,
+  }
+
+  if (!payload.name || !payload.email) {
+    adminFormError.value = 'Name and email are required.'
+    return
+  }
+
+  if (adminForm.value.password) {
+    payload.password = adminForm.value.password
+  }
+
+  isAdminSaving.value = true
+  try {
+    await apiUpdateAdmin(adminTarget.value.id, payload)
+    closeAdminModal()
+    await loadAdmins()
+  } catch (err) {
+    adminFormError.value = err.message
+  } finally {
+    isAdminSaving.value = false
+  }
+}
+
+const resetAdminFilters = () => {
+  adminSearch.value = ''
+  adminRoleFilter.value = 'all'
+  adminSortKey.value = 'created_at'
+  adminSortDirection.value = 'desc'
+  adminPage.value = 1
+}
+
 const setServicePage = (page) => {
   const next = Math.min(Math.max(page, 1), serviceTotalPages.value)
   servicePage.value = next
@@ -3438,6 +3796,9 @@ const loadAdmins = async () => {
   try {
     const data = await getAdmins()
     admins.value = data.admins || []
+    if (adminPage.value > adminTotalPages.value) {
+      adminPage.value = adminTotalPages.value
+    }
   } catch (err) {
     adminError.value = err.message
   } finally {
@@ -3539,6 +3900,29 @@ const formatMinutesAgo = (minutes) => {
   const remainder = minutes % 60
   if (!remainder) return `${hours}h ago`
   return `${hours}h ${remainder}m ago`
+}
+
+const formatServiceAssignments = (admin) => {
+  if (!admin) return '-'
+  if (admin.role === 'super_admin') return 'All services'
+  const ids = Array.isArray(admin.service_ids) ? admin.service_ids : []
+  if (!ids.length) return 'Unassigned'
+  const labels = ids.map((id) => {
+    const match = services.value.find((service) => service.id === id)
+    return match?.code || `#${id}`
+  })
+  return labels.join(', ')
+}
+
+const getAdminInitials = (admin) => {
+  const name = String(admin?.name || '').trim()
+  if (!name) return 'AD'
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join('')
 }
 
 const formatHourLabel = (hour) => {
@@ -5529,6 +5913,299 @@ onBeforeUnmount(() => {
   color: #0b2c6f;
 }
 
+.admin-users-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.admin-users-side {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-rows: auto auto 1fr;
+}
+
+.admin-users-overview {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 1.5rem;
+  background: linear-gradient(140deg, #f0f4ff 0%, #ffffff 65%);
+  border: 1px solid rgba(11, 44, 111, 0.2);
+  color: #0b2c6f;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+}
+
+.admin-users-overview::after {
+  content: '';
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 1px solid rgba(11, 44, 111, 0.2);
+  right: -40px;
+  top: -40px;
+  pointer-events: none;
+}
+
+.admin-users-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(11, 44, 111, 0.7);
+}
+
+.admin-users-title {
+  margin-top: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.admin-users-subtitle {
+  margin-top: 0.6rem;
+  color: rgba(11, 44, 111, 0.75);
+}
+
+.admin-users-metric-grid {
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-users-metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border-radius: 16px;
+  background: #0b2c6f;
+  color: #ffffff;
+  border: 1px solid rgba(11, 44, 111, 0.6);
+}
+
+.admin-users-metric-card strong {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.admin-users-metric-card small {
+  font-size: 0.85rem;
+  color: rgba(248, 250, 252, 0.85);
+}
+
+.admin-users-metric-card.is-success {
+  background: #2e7d32;
+  border-color: rgba(46, 125, 50, 0.7);
+}
+
+.admin-users-metric-card.is-accent {
+  background: #f2c300;
+  color: #0b2c6f;
+  border-color: rgba(242, 195, 0, 0.85);
+}
+
+.admin-users-metric-card.is-accent small,
+.admin-users-metric-card.is-neutral small {
+  color: rgba(11, 44, 111, 0.8);
+}
+
+.admin-users-metric-card.is-neutral {
+  background: #e5e7eb;
+  color: #0b2c6f;
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+.admin-users-form-card,
+.admin-users-filter-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-users-form-header,
+.admin-users-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-users-form-header h4,
+.admin-users-filter-header h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.admin-users-form-header p,
+.admin-users-filter-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.admin-users-form-grid,
+.admin-users-filter-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.admin-users-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.admin-users-field-full {
+  grid-column: 1 / -1;
+}
+
+.admin-users-input {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 0.65rem 0.85rem;
+  font-size: 1rem;
+  background: #f8fafc;
+}
+
+.admin-users-form-actions,
+.admin-users-filter-actions {
+  margin-top: auto;
+  padding-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.admin-users-table-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.admin-users-table-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.admin-users-table-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.admin-users-table-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.admin-users-table-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.admin-users-chip {
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+.admin-users-chip.is-muted {
+  background: #ffffff;
+  color: #6b7280;
+}
+
+.admin-users-table-wrapper {
+  overflow-x: auto;
+  min-height: 360px;
+}
+
+.admin-users-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.admin-users-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: #0b2c6f;
+  color: #ffffff;
+}
+
+.admin-users-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.admin-users-id {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.admin-users-action {
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid #0b2c6f;
+  background: #f8fafc;
+  color: #0b2c6f;
+}
+
+.admin-users-pagination {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.admin-users-range {
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.admin-users-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.admin-users-page-label {
+  font-weight: 600;
+  color: #0b2c6f;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -6708,6 +7385,10 @@ onBeforeUnmount(() => {
   .kiosk-layout {
     grid-template-columns: 1fr;
   }
+
+  .admin-users-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -6805,6 +7486,20 @@ onBeforeUnmount(() => {
     align-items: flex-start;
   }
 
+  .admin-users-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-users-form-grid,
+  .admin-users-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-users-table-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .resident-table-header {
     flex-direction: column;
     align-items: flex-start;
@@ -6835,6 +7530,10 @@ onBeforeUnmount(() => {
   }
 
   .kiosk-table-wrapper {
+    min-height: 240px;
+  }
+
+  .admin-users-table-wrapper {
     min-height: 240px;
   }
 }
