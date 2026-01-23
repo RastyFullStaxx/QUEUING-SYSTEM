@@ -224,6 +224,56 @@ if ($path === '/api/resident/me' && $method === 'GET') {
     exit;
 }
 
+if ($path === '/api/auth/admin/register' && $method === 'POST') {
+    $body = read_json_body();
+    $name = trim($body['name'] ?? '');
+    $email = strtolower(trim($body['email'] ?? ''));
+    $password = $body['password'] ?? '';
+
+    if (!$name || !$email || !$password) {
+        json_response(['error' => 'Name, email, and password are required'], 422);
+        exit;
+    }
+    if (strlen($password) < 8) {
+        json_response(['error' => 'Password must be at least 8 characters'], 422);
+        exit;
+    }
+
+    $count = (int) $pdo->query('SELECT COUNT(*) FROM admins')->fetchColumn();
+    if ($count > 0) {
+        json_response(['error' => 'Registration is disabled. Contact a super admin.'], 403);
+        exit;
+    }
+
+    $stmt = $pdo->prepare('SELECT id FROM admins WHERE email = ?');
+    $stmt->execute([$email]);
+    if ($stmt->fetch()) {
+        json_response(['error' => 'Email already registered'], 409);
+        exit;
+    }
+
+    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+    $serviceIds = json_encode([]);
+    $stmt = $pdo->prepare('INSERT INTO admins (name, email, password_hash, role, service_ids, created_at) VALUES (?, ?, ?, ?, ?, NOW())');
+    $stmt->execute([$name, $email, $passwordHash, 'super_admin', $serviceIds]);
+    $adminId = (int) $pdo->lastInsertId();
+
+    log_audit($pdo, 'admin', $adminId, 'admin.registered', ['admin_id' => $adminId]);
+
+    $token = issue_token('admin', $adminId, $appKey);
+    json_response([
+        'token' => $token,
+        'admin' => [
+            'id' => $adminId,
+            'name' => $name,
+            'email' => $email,
+            'role' => 'super_admin',
+            'service_ids' => [],
+        ],
+    ], 201);
+    exit;
+}
+
 if ($path === '/api/auth/admin/login' && $method === 'POST') {
     $body = read_json_body();
     $email = strtolower(trim($body['email'] ?? ''));
