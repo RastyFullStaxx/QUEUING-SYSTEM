@@ -831,77 +831,202 @@
         </div>
 
           <section id="services" class="admin-card mt-6" v-show="activeSection === 'services'">
-        <div class="tool-header">
-          <div class="tool-title">
-            <span class="tool-icon">
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 3v5m0 8v5m9-9h-5M8 12H3m14.95-6.95-3.54 3.54m-4.82 4.82-3.54 3.54m0-8.36-3.54-3.54m12.3 12.3-3.54-3.54" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
-              </svg>
-            </span>
-            <h2 class="tool-heading">Services</h2>
-          </div>
-          <div class="tool-accent" aria-hidden="true">
-            <span class="tool-accent-bar is-primary"></span>
-            <span class="tool-accent-bar is-gold"></span>
-            <span class="tool-accent-bar is-neutral"></span>
-          </div>
-        </div>
-        <div class="control-strip mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <input v-model="newService.name" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Service name" />
-          <input v-model="newService.code" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base" placeholder="Code" />
-          <button class="bg-[#F2C300] text-black rounded-xl text-base font-semibold" @click="createService">
-            Add service
-          </button>
-          <button class="bg-[#0B2C6F] text-white rounded-xl text-base" @click="loadServices">
-            Refresh
-          </button>
-        </div>
-        <div class="mt-4 overflow-x-auto">
-          <table class="w-full text-base">
-            <thead class="text-left text-[#6B7280]">
-              <tr class="border-b border-[#E5E7EB]">
-                <th class="py-2">Name</th>
-                <th class="py-2">Code</th>
-                <th class="py-2">Active</th>
-                <th class="py-2 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="isLoadingServices">
-                <td colspan="4" class="py-4">
-                  <div class="table-state">
-                    <span class="table-state-icon"></span>
-                    <span>Loading services...</span>
+            <div class="tool-header">
+              <div class="tool-title">
+                <span class="tool-icon">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M12 3v5m0 8v5m9-9h-5M8 12H3m14.95-6.95-3.54 3.54m-4.82 4.82-3.54 3.54m0-8.36-3.54-3.54m12.3 12.3-3.54-3.54" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <h2 class="tool-heading">Services</h2>
+              </div>
+              <div class="tool-accent" aria-hidden="true">
+                <span class="tool-accent-bar is-primary"></span>
+                <span class="tool-accent-bar is-gold"></span>
+                <span class="tool-accent-bar is-neutral"></span>
+              </div>
+            </div>
+
+            <div class="service-layout mt-6">
+              <div class="service-side">
+                <div class="service-overview">
+                  <p class="service-kicker">Service operations</p>
+                  <h3 class="service-title">Catalog control hub</h3>
+                  <p class="service-subtitle">
+                    Manage offerings, keep codes consistent, and highlight demand leaders at a glance.
+                  </p>
+                  <div class="service-metric-grid">
+                    <div class="service-metric-card">
+                      <span>Total services</span>
+                      <strong>{{ services.length }}</strong>
+                      <small>Across all counters</small>
+                    </div>
+                    <div class="service-metric-card is-success">
+                      <span>Active services</span>
+                      <strong>{{ activeServiceCount }}</strong>
+                      <small>Visible to kiosks</small>
+                    </div>
+                    <div class="service-metric-card is-danger">
+                      <span>Inactive</span>
+                      <strong>{{ inactiveServiceCount }}</strong>
+                      <small>Hidden from residents</small>
+                    </div>
+                    <div class="service-metric-card is-accent">
+                      <span>Demand leader</span>
+                      <strong>{{ topServiceLabel }}</strong>
+                      <small>{{ topServiceCountLabel }}</small>
+                    </div>
                   </div>
-                </td>
-              </tr>
-              <tr v-else-if="services.length === 0">
-                <td colspan="4" class="py-4">
-                  <div class="table-state">
-                    <span class="table-state-icon"></span>
-                    <span>No services found.</span>
+                </div>
+
+                <div class="service-action-card">
+                  <div class="service-action-header">
+                    <div>
+                      <h4>Service controls</h4>
+                      <p>Search and filter before editing.</p>
+                    </div>
+                    <button class="resident-primary" type="button" @click="openCreateServiceModal">New service</button>
                   </div>
-                </td>
-              </tr>
-              <tr v-for="service in services" :key="service.id" class="border-b border-[#F3F4F6]" :class="rowClass(service.active ? 'active' : 'inactive')">
-                <td class="py-2">{{ service.name }}</td>
-                <td class="py-2">{{ service.code }}</td>
-                <td class="py-2">
-                  <span class="status-pill" :class="statusClass(service.active ? 'active' : 'inactive')">
-                    {{ service.active ? 'Active' : 'Inactive' }}
-                  </span>
-                </td>
-                <td class="py-2 text-right">
-                  <button class="text-base border border-[#0B2C6F] text-[#0B2C6F] px-3 py-1 rounded-full" @click="toggleService(service)">
-                    Toggle
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-if="serviceError" class="mt-3 text-base text-[#C0392B]">{{ serviceError }}</p>
-        </div>
-      </section>
+                  <div class="service-action-grid">
+                    <label class="service-field">
+                      <span>Search</span>
+                      <input v-model="serviceSearch" type="text" placeholder="Name or code" class="service-input" />
+                    </label>
+                    <label class="service-field">
+                      <span>Status</span>
+                      <select v-model="serviceStatusFilter" class="service-input">
+                        <option value="all">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="service-action-footer">
+                    <button class="resident-secondary" type="button" @click="loadServices">Refresh list</button>
+                    <button class="resident-tertiary" type="button" @click="resetServiceFilters">Clear filters</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="service-table-card">
+                <div class="service-table-header">
+                  <div>
+                    <h3>Service directory</h3>
+                    <p>{{ serviceRangeLabel }}</p>
+                  </div>
+                  <div class="service-table-meta">
+                    <span class="service-chip">Total {{ services.length }}</span>
+                    <span class="service-chip is-muted">Active {{ activeServiceCount }}</span>
+                    <span class="service-chip is-muted">Inactive {{ inactiveServiceCount }}</span>
+                    <span v-if="serviceStatusFilter !== 'all'" class="service-chip is-muted">{{ serviceStatusFilter }}</span>
+                    <span v-if="serviceSearch" class="service-chip is-muted">Search: "{{ serviceSearch }}"</span>
+                  </div>
+                </div>
+                <div class="service-table-wrapper">
+                  <table class="w-full text-base">
+                    <thead class="text-left text-[#6B7280]">
+                      <tr class="border-b border-[#E5E7EB]">
+                        <th class="py-2">Service</th>
+                        <th class="py-2">Code</th>
+                        <th class="py-2">Status</th>
+                        <th class="py-2 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-if="isLoadingServices">
+                        <td colspan="4" class="py-4">
+                          <div class="table-state">
+                            <span class="table-state-icon"></span>
+                            <span>Loading services...</span>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr v-else-if="serviceFiltered.length === 0">
+                        <td colspan="4" class="py-4">
+                          <div class="table-state">
+                            <span class="table-state-icon"></span>
+                            <span>No services match the filters.</span>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr v-for="service in serviceFiltered" :key="service.id" class="border-b border-[#F3F4F6]" :class="rowClass(service.active ? 'active' : 'inactive')">
+                        <td class="py-3">
+                          <div class="service-identity">
+                            <div class="service-badge">{{ service.code }}</div>
+                            <div>
+                              <p class="service-name">{{ service.name }}</p>
+                              <p class="service-id">ID #{{ service.id }}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td class="py-3">
+                          <span class="service-code">{{ service.code }}</span>
+                        </td>
+                        <td class="py-3">
+                          <span class="status-pill" :class="statusClass(service.active ? 'active' : 'inactive')">
+                            {{ service.active ? 'Active' : 'Inactive' }}
+                          </span>
+                        </td>
+                        <td class="py-3 text-right">
+                          <div class="service-action-group">
+                            <button class="service-action is-outline" type="button" @click="openEditServiceModal(service)">
+                              Edit
+                            </button>
+                            <button
+                              :class="['service-action', service.active ? 'is-danger' : 'is-success']"
+                              type="button"
+                              @click="toggleService(service)"
+                            >
+                              {{ service.active ? 'Deactivate' : 'Activate' }}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p v-if="serviceError" class="mt-3 text-base text-[#C0392B]">{{ serviceError }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="isServiceModalOpen" class="modal-overlay" @click.self="closeServiceModal">
+              <div class="modal-card" role="dialog" aria-modal="true">
+                <div class="modal-header">
+                  <div>
+                    <h3>{{ serviceModalTitle }}</h3>
+                    <p>Keep the catalog consistent across kiosks and portals.</p>
+                  </div>
+                  <button class="modal-close" type="button" @click="closeServiceModal">Close</button>
+                </div>
+                <form class="modal-body" @submit.prevent="submitServiceForm">
+                  <div class="modal-grid">
+                    <label class="modal-field">
+                      <span>Service name</span>
+                      <input v-model="serviceForm.name" type="text" required />
+                    </label>
+                    <label class="modal-field">
+                      <span>Service code</span>
+                      <input v-model="serviceForm.code" type="text" required />
+                    </label>
+                    <label class="modal-field modal-full">
+                      <span>Status</span>
+                      <select v-model="serviceForm.active">
+                        <option :value="1">Active</option>
+                        <option :value="0">Inactive</option>
+                      </select>
+                    </label>
+                  </div>
+                  <p v-if="serviceFormError" class="modal-error">{{ serviceFormError }}</p>
+                  <div class="modal-actions">
+                    <button class="resident-tertiary" type="button" @click="closeServiceModal">Cancel</button>
+                    <button class="resident-primary" type="submit" :disabled="isServiceSaving">
+                      {{ isServiceSaving ? 'Saving...' : serviceSubmitLabel }}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </section>
 
           <section id="queue-control" class="admin-card mt-6" v-show="activeSection === 'queue-control'">
         <div class="tool-header">
@@ -1318,7 +1443,14 @@ const isDeletingResident = ref(false)
 const services = ref([])
 const isLoadingServices = ref(false)
 const serviceError = ref('')
-const newService = ref({ name: '', code: '' })
+const serviceSearch = ref('')
+const serviceStatusFilter = ref('all')
+const isServiceModalOpen = ref(false)
+const serviceModalMode = ref('create')
+const serviceForm = ref({ name: '', code: '', active: 1 })
+const serviceFormError = ref('')
+const isServiceSaving = ref(false)
+const serviceTarget = ref(null)
 const kiosks = ref([])
 const isLoadingKiosks = ref(false)
 const kioskError = ref('')
@@ -1368,6 +1500,14 @@ const residentSubmitLabel = computed(() =>
   residentModalMode.value === 'create' ? 'Create resident' : 'Save changes'
 )
 
+const serviceModalTitle = computed(() =>
+  serviceModalMode.value === 'create' ? 'Create service' : 'Update service'
+)
+
+const serviceSubmitLabel = computed(() =>
+  serviceModalMode.value === 'create' ? 'Create service' : 'Save changes'
+)
+
 const residentTotalPages = computed(() =>
   Math.max(1, Math.ceil(residents.value.length / residentPageSize))
 )
@@ -1383,6 +1523,29 @@ const residentRangeLabel = computed(() => {
   const start = (residentPage.value - 1) * residentPageSize + 1
   const end = Math.min(total, start + residentPageSize - 1)
   return `Showing ${start}-${end} of ${total} residents`
+})
+
+const serviceFiltered = computed(() => {
+  const term = serviceSearch.value.trim().toLowerCase()
+  return services.value.filter((service) => {
+    const matchesStatus =
+      serviceStatusFilter.value === 'all' ||
+      (serviceStatusFilter.value === 'active' && service.active) ||
+      (serviceStatusFilter.value === 'inactive' && !service.active)
+    if (!matchesStatus) return false
+    if (!term) return true
+    const name = String(service.name || '').toLowerCase()
+    const code = String(service.code || '').toLowerCase()
+    return name.includes(term) || code.includes(term)
+  })
+})
+
+const serviceRangeLabel = computed(() => {
+  const total = services.value.length
+  const visible = serviceFiltered.value.length
+  if (!total) return 'No services available'
+  if (total === visible) return `Showing ${total} services`
+  return `Showing ${visible} of ${total} services`
 })
 
 const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
@@ -2177,6 +2340,65 @@ const previousResidentPage = () => {
   setResidentPage(residentPage.value - 1)
 }
 
+const openCreateServiceModal = () => {
+  serviceModalMode.value = 'create'
+  serviceForm.value = { name: '', code: '', active: 1 }
+  serviceTarget.value = null
+  serviceFormError.value = ''
+  isServiceSaving.value = false
+  isServiceModalOpen.value = true
+}
+
+const openEditServiceModal = (service) => {
+  serviceModalMode.value = 'edit'
+  serviceTarget.value = service
+  serviceForm.value = {
+    name: service.name || '',
+    code: service.code || '',
+    active: service.active ? 1 : 0,
+  }
+  serviceFormError.value = ''
+  isServiceSaving.value = false
+  isServiceModalOpen.value = true
+}
+
+const closeServiceModal = () => {
+  isServiceModalOpen.value = false
+  serviceFormError.value = ''
+  isServiceSaving.value = false
+  serviceTarget.value = null
+}
+
+const submitServiceForm = async () => {
+  serviceFormError.value = ''
+  const activeValue = Number(serviceForm.value.active) === 1 ? 1 : 0
+  const payload = {
+    name: serviceForm.value.name.trim(),
+    code: serviceForm.value.code.trim(),
+    active: activeValue,
+  }
+
+  if (!payload.name || !payload.code) {
+    serviceFormError.value = 'Service name and code are required.'
+    return
+  }
+
+  isServiceSaving.value = true
+  try {
+    if (serviceModalMode.value === 'create') {
+      await apiCreateService(payload)
+    } else if (serviceTarget.value) {
+      await apiUpdateService(serviceTarget.value.id, payload)
+    }
+    closeServiceModal()
+    await loadServices()
+  } catch (err) {
+    serviceFormError.value = err.message
+  } finally {
+    isServiceSaving.value = false
+  }
+}
+
 const submitResidentForm = async () => {
   residentFormError.value = ''
   const payload = {
@@ -2295,18 +2517,6 @@ const loadServices = async () => {
   }
 }
 
-const createService = async () => {
-  serviceError.value = ''
-  try {
-    const payload = { name: newService.value.name, code: newService.value.code, active: 1 }
-    await apiCreateService(payload)
-    newService.value = { name: '', code: '' }
-    await loadServices()
-  } catch (err) {
-    serviceError.value = err.message
-  }
-}
-
 const toggleService = async (service) => {
   serviceError.value = ''
   try {
@@ -2315,6 +2525,11 @@ const toggleService = async (service) => {
   } catch (err) {
     serviceError.value = err.message
   }
+}
+
+const resetServiceFilters = () => {
+  serviceSearch.value = ''
+  serviceStatusFilter.value = 'all'
 }
 
 const loadKiosks = async () => {
@@ -3353,6 +3568,289 @@ onBeforeUnmount(() => {
 .resident-page-label {
   font-weight: 600;
   color: #0b2c6f;
+}
+
+.service-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.service-side {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-rows: auto 1fr;
+}
+
+.service-overview {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 1.5rem;
+  background: linear-gradient(140deg, #fff7d1 0%, #ffffff 65%);
+  border: 1px solid rgba(242, 195, 0, 0.55);
+  color: #0b2c6f;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+}
+
+.service-overview::after {
+  content: '';
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 1px solid rgba(11, 44, 111, 0.2);
+  right: -40px;
+  top: -40px;
+  pointer-events: none;
+}
+
+.service-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(11, 44, 111, 0.7);
+}
+
+.service-title {
+  margin-top: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.service-subtitle {
+  margin-top: 0.6rem;
+  color: rgba(11, 44, 111, 0.75);
+}
+
+.service-metric-grid {
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.service-metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border-radius: 16px;
+  background: #0b2c6f;
+  color: #ffffff;
+  border: 1px solid rgba(11, 44, 111, 0.6);
+}
+
+.service-metric-card strong {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.service-metric-card small {
+  font-size: 0.85rem;
+  color: rgba(248, 250, 252, 0.85);
+}
+
+.service-metric-card.is-success {
+  background: #2e7d32;
+  border-color: rgba(46, 125, 50, 0.7);
+}
+
+.service-metric-card.is-danger {
+  background: #c0392b;
+  border-color: rgba(192, 57, 43, 0.7);
+}
+
+.service-metric-card.is-accent {
+  background: #f2c300;
+  color: #0b2c6f;
+  border-color: rgba(242, 195, 0, 0.85);
+}
+
+.service-metric-card.is-accent small {
+  color: rgba(11, 44, 111, 0.8);
+}
+
+.service-action-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.service-action-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.service-action-header h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.service-action-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.service-action-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.service-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.service-input {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 0.65rem 0.85rem;
+  font-size: 1rem;
+  background: #f8fafc;
+}
+
+.service-action-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.service-table-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.service-table-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.service-table-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.service-table-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.service-table-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.service-chip {
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+.service-chip.is-muted {
+  background: #ffffff;
+  color: #6b7280;
+}
+
+.service-table-wrapper {
+  overflow-x: auto;
+  min-height: 360px;
+}
+
+.service-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.service-badge {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: #0b2c6f;
+  color: #ffffff;
+}
+
+.service-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.service-id {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.service-code {
+  font-weight: 600;
+  color: #0b2c6f;
+}
+
+.service-action-group {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.service-action {
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  background: #ffffff;
+  color: #0b2c6f;
+}
+
+.service-action.is-outline {
+  border-color: #0b2c6f;
+  background: #f8fafc;
+}
+
+.service-action.is-success {
+  border-color: rgba(46, 125, 50, 0.4);
+  color: #2e7d32;
+  background: #f0faf2;
+}
+
+.service-action.is-danger {
+  border-color: rgba(192, 57, 43, 0.4);
+  color: #c0392b;
+  background: #fff5f5;
 }
 
 .modal-overlay {
@@ -4518,6 +5016,10 @@ onBeforeUnmount(() => {
   .resident-layout {
     grid-template-columns: 1fr;
   }
+
+  .service-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -4559,6 +5061,19 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
+  .service-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .service-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .service-table-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .resident-table-header {
     flex-direction: column;
     align-items: flex-start;
@@ -4574,6 +5089,10 @@ onBeforeUnmount(() => {
 
   .resident-pagination {
     align-items: flex-start;
+  }
+
+  .service-table-wrapper {
+    min-height: 240px;
   }
 }
 
