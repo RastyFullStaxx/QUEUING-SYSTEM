@@ -270,56 +270,6 @@
             <div class="dashboard-panel span-6">
               <div class="dashboard-panel-header">
                 <div>
-                  <h3>Most booked service</h3>
-                  <p>Service bookings ranked by ticket volume.</p>
-                </div>
-                <span class="panel-badge is-gold">Volume</span>
-              </div>
-              <div v-if="serviceVolumeBars.length" class="service-chart">
-                <div class="service-chart-bars">
-                  <div v-for="service in serviceVolumeBars" :key="service.id" class="service-bar">
-                    <div class="service-bar-track">
-                      <span class="service-bar-fill" :style="{ height: `${service.percent}%` }"></span>
-                    </div>
-                    <span class="service-bar-label">{{ service.shortLabel }}</span>
-                    <span class="service-bar-value">{{ service.count }}</span>
-                  </div>
-                </div>
-                <div class="service-chart-summary">
-                  <p class="summary-title">{{ topServiceLabel }}</p>
-                  <p class="summary-subtitle">{{ topServiceCountLabel }}</p>
-                  <p class="summary-note">{{ serviceInsight }}</p>
-                </div>
-              </div>
-              <p v-else class="empty-state">No service demand yet. Queue tickets will appear here.</p>
-            </div>
-
-            <div class="dashboard-panel span-6">
-              <div class="dashboard-panel-header">
-                <div>
-                  <h3>Traffic by time</h3>
-                  <p>Ticket volume grouped by 3-hour windows.</p>
-                </div>
-                <span class="panel-badge is-neutral">Hourly</span>
-              </div>
-              <div v-if="trafficBuckets.length" class="traffic-chart">
-                <div class="traffic-bars">
-                  <div v-for="slot in trafficBuckets" :key="slot.label" class="traffic-bar">
-                    <div class="traffic-bar-track">
-                      <span class="traffic-bar-fill" :style="{ height: `${slot.percent}%` }"></span>
-                    </div>
-                    <span class="traffic-bar-label">{{ slot.label }}</span>
-                    <span class="traffic-bar-value">{{ slot.count }}</span>
-                  </div>
-                </div>
-                <p class="traffic-note">{{ trafficInsight }}</p>
-              </div>
-              <p v-else class="empty-state">No traffic data yet. Ticket activity will build this view.</p>
-            </div>
-
-            <div class="dashboard-panel span-6">
-              <div class="dashboard-panel-header">
-                <div>
                   <h3>Kiosk health</h3>
                   <p>Heartbeat status from registered devices.</p>
                 </div>
@@ -339,7 +289,7 @@
               <p v-else class="empty-state">No kiosk devices registered yet.</p>
             </div>
 
-            <div class="dashboard-panel span-4">
+            <div class="dashboard-panel span-6">
               <div class="dashboard-panel-header">
                 <div>
                   <h3>Insights</h3>
@@ -354,7 +304,7 @@
               </ul>
             </div>
 
-            <div class="dashboard-panel span-8">
+            <div class="dashboard-panel span-12">
               <div class="dashboard-panel-header">
                 <div>
                   <h3>Recent activity</h3>
@@ -372,6 +322,262 @@
                 </div>
               </div>
               <p v-else class="empty-state">No recent activity yet.</p>
+            </div>
+          </div>
+
+          <div class="analytics-zone">
+            <div class="analytics-header">
+              <div>
+                <p class="analytics-kicker">Deep analytics</p>
+                <h3 class="analytics-title">Operational Intelligence</h3>
+                <p class="analytics-subtitle">
+                  Visualize demand, approvals, and traffic patterns. Filters below apply to every chart.
+                </p>
+                <p class="analytics-range">Showing: {{ analyticsRangeLabel }}</p>
+              </div>
+              <div class="analytics-filters">
+                <div class="filter-field">
+                  <label class="filter-label">Range</label>
+                  <select v-model="analyticsRange" class="filter-input">
+                    <option value="today">Today</option>
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                    <option value="90d">Last 90 days</option>
+                    <option value="all">All time</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+                <div v-if="analyticsRange === 'custom'" class="filter-field">
+                  <label class="filter-label">Start</label>
+                  <input v-model="analyticsStartDate" type="date" class="filter-input" />
+                </div>
+                <div v-if="analyticsRange === 'custom'" class="filter-field">
+                  <label class="filter-label">End</label>
+                  <input v-model="analyticsEndDate" type="date" class="filter-input" />
+                </div>
+                <div class="filter-field">
+                  <label class="filter-label">Service</label>
+                  <select v-model="analyticsServiceId" class="filter-input">
+                    <option value="">All services</option>
+                    <option v-for="service in services" :key="service.id" :value="service.id">
+                      {{ service.name }}
+                    </option>
+                  </select>
+                </div>
+                <div class="filter-field">
+                  <label class="filter-label">Status</label>
+                  <select v-model="analyticsStatus" class="filter-input">
+                    <option value="all">All statuses</option>
+                    <option value="waiting">Waiting</option>
+                    <option value="serving">Serving</option>
+                    <option value="done">Done</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <button class="filter-reset" type="button" @click="resetAnalyticsFilters">
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            <div class="analytics-grid">
+              <div class="analytics-card span-7">
+                <div class="chart-header">
+                  <div>
+                    <h4>Daily ticket volume</h4>
+                    <p>Line trend of tickets created per day.</p>
+                  </div>
+                </div>
+                <div v-if="ticketTrendSeries.length" class="line-chart">
+                  <svg class="line-svg" viewBox="0 0 640 220" preserveAspectRatio="none" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="ticketTrendFill" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stop-color="#0b2c6f" stop-opacity="0.25" />
+                        <stop offset="100%" stop-color="#0b2c6f" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <g class="line-grid">
+                      <line v-for="grid in lineGrid" :key="`ticket-grid-${grid}`" :x1="24" :x2="616" :y1="grid" :y2="grid" />
+                    </g>
+                    <path class="line-area" :d="ticketTrend.areaPath" fill="url(#ticketTrendFill)" />
+                    <path class="line-path" :d="ticketTrend.linePath" />
+                    <circle
+                      v-for="point in ticketTrend.points"
+                      :key="`ticket-point-${point.index}`"
+                      class="line-point"
+                      :cx="point.x"
+                      :cy="point.y"
+                      r="4"
+                    />
+                  </svg>
+                  <div class="line-axis">
+                    <span v-for="label in ticketTrendAxis" :key="`ticket-axis-${label}`">{{ label }}</span>
+                  </div>
+                </div>
+                <p v-else class="empty-state">No ticket data in this range yet.</p>
+                <p class="analysis-note">{{ ticketTrendInsight }}</p>
+              </div>
+
+              <div class="analytics-card span-5">
+                <div class="chart-header">
+                  <div>
+                    <h4>Ticket status mix</h4>
+                    <p>Distribution of queue outcomes.</p>
+                  </div>
+                </div>
+                <div v-if="ticketStatusMix.length" class="donut-chart">
+                  <div class="donut-figure">
+                    <svg viewBox="0 0 120 120" class="donut-svg" aria-hidden="true">
+                      <circle class="donut-bg" cx="60" cy="60" r="46" />
+                      <circle
+                        v-for="segment in ticketStatusSegments"
+                        :key="segment.label"
+                        class="donut-segment"
+                        cx="60"
+                        cy="60"
+                        r="46"
+                        :stroke="segment.color"
+                        :stroke-dasharray="segment.dasharray"
+                        :stroke-dashoffset="segment.dashoffset"
+                      />
+                    </svg>
+                    <div class="donut-center">
+                      <span class="donut-value">{{ ticketStatusTotal }}</span>
+                      <span class="donut-label">Tickets</span>
+                    </div>
+                  </div>
+                  <div class="chart-legend">
+                    <div v-for="segment in ticketStatusMix" :key="segment.label" class="legend-item">
+                      <span class="legend-swatch" :style="{ background: segment.color }"></span>
+                      <span>{{ segment.label }}</span>
+                      <strong>{{ segment.percent }}%</strong>
+                    </div>
+                  </div>
+                </div>
+                <p v-else class="empty-state">No ticket status data available.</p>
+                <p class="analysis-note">{{ statusMixInsight }}</p>
+              </div>
+
+              <div class="analytics-card span-6">
+                <div class="chart-header">
+                  <div>
+                    <h4>Most booked service</h4>
+                    <p>Bar chart of service volume for the selected range.</p>
+                  </div>
+                </div>
+                <div v-if="serviceVolumeBars.length" class="service-chart">
+                  <div class="service-chart-bars">
+                    <div v-for="service in serviceVolumeBars" :key="service.id" class="service-bar">
+                      <div class="service-bar-track">
+                        <span class="service-bar-fill" :style="{ height: `${service.percent}%` }"></span>
+                      </div>
+                      <span class="service-bar-label">{{ service.shortLabel }}</span>
+                      <span class="service-bar-value">{{ service.count }}</span>
+                    </div>
+                  </div>
+                  <div class="service-chart-summary">
+                    <p class="summary-title">{{ analyticsTopServiceLabel }}</p>
+                    <p class="summary-subtitle">{{ analyticsTopServiceCountLabel }}</p>
+                    <p class="summary-note">{{ analyticsFilterNote }}</p>
+                  </div>
+                </div>
+                <p v-else class="empty-state">No service demand yet. Queue tickets will appear here.</p>
+                <p class="analysis-note">{{ analyticsServiceInsight }}</p>
+              </div>
+
+              <div class="analytics-card span-6">
+                <div class="chart-header">
+                  <div>
+                    <h4>Service mix</h4>
+                    <p>Pie view of service shares.</p>
+                  </div>
+                </div>
+                <div v-if="serviceMix.length" class="pie-chart">
+                  <div class="pie-figure">
+                    <svg viewBox="0 0 120 120" class="pie-svg" aria-hidden="true">
+                      <circle
+                        v-for="segment in serviceMixSegments"
+                        :key="segment.label"
+                        class="pie-segment"
+                        cx="60"
+                        cy="60"
+                        r="28"
+                        :stroke="segment.color"
+                        :stroke-dasharray="segment.dasharray"
+                        :stroke-dashoffset="segment.dashoffset"
+                      />
+                    </svg>
+                  </div>
+                  <div class="chart-legend">
+                    <div v-for="segment in serviceMix" :key="segment.label" class="legend-item">
+                      <span class="legend-swatch" :style="{ background: segment.color }"></span>
+                      <span>{{ segment.label }}</span>
+                      <strong>{{ segment.percent }}%</strong>
+                    </div>
+                  </div>
+                </div>
+                <p v-else class="empty-state">No service mix data available.</p>
+                <p class="analysis-note">{{ serviceMixInsight }}</p>
+              </div>
+
+              <div class="analytics-card span-6">
+                <div class="chart-header">
+                  <div>
+                    <h4>Traffic by time</h4>
+                    <p>Ticket volume grouped by 3-hour windows.</p>
+                  </div>
+                </div>
+                <div v-if="trafficBuckets.length" class="traffic-chart">
+                  <div class="traffic-bars">
+                    <div v-for="slot in trafficBuckets" :key="slot.label" class="traffic-bar">
+                      <div class="traffic-bar-track">
+                        <span class="traffic-bar-fill" :style="{ height: `${slot.percent}%` }"></span>
+                      </div>
+                      <span class="traffic-bar-label">{{ slot.label }}</span>
+                      <span class="traffic-bar-value">{{ slot.count }}</span>
+                    </div>
+                  </div>
+                </div>
+                <p v-else class="empty-state">No traffic data yet. Ticket activity will build this view.</p>
+                <p class="analysis-note">{{ trafficInsight }}</p>
+              </div>
+
+              <div class="analytics-card span-6">
+                <div class="chart-header">
+                  <div>
+                    <h4>Resident registrations</h4>
+                    <p>Daily registration activity.</p>
+                  </div>
+                </div>
+                <div v-if="residentTrendSeries.length" class="line-chart">
+                  <svg class="line-svg" viewBox="0 0 640 220" preserveAspectRatio="none" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="residentTrendFill" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stop-color="#f2c300" stop-opacity="0.3" />
+                        <stop offset="100%" stop-color="#f2c300" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <g class="line-grid">
+                      <line v-for="grid in lineGrid" :key="`resident-grid-${grid}`" :x1="24" :x2="616" :y1="grid" :y2="grid" />
+                    </g>
+                    <path class="line-area is-gold" :d="residentTrend.areaPath" fill="url(#residentTrendFill)" />
+                    <path class="line-path is-gold" :d="residentTrend.linePath" />
+                    <circle
+                      v-for="point in residentTrend.points"
+                      :key="`resident-point-${point.index}`"
+                      class="line-point is-gold"
+                      :cx="point.x"
+                      :cy="point.y"
+                      r="4"
+                    />
+                  </svg>
+                  <div class="line-axis">
+                    <span v-for="label in residentTrendAxis" :key="`resident-axis-${label}`">{{ label }}</span>
+                  </div>
+                </div>
+                <p v-else class="empty-state">No registrations in this range yet.</p>
+                <p class="analysis-note">{{ residentTrendInsight }}</p>
+              </div>
             </div>
           </div>
         </section>
@@ -981,6 +1187,13 @@ const newAdmin = ref({
   role: 'staff_admin',
   service_ids: '',
 })
+const allResidents = ref([])
+const allQueueTickets = ref([])
+const analyticsRange = ref('30d')
+const analyticsServiceId = ref('')
+const analyticsStatus = ref('all')
+const analyticsStartDate = ref('')
+const analyticsEndDate = ref('')
 const lastUpdatedAt = ref(new Date())
 
 const lastUpdatedLabel = computed(() => {
@@ -988,9 +1201,109 @@ const lastUpdatedLabel = computed(() => {
   return lastUpdatedAt.value.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 })
 
+const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
+
+const endOfDay = (date) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59, 999)
+
+const addDays = (date, days) =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate() + days)
+
+const parseDateInput = (value) => {
+  if (!value) return null
+  const date = new Date(`${value}T00:00:00`)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const analyticsDateRange = computed(() => {
+  const today = new Date()
+  const endToday = endOfDay(today)
+  if (analyticsRange.value === 'all') {
+    return { start: null, end: null }
+  }
+  if (analyticsRange.value === 'today') {
+    return { start: startOfDay(today), end: endToday }
+  }
+  if (analyticsRange.value === 'custom') {
+    let start = parseDateInput(analyticsStartDate.value)
+    let end = parseDateInput(analyticsEndDate.value)
+    if (start) start = startOfDay(start)
+    if (end) end = endOfDay(end)
+    if (!end) end = endToday
+    if (!start) start = startOfDay(end)
+    if (start > end) {
+      const swap = start
+      start = startOfDay(end)
+      end = endOfDay(swap)
+    }
+    return { start, end }
+  }
+  const rangeDays = analyticsRange.value === '90d' ? 90 : analyticsRange.value === '30d' ? 30 : 7
+  const start = startOfDay(addDays(endToday, -(rangeDays - 1)))
+  return { start, end: endToday }
+})
+
+const analyticsRangeLabel = computed(() => {
+  if (analyticsRange.value === 'all') return 'All time'
+  if (analyticsRange.value === 'today') return 'Today'
+  if (analyticsRange.value === '7d') return 'Last 7 days'
+  if (analyticsRange.value === '30d') return 'Last 30 days'
+  if (analyticsRange.value === '90d') return 'Last 90 days'
+  if (analyticsRange.value === 'custom') {
+    if (!analyticsStartDate.value && !analyticsEndDate.value) return 'Custom range'
+    const startLabel = analyticsStartDate.value || 'Start'
+    const endLabel = analyticsEndDate.value || 'Today'
+    return `${startLabel} to ${endLabel}`
+  }
+  return 'Custom range'
+})
+
+const analyticsFilterNote = computed(() => {
+  const statusLabel =
+    analyticsStatus.value === 'all'
+      ? 'All statuses'
+      : analyticsStatus.value.charAt(0).toUpperCase() + analyticsStatus.value.slice(1)
+  const serviceLabel = analyticsServiceId.value
+    ? services.value.find((service) => service.id === parseInt(analyticsServiceId.value, 10))?.name ||
+      `Service ${analyticsServiceId.value}`
+    : 'All services'
+  return `${analyticsRangeLabel.value} | ${serviceLabel} | ${statusLabel}`
+})
+
+const analyticsTickets = computed(() => {
+  const { start, end } = analyticsDateRange.value
+  return allQueueTickets.value.filter((ticket) => {
+    if (!ticket.issued_at) return false
+    const issuedAt = new Date(ticket.issued_at)
+    if (Number.isNaN(issuedAt.getTime())) return false
+    if (start && issuedAt < start) return false
+    if (end && issuedAt > end) return false
+    if (analyticsServiceId.value) {
+      const serviceId = parseInt(analyticsServiceId.value, 10)
+      if (ticket.service_id !== serviceId) return false
+    }
+    if (analyticsStatus.value !== 'all' && ticket.status !== analyticsStatus.value) {
+      return false
+    }
+    return true
+  })
+})
+
+const analyticsResidents = computed(() => {
+  const { start, end } = analyticsDateRange.value
+  return allResidents.value.filter((resident) => {
+    if (!resident.created_at) return false
+    const createdAt = new Date(resident.created_at)
+    if (Number.isNaN(createdAt.getTime())) return false
+    if (start && createdAt < start) return false
+    if (end && createdAt > end) return false
+    return true
+  })
+})
+
 const residentStats = computed(() => {
-  const stats = { total: residents.value.length, approved: 0, pending: 0, rejected: 0 }
-  residents.value.forEach((resident) => {
+  const stats = { total: allResidents.value.length, approved: 0, pending: 0, rejected: 0 }
+  allResidents.value.forEach((resident) => {
     if (resident.status === 'approved') stats.approved += 1
     if (resident.status === 'pending') stats.pending += 1
     if (resident.status === 'rejected') stats.rejected += 1
@@ -1014,14 +1327,14 @@ const residentPercentages = computed(() => {
 })
 
 const queueStatusCounts = computed(() => {
-  const counts = { waiting: 0, serving: 0, done: 0, cancelled: 0, total: queueTickets.value.length }
-  queueTickets.value.forEach((ticket) => {
+  const counts = { waiting: 0, serving: 0, done: 0, cancelled: 0, total: allQueueTickets.value.length }
+  allQueueTickets.value.forEach((ticket) => {
     if (ticket.status === 'waiting') counts.waiting += 1
     if (ticket.status === 'serving') counts.serving += 1
     if (ticket.status === 'done') counts.done += 1
     if (ticket.status === 'cancelled') counts.cancelled += 1
   })
-  counts.total = queueTickets.value.length
+  counts.total = allQueueTickets.value.length
   return counts
 })
 
@@ -1039,7 +1352,7 @@ const activeQueueCount = computed(() => queueStatusCounts.value.waiting + queueS
 
 const averageWaitMinutes = computed(() => {
   const now = Date.now()
-  const waitingTickets = queueTickets.value.filter((ticket) => ticket.status === 'waiting' && ticket.issued_at)
+  const waitingTickets = allQueueTickets.value.filter((ticket) => ticket.status === 'waiting' && ticket.issued_at)
   if (!waitingTickets.length) return 0
   const totalMinutes = waitingTickets.reduce((sum, ticket) => {
     const issuedAt = new Date(ticket.issued_at).getTime()
@@ -1076,7 +1389,7 @@ const inactiveServiceCount = computed(() => services.value.filter((service) => !
 
 const serviceDemand = computed(() => {
   const counts = new Map()
-  queueTickets.value.forEach((ticket) => {
+  allQueueTickets.value.forEach((ticket) => {
     const serviceId = ticket.service_id
     if (!serviceId) return
     counts.set(serviceId, (counts.get(serviceId) || 0) + 1)
@@ -1111,7 +1424,7 @@ const shortServiceLabel = (name = '') => {
 
 const serviceVolumeBars = computed(() => {
   const counts = new Map()
-  queueTickets.value.forEach((ticket) => {
+  analyticsTickets.value.forEach((ticket) => {
     const serviceId = ticket.service_id
     if (!serviceId) return
     counts.set(serviceId, (counts.get(serviceId) || 0) + 1)
@@ -1134,6 +1447,18 @@ const serviceVolumeBars = computed(() => {
     percent: Math.round((item.count / maxCount) * 100),
     shortLabel: shortServiceLabel(item.name),
   }))
+})
+
+const analyticsTopService = computed(() => serviceVolumeBars.value[0] || null)
+
+const analyticsTopServiceLabel = computed(() => {
+  if (!analyticsTopService.value) return 'No demand yet'
+  return analyticsTopService.value.name
+})
+
+const analyticsTopServiceCountLabel = computed(() => {
+  if (!analyticsTopService.value) return 'Waiting for tickets'
+  return `${analyticsTopService.value.count} tickets`
 })
 
 const topServiceLabel = computed(() => {
@@ -1165,9 +1490,9 @@ const onlineKioskCount = computed(() => kioskStatusList.value.filter((kiosk) => 
 const offlineKioskCount = computed(() => Math.max(0, kioskStatusList.value.length - onlineKioskCount.value))
 
 const trafficBuckets = computed(() => {
-  if (!queueTickets.value.length) return []
+  if (!analyticsTickets.value.length) return []
   const slots = Array.from({ length: 8 }, (_, index) => ({ index, count: 0 }))
-  queueTickets.value.forEach((ticket) => {
+  analyticsTickets.value.forEach((ticket) => {
     if (!ticket.issued_at) return
     const hour = new Date(ticket.issued_at).getHours()
     if (Number.isNaN(hour)) return
@@ -1198,6 +1523,252 @@ const trafficInsight = computed(() => {
     return 'Not enough traffic data yet. Ticket volume will populate this view.'
   }
   return `Highest traffic window: ${busiestTrafficSlot.value.label} with ${busiestTrafficSlot.value.count} tickets.`
+})
+
+const lineChartConfig = {
+  width: 640,
+  height: 220,
+  padding: 24,
+}
+
+const lineGrid = computed(() => {
+  const usable = lineChartConfig.height - lineChartConfig.padding * 2
+  return [0.25, 0.5, 0.75].map((ratio) => lineChartConfig.padding + usable * ratio)
+})
+
+const toDateKey = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const getDateBounds = (items, key) => {
+  let minDate = null
+  let maxDate = null
+  items.forEach((item) => {
+    if (!item[key]) return
+    const date = new Date(item[key])
+    if (Number.isNaN(date.getTime())) return
+    if (!minDate || date < minDate) minDate = date
+    if (!maxDate || date > maxDate) maxDate = date
+  })
+  return { minDate, maxDate }
+}
+
+const buildDailySeries = (items, key) => {
+  if (!items.length) return []
+  const { start, end } = analyticsDateRange.value
+  const bounds = getDateBounds(items, key)
+  let startDate = start || bounds.minDate
+  let endDate = end || bounds.maxDate
+  if (!startDate || !endDate) return []
+  startDate = startOfDay(startDate)
+  endDate = endOfDay(endDate)
+
+  const dayMap = new Map()
+  items.forEach((item) => {
+    if (!item[key]) return
+    const date = new Date(item[key])
+    if (Number.isNaN(date.getTime())) return
+    const keyValue = toDateKey(date)
+    dayMap.set(keyValue, (dayMap.get(keyValue) || 0) + 1)
+  })
+
+  const series = []
+  for (let cursor = new Date(startDate); cursor <= endDate; cursor = addDays(cursor, 1)) {
+    const label = cursor.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    const keyValue = toDateKey(cursor)
+    series.push({
+      label,
+      value: dayMap.get(keyValue) || 0,
+    })
+  }
+  return series
+}
+
+const buildLineMetrics = (series) => {
+  if (!series.length) {
+    return { linePath: '', areaPath: '', points: [] }
+  }
+  const maxValue = Math.max(...series.map((point) => point.value), 1)
+  const stepX =
+    series.length > 1
+      ? (lineChartConfig.width - lineChartConfig.padding * 2) / (series.length - 1)
+      : 0
+  const points = series.map((point, index) => {
+    const x = lineChartConfig.padding + index * stepX
+    const y =
+      lineChartConfig.height -
+      lineChartConfig.padding -
+      (point.value / maxValue) * (lineChartConfig.height - lineChartConfig.padding * 2)
+    return { x, y, value: point.value, index }
+  })
+  const linePath = points
+    .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x} ${point.y}`)
+    .join(' ')
+  const areaPath = `${linePath} L ${
+    points[points.length - 1].x
+  } ${lineChartConfig.height - lineChartConfig.padding} L ${
+    points[0].x
+  } ${lineChartConfig.height - lineChartConfig.padding} Z`
+  const markerStep = points.length > 12 ? Math.ceil(points.length / 6) : 1
+  const markers = points.filter(
+    (point, index) =>
+      index === 0 || index === points.length - 1 || index % markerStep === 0
+  )
+  return { linePath, areaPath, points: markers }
+}
+
+const buildAxisLabels = (series) => {
+  if (!series.length) return []
+  const midIndex = Math.floor(series.length / 2)
+  return [series[0].label, series[midIndex].label, series[series.length - 1].label]
+}
+
+const buildTrendInsight = (series, label) => {
+  if (series.length < 4) return `Not enough ${label.toLowerCase()} history yet for trend insights.`
+  const windowSize = Math.min(3, Math.floor(series.length / 2))
+  const recent = series.slice(-windowSize).reduce((sum, point) => sum + point.value, 0)
+  const previous = series
+    .slice(-(windowSize * 2), -windowSize)
+    .reduce((sum, point) => sum + point.value, 0)
+  const peak = series.reduce((best, point) => {
+    if (!best || point.value > best.value) return point
+    return best
+  }, null)
+  const peakNote =
+    peak && peak.value
+      ? ` Peak day: ${peak.label} (${peak.value}).`
+      : ''
+  if (previous === 0) {
+    if (recent === 0) return `No ${label.toLowerCase()} activity in this range yet.${peakNote}`
+    return `${label} activity started in the last ${windowSize} days.${peakNote}`
+  }
+  const change = Math.round(((recent - previous) / previous) * 100)
+  if (change > 0) return `${label} volume is up ${change}% versus the previous ${windowSize} days.${peakNote}`
+  if (change < 0) return `${label} volume is down ${Math.abs(change)}% versus the previous ${windowSize} days.${peakNote}`
+  return `${label} volume is steady compared to the previous ${windowSize} days.${peakNote}`
+}
+
+const ticketTrendSeries = computed(() => buildDailySeries(analyticsTickets.value, 'issued_at'))
+
+const ticketTrend = computed(() => buildLineMetrics(ticketTrendSeries.value))
+
+const ticketTrendAxis = computed(() => buildAxisLabels(ticketTrendSeries.value))
+
+const ticketTrendInsight = computed(() => buildTrendInsight(ticketTrendSeries.value, 'Ticket'))
+
+const residentTrendSeries = computed(() => buildDailySeries(analyticsResidents.value, 'created_at'))
+
+const residentTrend = computed(() => buildLineMetrics(residentTrendSeries.value))
+
+const residentTrendAxis = computed(() => buildAxisLabels(residentTrendSeries.value))
+
+const residentTrendInsight = computed(() => buildTrendInsight(residentTrendSeries.value, 'Registration'))
+
+const ticketStatusMix = computed(() => {
+  const total = analyticsTickets.value.length
+  const counts = {
+    Waiting: 0,
+    Serving: 0,
+    Done: 0,
+    Cancelled: 0,
+  }
+  analyticsTickets.value.forEach((ticket) => {
+    if (ticket.status === 'waiting') counts.Waiting += 1
+    if (ticket.status === 'serving') counts.Serving += 1
+    if (ticket.status === 'done') counts.Done += 1
+    if (ticket.status === 'cancelled') counts.Cancelled += 1
+  })
+  const palette = {
+    Waiting: '#f2c300',
+    Serving: '#0b2c6f',
+    Done: '#2e7d32',
+    Cancelled: '#c0392b',
+  }
+  return Object.entries(counts)
+    .filter(([, count]) => count > 0)
+    .map(([label, count]) => ({
+      label,
+      count,
+      share: total ? count / total : 0,
+      percent: total ? Math.round((count / total) * 100) : 0,
+      color: palette[label],
+    }))
+})
+
+const ticketStatusTotal = computed(() => analyticsTickets.value.length)
+
+const buildSegments = (items, radius) => {
+  const circumference = 2 * Math.PI * radius
+  let offset = 0
+  return items.map((item) => {
+    const length = item.share * circumference
+    const dasharray = `${length} ${circumference - length}`
+    const dashoffset = -offset
+    offset += length
+    return { ...item, dasharray, dashoffset }
+  })
+}
+
+const ticketStatusSegments = computed(() => buildSegments(ticketStatusMix.value, 46))
+
+const statusMixInsight = computed(() => {
+  const total = ticketStatusTotal.value
+  if (!total) return 'No ticket activity in this range yet.'
+  const done = ticketStatusMix.value.find((item) => item.label === 'Done')?.count || 0
+  const cancelled = ticketStatusMix.value.find((item) => item.label === 'Cancelled')?.count || 0
+  const doneRate = Math.round((done / total) * 100)
+  const cancelRate = Math.round((cancelled / total) * 100)
+  return `Completion rate is ${doneRate}% with ${cancelRate}% cancellations for this range.`
+})
+
+const serviceMix = computed(() => {
+  const counts = new Map()
+  analyticsTickets.value.forEach((ticket) => {
+    if (!ticket.service_id) return
+    counts.set(ticket.service_id, (counts.get(ticket.service_id) || 0) + 1)
+  })
+  const total = Array.from(counts.values()).reduce((sum, value) => sum + value, 0)
+  if (!total) return []
+  const palette = ['#0b2c6f', '#f2c300', '#22c55e', '#0ea5e9', '#f97316', '#64748b']
+  const items = Array.from(counts.entries())
+    .map(([id, count]) => {
+      const service = services.value.find((entry) => entry.id === id)
+      return {
+        label: service?.name || `Service #${id}`,
+        count,
+      }
+    })
+    .sort((a, b) => b.count - a.count)
+  const topItems = items.slice(0, 4)
+  const otherCount = items.slice(4).reduce((sum, item) => sum + item.count, 0)
+  if (otherCount > 0) {
+    topItems.push({ label: 'Other', count: otherCount })
+  }
+  return topItems.map((item, index) => ({
+    ...item,
+    share: item.count / total,
+    percent: Math.round((item.count / total) * 100),
+    color: item.label === 'Other' ? '#9ca3af' : palette[index % palette.length],
+  }))
+})
+
+const serviceMixSegments = computed(() => buildSegments(serviceMix.value, 28))
+
+const analyticsServiceInsight = computed(() => {
+  const top = analyticsTopService.value
+  if (!top) return 'No service demand for the selected range yet.'
+  const total = analyticsTickets.value.length || 1
+  const share = Math.round((top.count / total) * 100)
+  return `${top.name} accounts for ${share}% of tickets in this range.`
+})
+
+const serviceMixInsight = computed(() => {
+  const top = serviceMix.value[0]
+  if (!top) return 'No service mix to analyze yet.'
+  return `${top.label} leads the service mix with ${top.percent}% of bookings.`
 })
 
 const recentLogs = computed(() => auditLogs.value.slice(0, 5))
@@ -1248,6 +1819,15 @@ const loadResidents = async () => {
     residentError.value = err.message
   } finally {
     isLoadingResidents.value = false
+  }
+}
+
+const loadAllResidents = async () => {
+  try {
+    const data = await getResidents()
+    allResidents.value = data.residents || []
+  } catch (err) {
+    // Ignore analytics fetch errors for now.
   }
 }
 
@@ -1330,6 +1910,15 @@ const loadQueue = async () => {
     queueError.value = err.message
   } finally {
     isLoadingQueue.value = false
+  }
+}
+
+const loadAllQueueTickets = async () => {
+  try {
+    const data = await getQueue()
+    allQueueTickets.value = data.tickets || []
+  } catch (err) {
+    // Ignore analytics fetch errors for now.
   }
 }
 
@@ -1432,9 +2021,11 @@ const createAdmin = async () => {
 const refreshAll = async () => {
   const tasks = [
     loadResidents(),
+    loadAllResidents(),
     loadServices(),
     loadKiosks(),
     loadQueue(),
+    loadAllQueueTickets(),
     loadTransactions(),
     loadAuditLogs(),
   ]
@@ -1443,6 +2034,14 @@ const refreshAll = async () => {
   }
   await Promise.all(tasks)
   lastUpdatedAt.value = new Date()
+}
+
+const resetAnalyticsFilters = () => {
+  analyticsRange.value = '30d'
+  analyticsServiceId.value = ''
+  analyticsStatus.value = 'all'
+  analyticsStartDate.value = ''
+  analyticsEndDate.value = ''
 }
 
 const statusTone = (status) => {
@@ -2251,6 +2850,10 @@ onBeforeUnmount(() => {
   grid-column: span 4;
 }
 
+.dashboard-panel.span-12 {
+  grid-column: span 12;
+}
+
 .dashboard-panel-header {
   display: flex;
   align-items: flex-start;
@@ -2585,6 +3188,291 @@ onBeforeUnmount(() => {
   color: #6b7280;
 }
 
+.analytics-zone {
+  margin-top: 2.5rem;
+  padding: 2rem;
+  border-radius: 28px;
+  border: 1px solid #e5e7eb;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 50%, #f7f2e8 100%);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.12);
+}
+
+.analytics-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.analytics-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  color: #6b7280;
+}
+
+.analytics-title {
+  margin-top: 0.4rem;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.analytics-subtitle {
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  color: #4b5563;
+  max-width: 520px;
+}
+
+.analytics-range {
+  margin-top: 0.65rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.analytics-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.8rem;
+  align-items: end;
+}
+
+.filter-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.filter-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #6b7280;
+}
+
+.filter-input {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.55rem 0.8rem;
+  background: #ffffff;
+  font-size: 0.9rem;
+}
+
+.filter-reset {
+  border: none;
+  border-radius: 12px;
+  padding: 0.65rem 1rem;
+  background: #0b2c6f;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-reset:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.16);
+}
+
+.analytics-grid {
+  margin-top: 2rem;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1.2rem;
+}
+
+.analytics-card {
+  grid-column: span 6;
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 1.5rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 1rem;
+}
+
+.analytics-card.span-7 {
+  grid-column: span 7;
+}
+
+.analytics-card.span-5 {
+  grid-column: span 5;
+}
+
+.analytics-card.span-6 {
+  grid-column: span 6;
+}
+
+.chart-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.chart-header h4 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #0b2c6f;
+}
+
+.chart-header p {
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.analysis-note {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin-top: 0.3rem;
+}
+
+.analysis-note::before {
+  content: 'AI insight: ';
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.line-chart {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.line-svg {
+  width: 100%;
+  height: auto;
+}
+
+.line-grid line {
+  stroke: rgba(148, 163, 184, 0.35);
+  stroke-width: 1;
+  stroke-dasharray: 6 8;
+}
+
+.line-path {
+  fill: none;
+  stroke: #0b2c6f;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.line-path.is-gold {
+  stroke: #f2c300;
+}
+
+.line-area {
+  opacity: 1;
+}
+
+.line-area.is-gold {
+  opacity: 0.85;
+}
+
+.line-point {
+  fill: #0b2c6f;
+  stroke: #ffffff;
+  stroke-width: 2;
+}
+
+.line-point.is-gold {
+  fill: #f2c300;
+}
+
+.line-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+
+.donut-chart,
+.pie-chart {
+  display: grid;
+  gap: 1rem;
+}
+
+.donut-figure,
+.pie-figure {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.donut-svg,
+.pie-svg {
+  width: 160px;
+  height: 160px;
+}
+
+.donut-bg {
+  fill: none;
+  stroke: #f3f4f6;
+  stroke-width: 16;
+}
+
+.donut-segment {
+  fill: none;
+  stroke-width: 16;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 60px 60px;
+}
+
+.donut-center {
+  position: absolute;
+  text-align: center;
+}
+
+.donut-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.donut-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.pie-segment {
+  fill: none;
+  stroke-width: 56;
+  stroke-linecap: butt;
+  transform: rotate(-90deg);
+  transform-origin: 60px 60px;
+}
+
+.chart-legend {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.legend-item strong {
+  margin-left: auto;
+  color: #111827;
+}
+
+.legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
 .kiosk-grid {
   margin-top: 1.2rem;
   display: grid;
@@ -2723,7 +3611,19 @@ onBeforeUnmount(() => {
   .dashboard-panel.span-7,
   .dashboard-panel.span-5,
   .dashboard-panel.span-8,
-  .dashboard-panel.span-4 {
+  .dashboard-panel.span-4,
+  .dashboard-panel.span-12 {
+    grid-column: span 1;
+  }
+
+  .analytics-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  .analytics-card,
+  .analytics-card.span-7,
+  .analytics-card.span-5,
+  .analytics-card.span-6 {
     grid-column: span 1;
   }
 }
@@ -2747,6 +3647,10 @@ onBeforeUnmount(() => {
   }
 
   .activity-row {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-filters {
     grid-template-columns: 1fr;
   }
 }
