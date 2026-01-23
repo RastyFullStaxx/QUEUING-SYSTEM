@@ -87,24 +87,8 @@
     </header>
 
     <div class="admin-content">
-      <div class="w-full py-12">
-        <div class="admin-intro">
-          <div class="admin-intro-left">
-            <div class="admin-emblem">
-              <span class="admin-emblem-ring"></span>
-              <span class="admin-emblem-dot"></span>
-              <span class="admin-emblem-dot is-gold"></span>
-            </div>
-            <h1 class="admin-title">{{ activeSectionTitle }}</h1>
-          </div>
-          <div class="admin-intro-art" aria-hidden="true">
-            <span class="admin-intro-bar is-primary"></span>
-            <span class="admin-intro-bar is-gold"></span>
-            <span class="admin-intro-bar is-neutral"></span>
-          </div>
-        </div>
-
-        <section id="dashboard" class="admin-dashboard mt-10" v-show="activeSection === 'dashboard'">
+      <div class="admin-page">
+        <section id="dashboard" class="admin-dashboard" v-show="activeSection === 'dashboard'">
           <div class="dashboard-hero">
             <div class="dashboard-hero-main">
               <p class="dashboard-kicker">Operations snapshot</p>
@@ -1133,22 +1117,6 @@ const adminInitials = computed(() => {
     .join('')
 })
 const activeSection = ref('dashboard')
-const sectionTitles = {
-  dashboard: 'Admin Dashboard',
-  'resident-verification': 'Resident Verification',
-  services: 'Services',
-  'queue-control': 'Queue Control',
-  transactions: 'Transactions',
-  'kiosk-devices': 'Kiosk Devices',
-  'audit-logs': 'Audit Logs',
-  'admin-users': 'Admin Users',
-}
-const activeSectionTitle = computed(() => {
-  if (activeSection.value === 'admin-users' && !isSuperAdmin.value) {
-    return sectionTitles['resident-verification']
-  }
-  return sectionTitles[activeSection.value] || sectionTitles['resident-verification']
-})
 let dockObserver = null
 let hashListener = null
 const residents = ref([])
@@ -2276,22 +2244,44 @@ onBeforeUnmount(() => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  gap: 1.25rem;
   padding: 2.5rem 2rem 3.5rem;
-  background: #f3f4f6;
+  background:
+    radial-gradient(1200px 420px at 12% -20%, rgba(11, 44, 111, 0.18), transparent 60%),
+    radial-gradient(900px 320px at 88% -10%, rgba(242, 195, 0, 0.16), transparent 55%),
+    #f3f4f6;
+  position: relative;
+  isolation: isolate;
 }
 
 .admin-dock {
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  padding: 1rem 1.5rem;
-  border-radius: 28px;
-  background: #0b2c6f;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.95rem 1.45rem;
+  border-radius: 26px;
+  background: linear-gradient(135deg, rgba(11, 44, 111, 0.98), rgba(9, 30, 78, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 20px 45px rgba(11, 44, 111, 0.28), 0 4px 10px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(14px);
   position: sticky;
-  top: 1.5rem;
-  z-index: 10;
+  top: 1.25rem;
+  z-index: 3;
+  animation: dock-reveal 0.6s ease both;
+}
+
+.admin-dock::after {
+  content: '';
+  position: absolute;
+  left: 1.6rem;
+  right: 1.6rem;
+  bottom: -18px;
+  height: 20px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(242, 195, 0, 0.5), rgba(11, 44, 111, 0));
+  opacity: 0.7;
+  filter: blur(8px);
+  pointer-events: none;
 }
 
 .admin-dock-profile {
@@ -2310,6 +2300,7 @@ onBeforeUnmount(() => {
   letter-spacing: 0.08em;
   background: #f2c300;
   color: #0b2c6f;
+  box-shadow: inset 0 0 0 2px rgba(11, 44, 111, 0.2);
 }
 
 .admin-name {
@@ -2327,7 +2318,7 @@ onBeforeUnmount(() => {
 .admin-dock-divider {
   height: 38px;
   width: 1px;
-  background: rgba(255, 255, 255, 0.18);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.08));
 }
 
 .admin-dock-nav {
@@ -2345,20 +2336,24 @@ onBeforeUnmount(() => {
   padding: 0.65rem 1rem;
   border-radius: 999px;
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.86);
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   text-decoration: none;
-  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+  transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .admin-nav-item:hover {
-  transform: translateX(2px);
-  background: rgba(242, 195, 0, 0.2);
+  transform: translateY(-1px);
+  background: rgba(242, 195, 0, 0.28);
   color: #ffffff;
+  box-shadow: 0 12px 24px rgba(11, 44, 111, 0.18);
 }
 
 .admin-nav-item.is-active {
-  background: #f2c300;
+  background: linear-gradient(135deg, #f2c300, #ffd666);
   color: #0b2c6f;
+  box-shadow: 0 14px 28px rgba(242, 195, 0, 0.35);
 }
 
 .admin-nav-icon {
@@ -2368,7 +2363,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.2);
   color: inherit;
 }
 
@@ -2388,123 +2383,40 @@ onBeforeUnmount(() => {
   background: #f2c300;
   color: #0b2c6f;
   cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease;
+  box-shadow: 0 14px 26px rgba(242, 195, 0, 0.3);
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .admin-logout:hover {
   transform: translateY(-1px);
   background: #f7cf1a;
+  box-shadow: 0 18px 30px rgba(242, 195, 0, 0.4);
 }
 
 .admin-content {
   flex: 1;
   min-width: 0;
   font-size: 1rem;
-}
-
-.admin-intro {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-  padding: 1.75rem 2rem;
-  border-radius: 24px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  position: relative;
-  overflow: hidden;
-}
-
-.admin-intro::before {
-  content: '';
-  position: absolute;
-  right: -70px;
-  top: -90px;
-  width: 220px;
-  height: 220px;
-  border-radius: 50%;
-  border: 1px solid rgba(11, 44, 111, 0.18);
-  pointer-events: none;
-}
-
-.admin-intro-left {
-  display: flex;
-  align-items: center;
-  gap: 1.2rem;
   position: relative;
   z-index: 1;
 }
 
-.admin-emblem {
-  position: relative;
-  height: 64px;
-  width: 64px;
-  border-radius: 20px;
-  background: #0b2c6f;
-  display: grid;
-  place-items: center;
-}
-
-.admin-emblem-ring {
-  position: absolute;
-  height: 40px;
-  width: 40px;
-  border-radius: 50%;
-  border: 2px solid #f2c300;
-}
-
-.admin-emblem-dot {
-  height: 10px;
-  width: 10px;
-  border-radius: 50%;
-  background: #ffffff;
-}
-
-.admin-emblem-dot.is-gold {
-  position: absolute;
-  height: 6px;
-  width: 6px;
-  background: #f2c300;
-  top: 12px;
-  right: 12px;
-}
-
-.admin-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #0b2c6f;
-  letter-spacing: 0.02em;
-}
-
-.admin-intro-art {
-  display: flex;
-  gap: 0.6rem;
-  align-items: center;
+.admin-page {
+  width: 100%;
+  padding: 1.25rem 0 2.75rem;
   position: relative;
   z-index: 1;
 }
 
-.admin-intro-bar {
-  width: 56px;
-  height: 10px;
-  border-radius: 999px;
-  background: #e5e7eb;
-}
-
-.admin-intro-bar.is-primary {
-  width: 80px;
-  background: #0b2c6f;
-}
-
-.admin-intro-bar.is-gold {
-  background: #f2c300;
-}
-
-.admin-intro-bar.is-neutral {
-  width: 40px;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+@keyframes dock-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .admin-card {
@@ -3725,12 +3637,17 @@ onBeforeUnmount(() => {
     align-items: flex-start;
   }
 
+  .admin-dock::after {
+    display: none;
+  }
+
   .admin-dock-nav {
     width: 100%;
   }
 
-  .admin-intro {
-    align-items: flex-start;
+  .admin-page {
+    padding-top: 1rem;
+    padding-bottom: 2.25rem;
   }
 
   .dashboard-hero {
@@ -3767,6 +3684,11 @@ onBeforeUnmount(() => {
     padding: 1rem;
   }
 
+  .admin-page {
+    padding-top: 0.75rem;
+    padding-bottom: 2rem;
+  }
+
   .admin-nav-item {
     padding: 0.45rem 0.7rem;
     font-size: 0.95rem;
@@ -3786,6 +3708,12 @@ onBeforeUnmount(() => {
 
   .analytics-filters {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-dock {
+    animation: none;
   }
 }
 </style>

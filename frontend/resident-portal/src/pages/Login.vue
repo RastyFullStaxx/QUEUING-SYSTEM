@@ -1,55 +1,17 @@
 <template>
-  <div
-    class="min-h-screen relative transition-colors duration-700"
-    :class="showIntro ? 'bg-[#F7F8FB]' : 'bg-[#F7F8FB]'"
-  >
-    <div
-      class="min-h-screen flex items-center justify-center px-6 relative overflow-hidden intro-stage"
-      :class="{ 'intro-dim': !showIntro }"
-      role="button"
-      tabindex="0"
-      @click="showIntro = false"
-      @keydown.enter.prevent="showIntro = false"
-      @keydown.space.prevent="showIntro = false"
-    >
-      <div v-if="showIntro" class="sun-rays"></div>
-      <div class="intro-orb orb-1"></div>
-      <div class="intro-orb orb-2"></div>
-      <div class="intro-orb orb-3"></div>
-      <div class="text-center max-w-xl relative intro-content intro-center">
-        <img src="/logo.png" alt="Barangay San Miguel" class="mx-auto h-50 w-50 object-contain logo-breathe" />
-        <p class="mt-6 text-sm uppercase tracking-[0.4em] text-[#6B7280]">Queue Registration Kiosk</p>
-        <h1 class="mt-3 text-6xl font-semibold text-[#0B2C6F]">Barangay San Miguel</h1>
-        <div class="mt-10 text-sm uppercase tracking-[0.35em] text-[#6B7280] intro-pulse intro-guide">
-          Tap anywhere to begin
-        </div>
-      </div>
-      <div class="buildings"></div>
-    </div>
-    <transition name="fade-slide" mode="out-in">
-      <div
-        v-if="!showIntro"
-        key="login"
-        class="fixed inset-0 w-full px-6 sm:px-10 py-16 flex items-center justify-center z-30"
-      >
-        <div class="w-full max-w-2xl pop-shell">
-          <div class="pop-card">
-            <div class="pop-top">
-              <button
-                class="pop-close"
-                @click="showIntro = true"
-                aria-label="Close"
-              >
-                ×
-              </button>
-              <div class="pop-brand">
-                <p class="pop-eyebrow">Barangay San Miguel</p>
-                <h2 class="pop-title">{{ mode === 'login' ? 'Sign in' : 'Create account' }}</h2>
-                <p class="pop-subtitle">
-                  {{ mode === 'login' ? 'Use your registered email.' : 'Register for resident access.' }}
-                </p>
-              </div>
+  <div class="min-h-screen relative bg-[#F7F8FB]">
+    <div class="fixed inset-0 w-full px-6 sm:px-10 py-16 flex items-center justify-center">
+      <div class="w-full max-w-2xl pop-shell">
+        <div class="pop-card">
+          <div class="pop-top">
+            <div class="pop-brand">
+              <p class="pop-eyebrow">Barangay San Miguel</p>
+              <h2 class="pop-title">{{ mode === 'login' ? 'Sign in' : 'Create account' }}</h2>
+              <p class="pop-subtitle">
+                {{ mode === 'login' ? 'Use your registered email.' : 'Register for resident access.' }}
+              </p>
             </div>
+          </div>
           <transition name="form-swap" mode="out-in">
             <form v-if="mode === 'login'" key="login-form" class="space-y-5" @submit.prevent="onSubmit">
               <div>
@@ -147,13 +109,9 @@
           </form>
           </transition>
           <p v-if="error" class="mt-4 text-red-600 text-sm">{{ error }}</p>
-          </div>
         </div>
       </div>
-    </transition>
-    <transition name="fade-overlay">
-      <div v-if="!showIntro" class="modal-overlay"></div>
-    </transition>
+    </div>
   </div>
 </template>
 
@@ -173,7 +131,6 @@ const lastName = ref('')
 const regEmail = ref('')
 const regPassword = ref('')
 const isRegistering = ref(false)
-const showIntro = ref(true)
 
 const onSubmit = async () => {
   error.value = ''
@@ -219,34 +176,6 @@ const onRegister = async () => {
 </script>
 
 <style scoped>
-.fade-slide-enter-active,
-.fade-slide-leave-active {
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.fade-slide-enter-from,
-.fade-slide-leave-to {
-  opacity: 0;
-  transform: translateY(12px);
-}
-
-.fade-overlay-enter-active,
-.fade-overlay-leave-active {
-  transition: opacity 0.3s ease;
-}
-
-.fade-overlay-enter-from,
-.fade-overlay-leave-to {
-  opacity: 0;
-}
-
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(9, 20, 50, 0.35);
-  backdrop-filter: blur(3px);
-  z-index: 20;
-}
 
 .pop-shell {
   position: relative;
@@ -342,30 +271,6 @@ const onRegister = async () => {
   color: #6b7280;
 }
 
-.pop-close {
-  position: absolute;
-  top: 0;
-  right: 0;
-  height: 40px;
-  width: 40px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.9);
-  color: #0b2c6f;
-  font-size: 1.5rem;
-  line-height: 1;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 12px 30px rgba(12, 28, 74, 0.16);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
-  cursor: pointer;
-}
-
-.pop-close:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 16px 40px rgba(12, 28, 74, 0.2);
-  background: #fff;
-  color: #092b6c;
-}
-
 .pop-action {
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
   cursor: pointer;
@@ -388,165 +293,6 @@ const onRegister = async () => {
 
 .pop-link:hover {
   color: #092b6c;
-}
-
-.intro-orb {
-  position: absolute;
-  border-radius: 9999px;
-  opacity: 0.25;
-  border: 2px solid #0b2c6f;
-  background: transparent;
-  animation: float 8s ease-in-out infinite;
-  z-index: 1;
-}
-
-.sun-rays {
-  position: absolute;
-  inset: -60%;
-  background-image:
-    radial-gradient(circle at center, #ffffff 0%, #ffffff 14%, rgba(255, 255, 255, 0) 20%),
-    repeating-conic-gradient(
-      from 0deg,
-      rgba(11, 44, 111, 0.06) 0deg,
-      rgba(11, 44, 111, 0.06) 10deg,
-      rgba(255, 255, 255, 0) 10deg,
-      rgba(255, 255, 255, 0) 20deg
-    );
-  animation: raysPulse 8s ease-in-out infinite, raysRotate 180s linear infinite;
-  transform-origin: 50% 50%;
-  z-index: 0;
-}
-
-
-.buildings {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100%;
-  height: 220px;
-  z-index: 3;
-  background-image: url("/buildings.png");
-  background-repeat: repeat-x;
-  background-size: auto 100%;
-}
-
-.buildings::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-color: rgba(255, 255, 255, 0.08);
-  animation: shimmer 6s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.intro-content {
-  z-index: 4;
-}
-
-.intro-stage {
-  transition: filter 0.5s ease, transform 0.5s ease;
-}
-
-.intro-dim {
-  filter: brightness(0.72) saturate(0.9);
-  transform: scale(0.99);
-}
-
-.intro-center {
-  transform: translateY(-6vh);
-}
-
-.intro-guide {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 1.5rem;
-  white-space: nowrap;
-}
-
-.intro-guide::before,
-.intro-guide::after {
-  content: "";
-  display: block;
-  height: 2px;
-  width: 10rem;
-  background-color: #0b2c6f;
-  opacity: 0.3;
-}
-
-.logo-breathe {
-  animation: logoBreathe 8s ease-in-out infinite;
-}
-
-
-.orb-1 {
-  width: 220px;
-  height: 220px;
-  top: 12%;
-  left: 8%;
-}
-
-.orb-2 {
-  width: 160px;
-  height: 160px;
-  border-color: #f2c300;
-  top: 20%;
-  right: 10%;
-  animation-delay: 1s;
-}
-
-.orb-3 {
-  width: 280px;
-  height: 280px;
-  bottom: 10%;
-  right: 20%;
-  animation-delay: 2s;
-}
-
-.intro-pulse {
-  animation: pulse 2.2s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%,
-  100% {
-    transform: translateY(0px);
-  }
-  50% {
-    transform: translateY(-12px);
-  }
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.03);
-  }
-}
-
-@keyframes raysPulse {
-  0%,
-  100% {
-    opacity: 0.45;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.75;
-    transform: scale(1.025);
-  }
-}
-
-@keyframes raysRotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
 }
 
 @keyframes popIn {
@@ -579,26 +325,5 @@ const onRegister = async () => {
   opacity: 0;
   transform: translateY(10px);
 }
-
-@keyframes logoBreathe {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.02);
-  }
-}
-
-@keyframes shimmer {
-  0%,
-  100% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
-
 
 </style>
