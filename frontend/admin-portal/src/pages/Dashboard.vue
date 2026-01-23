@@ -1289,56 +1289,190 @@
               <span class="tool-accent-bar is-neutral"></span>
             </div>
           </div>
-          <div class="control-strip mt-4 flex flex-wrap gap-3">
-            <input v-model="transactionServiceId" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base w-32" placeholder="Service ID" />
-            <select v-model="transactionStatus" class="border border-[#E5E7EB] rounded-xl px-3 py-2 text-base">
-              <option value="done">Done</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-            <button class="bg-[#0B2C6F] text-white rounded-xl px-4 py-2 text-base" @click="loadTransactions">
-              Refresh
-            </button>
-          </div>
-          <div class="mt-4 overflow-x-auto">
-            <table class="w-full text-base">
-              <thead class="text-left text-[#6B7280]">
-                <tr class="border-b border-[#E5E7EB]">
-                  <th class="py-2">Ticket</th>
-                  <th class="py-2">Service</th>
-                  <th class="py-2">Status</th>
-                  <th class="py-2">Issued</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-if="isLoadingTransactions">
-                  <td colspan="4" class="py-4">
-                    <div class="table-state">
-                      <span class="table-state-icon"></span>
-                      <span>Loading transactions...</span>
-                    </div>
-                  </td>
-                </tr>
-                <tr v-else-if="transactions.length === 0">
-                  <td colspan="4" class="py-4">
-                    <div class="table-state">
-                      <span class="table-state-icon"></span>
-                      <span>No transactions found.</span>
-                    </div>
-                  </td>
-                </tr>
-                <tr v-for="ticket in transactions" :key="ticket.id" class="border-b border-[#F3F4F6]" :class="rowClass(ticket.status)">
-                  <td class="py-2">{{ ticket.ticket_no }}</td>
-                  <td class="py-2">{{ ticket.service_id }}</td>
-                  <td class="py-2">
-                    <span class="status-pill" :class="statusClass(ticket.status)">
-                      {{ ticket.status }}
-                    </span>
-                  </td>
-                  <td class="py-2">{{ formatDate(ticket.issued_at) }}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p v-if="transactionError" class="mt-3 text-base text-[#C0392B]">{{ transactionError }}</p>
+
+          <div class="transaction-layout mt-6">
+            <div class="transaction-side">
+              <div class="transaction-overview">
+                <p class="transaction-kicker">Ticket outcomes</p>
+                <h3 class="transaction-title">Service completion tracker</h3>
+                <p class="transaction-subtitle">
+                  Review completed and cancelled requests with clear sorting and audit-ready filters.
+                </p>
+                <div class="transaction-metric-grid">
+                  <div class="transaction-metric-card">
+                    <span>Total records</span>
+                    <strong>{{ transactionCounts.total }}</strong>
+                    <small>Loaded for review</small>
+                  </div>
+                  <div class="transaction-metric-card is-success">
+                    <span>Completed</span>
+                    <strong>{{ transactionCounts.done }}</strong>
+                    <small>Done tickets</small>
+                  </div>
+                  <div class="transaction-metric-card is-danger">
+                    <span>Cancelled</span>
+                    <strong>{{ transactionCounts.cancelled }}</strong>
+                    <small>Cancelled tickets</small>
+                  </div>
+                  <div class="transaction-metric-card is-accent">
+                    <span>Completion rate</span>
+                    <strong>
+                      {{
+                        transactionCounts.total
+                          ? Math.round((transactionCounts.done / transactionCounts.total) * 100)
+                          : 0
+                      }}%
+                    </strong>
+                    <small>Of loaded records</small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="transaction-filter-card">
+                <div class="transaction-filter-header">
+                  <div>
+                    <h4>Transaction filters</h4>
+                    <p>Limit by service, status, or search term.</p>
+                  </div>
+                  <button class="resident-secondary" type="button" @click="loadTransactions">Refresh list</button>
+                </div>
+                <div class="transaction-filter-grid">
+                  <label class="transaction-field">
+                    <span>Search</span>
+                    <input
+                      v-model="transactionSearch"
+                      type="text"
+                      placeholder="Ticket, status, or service"
+                      class="transaction-input"
+                      @input="transactionPage = 1"
+                    />
+                  </label>
+                  <label class="transaction-field">
+                    <span>Service</span>
+                    <select
+                      v-model="transactionServiceId"
+                      class="transaction-input"
+                      @change="handleTransactionFilterChange"
+                    >
+                      <option value="">All services</option>
+                      <option v-for="service in services" :key="service.id" :value="service.id">
+                        {{ service.name }}
+                      </option>
+                    </select>
+                  </label>
+                  <label class="transaction-field">
+                    <span>Status</span>
+                    <select
+                      v-model="transactionStatus"
+                      class="transaction-input"
+                      @change="handleTransactionFilterChange"
+                    >
+                      <option value="">All statuses</option>
+                      <option value="done">Done</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </label>
+                  <label class="transaction-field">
+                    <span>Sort by</span>
+                    <select v-model="transactionSortKey" class="transaction-input" @change="transactionPage = 1">
+                      <option value="issued_at">Issued time</option>
+                      <option value="ticket_no">Ticket number</option>
+                      <option value="service_id">Service</option>
+                      <option value="status">Status</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="transaction-filter-actions">
+                  <button class="resident-tertiary" type="button" @click="toggleTransactionSortDirection">
+                    Sort: {{ transactionSortDirection === 'asc' ? 'Ascending' : 'Descending' }}
+                  </button>
+                  <button class="resident-tertiary" type="button" @click="resetTransactionFilters">Clear filters</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="transaction-table-card">
+              <div class="transaction-table-header">
+                <div>
+                  <h3>Transaction ledger</h3>
+                  <p>{{ transactionRangeLabel }}</p>
+                </div>
+                <div class="transaction-table-meta">
+                  <span class="transaction-chip">Total {{ transactions.length }}</span>
+                  <span class="transaction-chip is-muted">Filtered {{ transactionSorted.length }}</span>
+                </div>
+              </div>
+              <div class="transaction-table-wrapper">
+                <table class="w-full text-base">
+                  <thead class="text-left text-[#6B7280]">
+                    <tr class="border-b border-[#E5E7EB]">
+                      <th class="py-2">Ticket</th>
+                      <th class="py-2">Service</th>
+                      <th class="py-2">Status</th>
+                      <th class="py-2">Issued</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-if="isLoadingTransactions">
+                      <td colspan="4" class="py-4">
+                        <div class="table-state">
+                          <span class="table-state-icon"></span>
+                          <span>Loading transactions...</span>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr v-else-if="transactionSorted.length === 0">
+                      <td colspan="4" class="py-4">
+                        <div class="table-state">
+                          <span class="table-state-icon"></span>
+                          <span>No transactions match the filters.</span>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr v-for="ticket in transactionPageRows" :key="ticket.id" class="border-b border-[#F3F4F6]" :class="rowClass(ticket.status)">
+                      <td class="py-3">
+                        <div class="transaction-ticket">
+                          <span class="transaction-ticket-no">{{ ticket.ticket_no }}</span>
+                          <small>Resident #{{ ticket.resident_id }}</small>
+                        </div>
+                      </td>
+                      <td class="py-3">
+                        <div class="transaction-service">
+                          <span class="transaction-service-name">
+                            {{ services.find((service) => service.id === ticket.service_id)?.name || `Service #${ticket.service_id}` }}
+                          </span>
+                          <small>{{ services.find((service) => service.id === ticket.service_id)?.code || '' }}</small>
+                        </div>
+                      </td>
+                      <td class="py-3">
+                        <span class="status-pill" :class="statusClass(ticket.status)">
+                          {{ ticket.status }}
+                        </span>
+                      </td>
+                      <td class="py-3">{{ formatDate(ticket.issued_at) }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p v-if="transactionError" class="mt-3 text-base text-[#C0392B]">{{ transactionError }}</p>
+              </div>
+              <div class="transaction-pagination">
+                <span class="transaction-range">{{ transactionRangeLabel }}</span>
+                <div class="transaction-page-controls">
+                  <button class="resident-tertiary" type="button" :disabled="transactionPage === 1" @click="previousTransactionPage">
+                    Prev
+                  </button>
+                  <span class="transaction-page-label">Page {{ transactionPage }} of {{ transactionTotalPages }}</span>
+                  <button
+                    class="resident-tertiary"
+                    type="button"
+                    :disabled="transactionPage === transactionTotalPages"
+                    @click="nextTransactionPage"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -1635,6 +1769,11 @@ const isLoadingTransactions = ref(false)
 const transactionError = ref('')
 const transactionServiceId = ref('')
 const transactionStatus = ref('done')
+const transactionSearch = ref('')
+const transactionSortKey = ref('issued_at')
+const transactionSortDirection = ref('desc')
+const transactionPage = ref(1)
+const transactionPageSize = 10
 const auditLogs = ref([])
 const isLoadingLogs = ref(false)
 const auditError = ref('')
@@ -1801,6 +1940,72 @@ const queueRangeLabel = computed(() => {
   const start = (queuePage.value - 1) * queuePageSize + 1
   const end = Math.min(total, start + queuePageSize - 1)
   return `Showing ${start}-${end} of ${total} tickets`
+})
+
+const transactionCounts = computed(() => {
+  const counts = { total: transactions.value.length, done: 0, cancelled: 0 }
+  transactions.value.forEach((ticket) => {
+    if (ticket.status === 'done') counts.done += 1
+    if (ticket.status === 'cancelled') counts.cancelled += 1
+  })
+  return counts
+})
+
+const transactionFiltered = computed(() => {
+  const term = transactionSearch.value.trim().toLowerCase()
+  return transactions.value.filter((ticket) => {
+    if (!term) return true
+    const ticketNo = String(ticket.ticket_no || '').toLowerCase()
+    const serviceId = String(ticket.service_id || '').toLowerCase()
+    const status = String(ticket.status || '').toLowerCase()
+    return ticketNo.includes(term) || serviceId.includes(term) || status.includes(term)
+  })
+})
+
+const transactionSorted = computed(() => {
+  const items = [...transactionFiltered.value]
+  const direction = transactionSortDirection.value === 'desc' ? -1 : 1
+  const statusPriority = { done: 0, cancelled: 1 }
+  const compareValues = (a, b) => (a > b ? 1 : a < b ? -1 : 0)
+
+  items.sort((a, b) => {
+    if (transactionSortKey.value === 'status') {
+      const statusDiff = compareValues(statusPriority[a.status] ?? 99, statusPriority[b.status] ?? 99)
+      if (statusDiff !== 0) return statusDiff * direction
+    }
+    if (transactionSortKey.value === 'service_id') {
+      const serviceDiff = compareValues(a.service_id || 0, b.service_id || 0)
+      if (serviceDiff !== 0) return serviceDiff * direction
+    }
+    if (transactionSortKey.value === 'ticket_no') {
+      const ticketDiff = compareValues(String(a.ticket_no || ''), String(b.ticket_no || ''))
+      if (ticketDiff !== 0) return ticketDiff * direction
+    }
+    if (transactionSortKey.value === 'issued_at') {
+      const timeDiff = compareValues(new Date(a.issued_at || 0).getTime(), new Date(b.issued_at || 0).getTime())
+      if (timeDiff !== 0) return timeDiff * direction
+    }
+    const fallback = compareValues(new Date(a.issued_at || 0).getTime(), new Date(b.issued_at || 0).getTime())
+    return fallback * direction
+  })
+  return items
+})
+
+const transactionTotalPages = computed(() =>
+  Math.max(1, Math.ceil(transactionSorted.value.length / transactionPageSize))
+)
+
+const transactionPageRows = computed(() => {
+  const start = (transactionPage.value - 1) * transactionPageSize
+  return transactionSorted.value.slice(start, start + transactionPageSize)
+})
+
+const transactionRangeLabel = computed(() => {
+  const total = transactionSorted.value.length
+  if (!total) return 'No transactions to display'
+  const start = (transactionPage.value - 1) * transactionPageSize + 1
+  const end = Math.min(total, start + transactionPageSize - 1)
+  return `Showing ${start}-${end} of ${total} transactions`
 })
 
 const queueWaitingList = computed(() => {
@@ -2629,6 +2834,29 @@ const toggleQueueSortDirection = () => {
   queuePage.value = 1
 }
 
+const setTransactionPage = (page) => {
+  const next = Math.min(Math.max(page, 1), transactionTotalPages.value)
+  transactionPage.value = next
+}
+
+const nextTransactionPage = () => {
+  setTransactionPage(transactionPage.value + 1)
+}
+
+const previousTransactionPage = () => {
+  setTransactionPage(transactionPage.value - 1)
+}
+
+const toggleTransactionSortDirection = () => {
+  transactionSortDirection.value = transactionSortDirection.value === 'asc' ? 'desc' : 'asc'
+  transactionPage.value = 1
+}
+
+const handleTransactionFilterChange = () => {
+  transactionPage.value = 1
+  loadTransactions()
+}
+
 const setServicePage = (page) => {
   const next = Math.min(Math.max(page, 1), serviceTotalPages.value)
   servicePage.value = next
@@ -2905,11 +3133,24 @@ const loadTransactions = async () => {
       status: transactionStatus.value,
     })
     transactions.value = data.tickets || []
+    if (transactionPage.value > transactionTotalPages.value) {
+      transactionPage.value = transactionTotalPages.value
+    }
   } catch (err) {
     transactionError.value = err.message
   } finally {
     isLoadingTransactions.value = false
   }
+}
+
+const resetTransactionFilters = () => {
+  transactionServiceId.value = ''
+  transactionStatus.value = 'done'
+  transactionSearch.value = ''
+  transactionSortKey.value = 'issued_at'
+  transactionSortDirection.value = 'desc'
+  transactionPage.value = 1
+  loadTransactions()
 }
 
 const callNext = async () => {
@@ -4502,6 +4743,277 @@ onBeforeUnmount(() => {
   color: #0b2c6f;
 }
 
+.transaction-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.transaction-side {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-rows: auto 1fr;
+}
+
+.transaction-overview {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 1.5rem;
+  background: linear-gradient(140deg, #ecfdf3 0%, #ffffff 65%);
+  border: 1px solid rgba(46, 125, 50, 0.3);
+  color: #0b2c6f;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+}
+
+.transaction-overview::after {
+  content: '';
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 1px solid rgba(11, 44, 111, 0.2);
+  right: -40px;
+  top: -40px;
+  pointer-events: none;
+}
+
+.transaction-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(11, 44, 111, 0.7);
+}
+
+.transaction-title {
+  margin-top: 0.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.transaction-subtitle {
+  margin-top: 0.6rem;
+  color: rgba(11, 44, 111, 0.75);
+}
+
+.transaction-metric-grid {
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.transaction-metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border-radius: 16px;
+  background: #0b2c6f;
+  color: #ffffff;
+  border: 1px solid rgba(11, 44, 111, 0.6);
+}
+
+.transaction-metric-card strong {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.transaction-metric-card small {
+  font-size: 0.85rem;
+  color: rgba(248, 250, 252, 0.85);
+}
+
+.transaction-metric-card.is-success {
+  background: #2e7d32;
+  border-color: rgba(46, 125, 50, 0.7);
+}
+
+.transaction-metric-card.is-danger {
+  background: #c0392b;
+  border-color: rgba(192, 57, 43, 0.7);
+}
+
+.transaction-metric-card.is-accent {
+  background: #f2c300;
+  color: #0b2c6f;
+  border-color: rgba(242, 195, 0, 0.85);
+}
+
+.transaction-metric-card.is-accent small {
+  color: rgba(11, 44, 111, 0.8);
+}
+
+.transaction-filter-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  display: flex;
+  flex-direction: column;
+}
+
+.transaction-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.transaction-filter-header h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.transaction-filter-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.transaction-filter-grid {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.transaction-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.transaction-input {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 0.65rem 0.85rem;
+  font-size: 1rem;
+  background: #f8fafc;
+}
+
+.transaction-filter-actions {
+  margin-top: auto;
+  padding-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.transaction-table-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.transaction-table-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.transaction-table-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.transaction-table-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.transaction-table-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.transaction-chip {
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+.transaction-chip.is-muted {
+  background: #ffffff;
+  color: #6b7280;
+}
+
+.transaction-table-wrapper {
+  overflow-x: auto;
+  min-height: 360px;
+}
+
+.transaction-ticket {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.transaction-ticket-no {
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.transaction-ticket small {
+  color: #6b7280;
+}
+
+.transaction-service {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.transaction-service-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.transaction-service small {
+  color: #6b7280;
+}
+
+.transaction-pagination {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.transaction-range {
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.transaction-page-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.transaction-page-label {
+  font-weight: 600;
+  color: #0b2c6f;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -5673,6 +6185,10 @@ onBeforeUnmount(() => {
   .queue-layout {
     grid-template-columns: 1fr;
   }
+
+  .transaction-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -5740,6 +6256,19 @@ onBeforeUnmount(() => {
     align-items: flex-start;
   }
 
+  .transaction-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .transaction-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .transaction-table-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
   .resident-table-header {
     flex-direction: column;
     align-items: flex-start;
@@ -5762,6 +6291,10 @@ onBeforeUnmount(() => {
   }
 
   .queue-table-wrapper {
+    min-height: 240px;
+  }
+
+  .transaction-table-wrapper {
     min-height: 240px;
   }
 }
