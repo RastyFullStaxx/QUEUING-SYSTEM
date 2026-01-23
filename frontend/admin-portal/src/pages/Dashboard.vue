@@ -567,97 +567,269 @@
         </section>
 
         <div id="resident-verification" class="admin-card mt-10" v-show="activeSection === 'resident-verification'">
-      <div class="tool-header">
-        <div class="tool-title">
-          <span class="tool-icon">
-            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M4 12l8-7 8 7v8a2 2 0 0 1-2 2h-4v-6H10v6H6a2 2 0 0 1-2-2v-8Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </span>
-          <h2 class="tool-heading">Resident Verification</h2>
-        </div>
-        <div class="tool-accent" aria-hidden="true">
-          <span class="tool-accent-bar is-primary"></span>
-          <span class="tool-accent-bar is-gold"></span>
-          <span class="tool-accent-bar is-neutral"></span>
-        </div>
-      </div>
-      <div class="control-strip mt-4 flex flex-wrap gap-3">
-        <select v-model="statusFilter" class="border border-[#E5E7EB] rounded-full px-4 py-2 text-base">
-          <option value="">All statuses</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-        </select>
-        <input
-          v-model="search"
-          type="text"
-          placeholder="Search name or email"
-          class="border border-[#E5E7EB] rounded-full px-4 py-2 text-base w-64"
-        />
-        <button class="bg-[#0B2C6F] text-white px-4 py-2 rounded-full text-base" @click="loadResidents">
-          Refresh
-        </button>
-      </div>
-      <div class="mt-6 overflow-x-auto">
-        <table class="w-full text-base">
-          <thead class="text-left text-[#6B7280]">
-            <tr class="border-b border-[#E5E7EB]">
-              <th class="py-2">Name</th>
-              <th class="py-2">Email</th>
-              <th class="py-2">Status</th>
-              <th class="py-2">Registered</th>
-              <th class="py-2 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="isLoadingResidents">
-              <td colspan="5" class="py-6">
-                <div class="table-state">
-                  <span class="table-state-icon"></span>
-                  <span>Loading residents...</span>
+          <div class="tool-header">
+            <div class="tool-title">
+              <span class="tool-icon">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 12l8-7 8 7v8a2 2 0 0 1-2 2h-4v-6H10v6H6a2 2 0 0 1-2-2v-8Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <h2 class="tool-heading">Resident Management</h2>
+            </div>
+            <div class="tool-accent" aria-hidden="true">
+              <span class="tool-accent-bar is-primary"></span>
+              <span class="tool-accent-bar is-gold"></span>
+              <span class="tool-accent-bar is-neutral"></span>
+            </div>
+          </div>
+
+          <div class="resident-layout mt-6">
+            <div class="resident-side">
+              <div class="resident-overview">
+                <p class="resident-kicker">Resident operations</p>
+                <h3 class="resident-title">Verification command center</h3>
+                <p class="resident-subtitle">
+                  Track registration flow, manage profiles, and keep the community directory accurate.
+                </p>
+                <div class="resident-metric-grid">
+                  <div class="resident-metric-card">
+                    <span>Total residents</span>
+                    <strong>{{ residentStats.total }}</strong>
+                    <small>{{ approvalRateLabel }} approval rate</small>
+                  </div>
+                  <div class="resident-metric-card is-warning">
+                    <span>Pending review</span>
+                    <strong>{{ residentStats.pending }}</strong>
+                    <small>Awaiting action</small>
+                  </div>
+                  <div class="resident-metric-card is-success">
+                    <span>Approved</span>
+                    <strong>{{ residentStats.approved }}</strong>
+                    <small>Ready for kiosks</small>
+                  </div>
+                  <div class="resident-metric-card is-danger">
+                    <span>Rejected</span>
+                    <strong>{{ residentStats.rejected }}</strong>
+                    <small>Needs follow-up</small>
+                  </div>
                 </div>
-              </td>
-            </tr>
-            <tr v-else-if="residents.length === 0">
-              <td colspan="5" class="py-6">
-                <div class="table-state">
-                  <span class="table-state-icon"></span>
-                  <span>No residents found.</span>
+              </div>
+
+              <div class="resident-filters-card">
+                <div class="resident-filters-header">
+                  <div>
+                    <h4>Directory filters</h4>
+                    <p>Refine the list before taking action.</p>
+                  </div>
+                  <button class="resident-primary" type="button" @click="openCreateResidentModal">New resident</button>
                 </div>
-              </td>
-            </tr>
-            <tr v-for="resident in residents" :key="resident.id" class="border-b border-[#F3F4F6]" :class="rowClass(resident.status)">
-              <td class="py-3">{{ resident.first_name }} {{ resident.last_name }}</td>
-              <td class="py-3">{{ resident.email }}</td>
-              <td class="py-3">
-                <span class="status-pill" :class="statusClass(resident.status)">
-                  {{ resident.status }}
-                </span>
-              </td>
-              <td class="py-3">{{ formatDate(resident.created_at) }}</td>
-              <td class="py-3 text-right">
-                <div class="inline-flex gap-2">
-                  <button
-                    class="px-3 py-1 rounded-full text-base border border-[#2E7D32] text-[#2E7D32]"
-                    @click="updateStatus(resident.id, 'approved')"
-                  >
-                    Approve
+                <div class="resident-filter-grid">
+                  <label class="resident-field">
+                    <span>Search</span>
+                    <input
+                      v-model="search"
+                      type="text"
+                      placeholder="Name or email"
+                      class="resident-input"
+                    />
+                  </label>
+                  <label class="resident-field">
+                    <span>Status</span>
+                    <select v-model="statusFilter" class="resident-input">
+                      <option value="">All statuses</option>
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="resident-filter-actions">
+                  <button class="resident-secondary" type="button" @click="refreshResidents">Refresh list</button>
+                  <button class="resident-tertiary" type="button" @click="resetResidentFilters">Clear filters</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="resident-table-card">
+              <div class="resident-table-header">
+                <div>
+                  <h3>Resident directory</h3>
+                  <p>Showing {{ residents.length }} of {{ residentStats.total }} residents.</p>
+                </div>
+                <div class="resident-table-meta">
+                  <span class="resident-chip">Results {{ residents.length }}</span>
+                  <span v-if="statusFilter" class="resident-chip is-muted">{{ statusFilter }}</span>
+                  <span v-if="search" class="resident-chip is-muted">Search: "{{ search }}"</span>
+                </div>
+              </div>
+              <div class="resident-table-wrapper">
+                <table class="w-full text-base">
+                  <thead class="text-left text-[#6B7280]">
+                    <tr class="border-b border-[#E5E7EB]">
+                      <th class="py-2">Resident</th>
+                      <th class="py-2">Email</th>
+                      <th class="py-2">Status</th>
+                      <th class="py-2">Registered</th>
+                      <th class="py-2 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-if="isLoadingResidents">
+                      <td colspan="5" class="py-6">
+                        <div class="table-state">
+                          <span class="table-state-icon"></span>
+                          <span>Loading residents...</span>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr v-else-if="residents.length === 0">
+                      <td colspan="5" class="py-6">
+                        <div class="table-state">
+                          <span class="table-state-icon"></span>
+                          <span>No residents found.</span>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr v-for="resident in residents" :key="resident.id" class="border-b border-[#F3F4F6]" :class="rowClass(resident.status)">
+                      <td class="py-4">
+                        <div class="resident-identity">
+                          <div class="resident-avatar">{{ residentInitials(resident) }}</div>
+                          <div>
+                            <p class="resident-name">{{ resident.first_name }} {{ resident.last_name }}</p>
+                            <p class="resident-id">ID #{{ resident.id }}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="py-4">
+                        <span class="resident-email">{{ resident.email }}</span>
+                      </td>
+                      <td class="py-4">
+                        <span class="status-pill" :class="statusClass(resident.status)">
+                          {{ resident.status }}
+                        </span>
+                      </td>
+                      <td class="py-4">{{ formatDate(resident.created_at) }}</td>
+                      <td class="py-4 text-right">
+                        <div class="resident-action-group">
+                          <button class="resident-action is-outline" type="button" @click="openEditResidentModal(resident)">
+                            Edit
+                          </button>
+                          <button
+                            v-if="resident.status !== 'approved'"
+                            class="resident-action is-success"
+                            type="button"
+                            @click="updateStatus(resident.id, 'approved')"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            v-if="resident.status !== 'rejected'"
+                            class="resident-action is-danger"
+                            type="button"
+                            @click="updateStatus(resident.id, 'rejected')"
+                          >
+                            Reject
+                          </button>
+                          <button
+                            v-if="resident.status !== 'pending'"
+                            class="resident-action is-warning"
+                            type="button"
+                            @click="updateStatus(resident.id, 'pending')"
+                          >
+                            Pending
+                          </button>
+                          <button class="resident-action is-ghost" type="button" @click="openDeleteResidentModal(resident)">
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p v-if="residentError" class="mt-4 text-base text-[#C0392B]">{{ residentError }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="isResidentModalOpen" class="modal-overlay" @click.self="closeResidentModal">
+            <div class="modal-card" role="dialog" aria-modal="true">
+              <div class="modal-header">
+                <div>
+                  <h3>{{ residentModalTitle }}</h3>
+                  <p>Keep resident profiles accurate and up to date.</p>
+                </div>
+                <button class="modal-close" type="button" @click="closeResidentModal">Close</button>
+              </div>
+              <form class="modal-body" @submit.prevent="submitResidentForm">
+                <div class="modal-grid">
+                  <label class="modal-field">
+                    <span>First name</span>
+                    <input v-model="residentForm.first_name" type="text" autocomplete="given-name" required />
+                  </label>
+                  <label class="modal-field">
+                    <span>Last name</span>
+                    <input v-model="residentForm.last_name" type="text" autocomplete="family-name" required />
+                  </label>
+                  <label class="modal-field">
+                    <span>Email</span>
+                    <input v-model="residentForm.email" type="email" autocomplete="email" required />
+                  </label>
+                  <label class="modal-field">
+                    <span>Status</span>
+                    <select v-model="residentForm.status">
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </label>
+                  <label class="modal-field modal-full">
+                    <span>Password</span>
+                    <input
+                      v-model="residentForm.password"
+                      type="password"
+                      autocomplete="new-password"
+                      :required="residentModalMode === 'create'"
+                    />
+                    <small v-if="residentModalMode === 'edit'">Leave blank to keep the existing password.</small>
+                  </label>
+                </div>
+                <p v-if="residentFormError" class="modal-error">{{ residentFormError }}</p>
+                <div class="modal-actions">
+                  <button class="resident-tertiary" type="button" @click="closeResidentModal">Cancel</button>
+                  <button class="resident-primary" type="submit" :disabled="isResidentSaving">
+                    {{ isResidentSaving ? 'Saving...' : residentSubmitLabel }}
                   </button>
-                  <button
-                    class="px-3 py-1 rounded-full text-base border border-[#C0392B] text-[#C0392B]"
-                    @click="updateStatus(resident.id, 'rejected')"
-                  >
-                    Reject
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div v-if="isDeleteResidentOpen" class="modal-overlay" @click.self="closeDeleteResidentModal">
+            <div class="modal-card is-danger" role="dialog" aria-modal="true">
+              <div class="modal-header">
+                <div>
+                  <h3>Delete resident</h3>
+                  <p>This action cannot be undone.</p>
+                </div>
+                <button class="modal-close" type="button" @click="closeDeleteResidentModal">Close</button>
+              </div>
+              <div class="modal-body">
+                <p>
+                  You are about to delete
+                  <strong>{{ residentDeleteTarget?.first_name }} {{ residentDeleteTarget?.last_name }}</strong>.
+                </p>
+                <p class="modal-muted">Make sure there are no queue records linked to this resident.</p>
+                <p v-if="deleteResidentError" class="modal-error">{{ deleteResidentError }}</p>
+                <div class="modal-actions">
+                  <button class="resident-tertiary" type="button" @click="closeDeleteResidentModal">Cancel</button>
+                  <button class="resident-danger" type="button" :disabled="isDeletingResident" @click="confirmDeleteResident">
+                    {{ isDeletingResident ? 'Deleting...' : 'Delete resident' }}
                   </button>
                 </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p v-if="residentError" class="mt-4 text-base text-[#C0392B]">{{ residentError }}</p>
-      </div>
-    </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
           <section id="services" class="admin-card mt-10" v-show="activeSection === 'services'">
         <div class="tool-header">
@@ -1090,6 +1262,9 @@ import { useRouter } from 'vue-router'
 import {
   getResidents,
   updateResidentStatus,
+  createResident as apiCreateResident,
+  updateResident as apiUpdateResident,
+  deleteResident as apiDeleteResident,
   getServices,
   createService as apiCreateService,
   updateService as apiUpdateService,
@@ -1124,6 +1299,22 @@ const isLoadingResidents = ref(false)
 const residentError = ref('')
 const statusFilter = ref('')
 const search = ref('')
+const isResidentModalOpen = ref(false)
+const residentModalMode = ref('create')
+const residentForm = ref({
+  first_name: '',
+  last_name: '',
+  email: '',
+  status: 'pending',
+  password: '',
+})
+const residentFormError = ref('')
+const isResidentSaving = ref(false)
+const residentTarget = ref(null)
+const isDeleteResidentOpen = ref(false)
+const residentDeleteTarget = ref(null)
+const deleteResidentError = ref('')
+const isDeletingResident = ref(false)
 const services = ref([])
 const isLoadingServices = ref(false)
 const serviceError = ref('')
@@ -1168,6 +1359,14 @@ const lastUpdatedLabel = computed(() => {
   if (!lastUpdatedAt.value) return 'just now'
   return lastUpdatedAt.value.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 })
+
+const residentModalTitle = computed(() =>
+  residentModalMode.value === 'create' ? 'Create resident' : 'Update resident'
+)
+
+const residentSubmitLabel = computed(() =>
+  residentModalMode.value === 'create' ? 'Create resident' : 'Save changes'
+)
 
 const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
 
@@ -1911,6 +2110,112 @@ const logout = () => {
   router.push('/login')
 }
 
+const openCreateResidentModal = () => {
+  residentModalMode.value = 'create'
+  residentForm.value = {
+    first_name: '',
+    last_name: '',
+    email: '',
+    status: 'pending',
+    password: '',
+  }
+  residentTarget.value = null
+  residentFormError.value = ''
+  isResidentSaving.value = false
+  isResidentModalOpen.value = true
+}
+
+const openEditResidentModal = (resident) => {
+  residentModalMode.value = 'edit'
+  residentTarget.value = resident
+  residentForm.value = {
+    first_name: resident.first_name || '',
+    last_name: resident.last_name || '',
+    email: resident.email || '',
+    status: resident.status || 'pending',
+    password: '',
+  }
+  residentFormError.value = ''
+  isResidentSaving.value = false
+  isResidentModalOpen.value = true
+}
+
+const closeResidentModal = () => {
+  isResidentModalOpen.value = false
+  residentFormError.value = ''
+  isResidentSaving.value = false
+  residentTarget.value = null
+}
+
+const submitResidentForm = async () => {
+  residentFormError.value = ''
+  const payload = {
+    first_name: residentForm.value.first_name.trim(),
+    last_name: residentForm.value.last_name.trim(),
+    email: residentForm.value.email.trim(),
+    status: residentForm.value.status,
+  }
+
+  if (!payload.first_name || !payload.last_name || !payload.email) {
+    residentFormError.value = 'First name, last name, and email are required.'
+    return
+  }
+
+  if (residentModalMode.value === 'create') {
+    if (!residentForm.value.password) {
+      residentFormError.value = 'Password is required for new residents.'
+      return
+    }
+    payload.password = residentForm.value.password
+  } else if (residentForm.value.password) {
+    payload.password = residentForm.value.password
+  }
+
+  isResidentSaving.value = true
+  try {
+    if (residentModalMode.value === 'create') {
+      await apiCreateResident(payload)
+    } else if (residentTarget.value) {
+      await apiUpdateResident(residentTarget.value.id, payload)
+    }
+    closeResidentModal()
+    await refreshResidents()
+  } catch (err) {
+    residentFormError.value = err.message
+  } finally {
+    isResidentSaving.value = false
+  }
+}
+
+const openDeleteResidentModal = (resident) => {
+  residentDeleteTarget.value = resident
+  deleteResidentError.value = ''
+  isDeletingResident.value = false
+  isDeleteResidentOpen.value = true
+}
+
+const closeDeleteResidentModal = () => {
+  isDeleteResidentOpen.value = false
+  deleteResidentError.value = ''
+  isDeletingResident.value = false
+  residentDeleteTarget.value = null
+}
+
+const confirmDeleteResident = async () => {
+  if (!residentDeleteTarget.value) return
+  deleteResidentError.value = ''
+  isDeletingResident.value = true
+  try {
+    await apiDeleteResident(residentDeleteTarget.value.id)
+    closeDeleteResidentModal()
+    await refreshResidents()
+  } catch (err) {
+    deleteResidentError.value = err.message
+  } finally {
+    isDeletingResident.value = false
+  }
+}
+
 const loadResidents = async () => {
   residentError.value = ''
   isLoadingResidents.value = true
@@ -1924,6 +2229,10 @@ const loadResidents = async () => {
   }
 }
 
+const refreshResidents = async () => {
+  await Promise.all([loadResidents(), loadAllResidents()])
+}
+
 const loadAllResidents = async () => {
   try {
     const data = await getResidents()
@@ -1933,11 +2242,17 @@ const loadAllResidents = async () => {
   }
 }
 
+const resetResidentFilters = async () => {
+  statusFilter.value = ''
+  search.value = ''
+  await refreshResidents()
+}
+
 const updateStatus = async (id, status) => {
   residentError.value = ''
   try {
     await updateResidentStatus(id, status)
-    await loadResidents()
+    await refreshResidents()
   } catch (err) {
     residentError.value = err.message
   }
@@ -2144,6 +2459,14 @@ const resetAnalyticsFilters = () => {
   analyticsStatus.value = 'all'
   analyticsStartDate.value = ''
   analyticsEndDate.value = ''
+}
+
+const residentInitials = (resident) => {
+  if (!resident) return 'RS'
+  const first = String(resident.first_name || '').trim()
+  const last = String(resident.last_name || '').trim()
+  const initials = `${first.charAt(0)}${last.charAt(0)}`.toUpperCase()
+  return initials || 'RS'
 }
 
 const statusTone = (status) => {
@@ -2624,6 +2947,446 @@ onBeforeUnmount(() => {
 
 .status-pill.is-neutral {
   border-color: #e5e7eb;
+  color: #6b7280;
+}
+
+.resident-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.resident-side {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.resident-overview {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 1.5rem;
+  color: #f8fafc;
+  background: linear-gradient(140deg, #0b2c6f 0%, #134793 55%, #0b2c6f 100%);
+  box-shadow: 0 18px 40px rgba(11, 44, 111, 0.18);
+}
+
+.resident-overview::after {
+  content: '';
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 1px solid rgba(242, 195, 0, 0.5);
+  top: -40px;
+  right: -40px;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.resident-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.resident-title {
+  margin-top: 0.5rem;
+  font-size: 1.55rem;
+  font-weight: 700;
+}
+
+.resident-subtitle {
+  margin-top: 0.6rem;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.resident-metric-grid {
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.resident-metric-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.resident-metric-card strong {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.resident-metric-card small {
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.resident-metric-card.is-success {
+  background: rgba(46, 125, 50, 0.2);
+  border-color: rgba(46, 125, 50, 0.5);
+}
+
+.resident-metric-card.is-warning {
+  background: rgba(242, 195, 0, 0.25);
+  border-color: rgba(242, 195, 0, 0.5);
+  color: #0b2c6f;
+}
+
+.resident-metric-card.is-warning small {
+  color: rgba(11, 44, 111, 0.75);
+}
+
+.resident-metric-card.is-danger {
+  background: rgba(192, 57, 43, 0.2);
+  border-color: rgba(192, 57, 43, 0.5);
+}
+
+.resident-filters-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.resident-filters-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.resident-filters-header h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.resident-filters-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.resident-filter-grid {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.resident-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.resident-input {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 0.65rem 0.85rem;
+  font-size: 1rem;
+  background: #f8fafc;
+}
+
+.resident-filter-actions {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.resident-primary,
+.resident-secondary,
+.resident-tertiary,
+.resident-danger {
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  border: 1px solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.resident-primary {
+  background: #0b2c6f;
+  color: #ffffff;
+  border-color: #0b2c6f;
+  box-shadow: 0 10px 18px rgba(11, 44, 111, 0.22);
+}
+
+.resident-secondary {
+  background: #f2c300;
+  color: #0b2c6f;
+  border-color: rgba(242, 195, 0, 0.6);
+}
+
+.resident-tertiary {
+  background: #ffffff;
+  color: #374151;
+  border-color: #e5e7eb;
+}
+
+.resident-danger {
+  background: #c0392b;
+  color: #ffffff;
+  border-color: #c0392b;
+}
+
+.resident-primary:hover,
+.resident-secondary:hover,
+.resident-tertiary:hover,
+.resident-danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+}
+
+.resident-table-card {
+  border-radius: 22px;
+  padding: 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
+}
+
+.resident-table-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.resident-table-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.resident-table-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.resident-table-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.resident-chip {
+  border-radius: 999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+.resident-chip.is-muted {
+  background: #ffffff;
+  color: #6b7280;
+}
+
+.resident-table-wrapper {
+  overflow-x: auto;
+}
+
+.resident-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.resident-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  background: #0b2c6f;
+  color: #ffffff;
+}
+
+.resident-name {
+  font-weight: 600;
+  color: #111827;
+}
+
+.resident-id {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.resident-email {
+  font-weight: 500;
+  color: #111827;
+}
+
+.resident-action-group {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.resident-action {
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+  background: #ffffff;
+  color: #0b2c6f;
+}
+
+.resident-action.is-outline {
+  border-color: #0b2c6f;
+  background: #f8fafc;
+}
+
+.resident-action.is-success {
+  border-color: rgba(46, 125, 50, 0.4);
+  color: #2e7d32;
+  background: #f0faf2;
+}
+
+.resident-action.is-danger {
+  border-color: rgba(192, 57, 43, 0.4);
+  color: #c0392b;
+  background: #fff5f5;
+}
+
+.resident-action.is-warning {
+  border-color: rgba(242, 195, 0, 0.55);
+  color: #8a6d00;
+  background: #fff9e6;
+}
+
+.resident-action.is-ghost {
+  border-color: #e5e7eb;
+  color: #c0392b;
+  background: #ffffff;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 20;
+}
+
+.modal-card {
+  width: min(560px, 100%);
+  background: #ffffff;
+  border-radius: 22px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);
+  overflow: hidden;
+}
+
+.modal-card.is-danger {
+  border-color: rgba(192, 57, 43, 0.4);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.modal-header p {
+  margin-top: 0.25rem;
+  color: #6b7280;
+}
+
+.modal-close {
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.9rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+}
+
+.modal-body {
+  padding: 1.25rem 1.5rem 1.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.modal-field input,
+.modal-field select {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.55rem 0.75rem;
+  font-size: 1rem;
+  background: #f9fafb;
+}
+
+.modal-field small {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
+.modal-full {
+  grid-column: 1 / -1;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.modal-error {
+  color: #c0392b;
+  font-weight: 600;
+}
+
+.modal-muted {
   color: #6b7280;
 }
 
@@ -3677,6 +4440,10 @@ onBeforeUnmount(() => {
   .analytics-card.span-6 {
     grid-column: span 1;
   }
+
+  .resident-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -3707,6 +4474,19 @@ onBeforeUnmount(() => {
   }
 
   .analytics-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .resident-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .resident-table-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .modal-grid {
     grid-template-columns: 1fr;
   }
 }

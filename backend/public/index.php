@@ -305,6 +305,170 @@ if ($path === '/api/admin/residents' && $method === 'GET') {
     exit;
 }
 
+if ($path === '/api/admin/residents' && $method === 'POST') {
+    $payload = require_auth('admin', $appKey);
+    if (!$payload) {
+        exit;
+    }
+
+    $body = read_json_body();
+    $email = strtolower(trim($body['email'] ?? ''));
+    $password = $body['password'] ?? '';
+    $firstName = trim($body['first_name'] ?? '');
+    $lastName = trim($body['last_name'] ?? '');
+    $status = $body['status'] ?? 'pending';
+
+    if (!$email || !$password || !$firstName || !$lastName) {
+        json_response(['error' => 'first_name, last_name, email, and password are required'], 422);
+        exit;
+    }
+    if (!in_array($status, ['approved', 'rejected', 'pending'], true)) {
+        json_response(['error' => 'Invalid status'], 422);
+        exit;
+    }
+
+    $stmt = $pdo->prepare('SELECT id FROM residents WHERE email = ?');
+    $stmt->execute([$email]);
+    if ($stmt->fetch()) {
+        json_response(['error' => 'Email already registered'], 409);
+        exit;
+    }
+
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+    $qrToken = generate_resident_qr_token($pdo);
+    $stmt = $pdo->prepare('INSERT INTO residents (first_name, last_name, email, password_hash, qr_token, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())');
+    $stmt->execute([$firstName, $lastName, $email, $hash, $qrToken, $status]);
+    $residentId = (int) $pdo->lastInsertId();
+
+    log_audit($pdo, 'admin', (int) $payload['id'], 'resident.created', [
+        'resident_id' => $residentId,
+    ]);
+
+    $stmt = $pdo->prepare('SELECT id, first_name, last_name, email, status, created_at FROM residents WHERE id = ?');
+    $stmt->execute([$residentId]);
+    json_response(['resident' => $stmt->fetch()], 201);
+    exit;
+}
+
+if (preg_match('#^/api/admin/residents/(\\d+)$#', $path, $matches) && $method === 'POST') {
+    $payload = require_auth('admin', $appKey);
+    if (!$payload) {
+        exit;
+    }
+
+    $residentId = (int) $matches[1];
+    $stmt = $pdo->prepare('SELECT id, email, qr_token FROM residents WHERE id = ?');
+    $stmt->execute([$residentId]);
+    $resident = $stmt->fetch();
+    if (!$resident) {
+        json_response(['error' => 'Resident not found'], 404);
+        exit;
+    }
+
+    $body = read_json_body();
+    $firstName = trim($body['first_name'] ?? '');
+    $lastName = trim($body['last_name'] ?? '');
+    $email = strtolower(trim($body['email'] ?? ''));
+    $status = $body['status'] ?? null;
+    $password = $body['password'] ?? null;
+
+    if ($status !== null && !in_array($status, ['approved', 'rejected', 'pending'], true)) {
+        json_response(['error' => 'Invalid status'], 422);
+        exit;
+    }
+
+    if ($email !== '' && $email !== $resident['email']) {
+        $stmt = $pdo->prepare('SELECT id FROM residents WHERE email = ? AND id != ?');
+        $stmt->execute([$email, $residentId]);
+        if ($stmt->fetch()) {
+            json_response(['error' => 'Email already registered'], 409);
+            exit;
+        }
+    }
+
+    $updates = [];
+    $params = [];
+    if ($firstName !== '') {
+        $updates[] = 'first_name = ?';
+        $params[] = $firstName;
+    }
+    if ($lastName !== '') {
+        $updates[] = 'last_name = ?';
+        $params[] = $lastName;
+    }
+    if ($email !== '') {
+        $updates[] = 'email = ?';
+        $params[] = $email;
+    }
+    if ($status !== null) {
+        $updates[] = 'status = ?';
+        $params[] = $status;
+    }
+    if ($password !== null && $password !== '') {
+        $updates[] = 'password_hash = ?';
+        $params[] = password_hash($password, PASSWORD_DEFAULT);
+    }
+    if (!$updates) {
+        json_response(['error' => 'No updates provided'], 422);
+        exit;
+    }
+
+    $updates[] = 'updated_at = NOW()';
+    $params[] = $residentId;
+    $stmt = $pdo->prepare('UPDATE residents SET ' . implode(', ', $updates) . ' WHERE id = ?');
+    $stmt->execute($params);
+
+    if ($status === 'approved' && !$resident['qr_token']) {
+        $qrToken = generate_resident_qr_token($pdo);
+        $stmt = $pdo->prepare('UPDATE residents SET qr_token = ? WHERE id = ?');
+        $stmt->execute([$qrToken, $residentId]);
+    }
+
+    log_audit($pdo, 'admin', (int) $payload['id'], 'resident.updated', [
+        'resident_id' => $residentId,
+    ]);
+
+    $stmt = $pdo->prepare('SELECT id, first_name, last_name, email, status, created_at FROM residents WHERE id = ?');
+    $stmt->execute([$residentId]);
+    json_response(['resident' => $stmt->fetch()]);
+    exit;
+}
+
+if (preg_match('#^/api/admin/residents/(\\d+)/delete$#', $path, $matches) && $method === 'POST') {
+    $payload = require_auth('admin', $appKey);
+    if (!$payload) {
+        exit;
+    }
+
+    $residentId = (int) $matches[1];
+    $stmt = $pdo->prepare('SELECT id FROM residents WHERE id = ?');
+    $stmt->execute([$residentId]);
+    if (!$stmt->fetch()) {
+        json_response(['error' => 'Resident not found'], 404);
+        exit;
+    }
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) AS count FROM queue_tickets WHERE resident_id = ?');
+    $stmt->execute([$residentId]);
+    if ((int) ($stmt->fetch()['count'] ?? 0) > 0) {
+        json_response(['error' => 'Resident has queue history and cannot be deleted'], 409);
+        exit;
+    }
+
+    $stmt = $pdo->prepare('DELETE FROM resident_ids WHERE resident_id = ?');
+    $stmt->execute([$residentId]);
+
+    $stmt = $pdo->prepare('DELETE FROM residents WHERE id = ?');
+    $stmt->execute([$residentId]);
+
+    log_audit($pdo, 'admin', (int) $payload['id'], 'resident.deleted', [
+        'resident_id' => $residentId,
+    ]);
+
+    json_response(['deleted' => true]);
+    exit;
+}
+
 if (preg_match('#^/api/admin/residents/(\\d+)/status$#', $path, $matches) && $method === 'POST') {
     $payload = require_auth('admin', $appKey);
     if (!$payload) {

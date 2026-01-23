@@ -21,6 +21,29 @@ function updateResidentStatus(id, status) {
   })
 }
 
+function createResident(payload) {
+  return request('/api/admin/residents', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+}
+
+function updateResident(id, payload) {
+  return request(`/api/admin/residents/${id}`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  })
+}
+
+function deleteResident(id) {
+  return request(`/api/admin/residents/${id}/delete`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+}
+
 function getServices() {
   return request('/api/admin/services', { headers: authHeaders() })
 }
@@ -118,6 +141,9 @@ function getAuditLogs(limit = 100) {
 export {
   getResidents,
   updateResidentStatus,
+  createResident,
+  updateResident,
+  deleteResident,
   getServices,
   createService,
   updateService,
