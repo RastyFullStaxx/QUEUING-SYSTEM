@@ -10,6 +10,14 @@
       </div>
       <div class="admin-dock-divider"></div>
       <nav class="admin-dock-nav">
+        <a class="admin-nav-item" :class="{ 'is-active': activeSection === 'dashboard' }" href="#dashboard">
+          <span class="admin-nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 4h7v7H4V4Zm9 0h7v5h-7V4ZM4 13h7v7H4v-7Zm9 7v-9h7v9h-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+            </svg>
+          </span>
+          Dashboard
+        </a>
         <a class="admin-nav-item" :class="{ 'is-active': activeSection === 'resident-verification' }" href="#resident-verification">
           <span class="admin-nav-icon">
             <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -95,6 +103,278 @@
             <span class="admin-intro-bar is-neutral"></span>
           </div>
         </div>
+
+        <section id="dashboard" class="admin-dashboard mt-10" v-show="activeSection === 'dashboard'">
+          <div class="dashboard-hero">
+            <div class="dashboard-hero-main">
+              <p class="dashboard-kicker">Operations snapshot</p>
+              <h2 class="dashboard-title">Admin Analytics Dashboard</h2>
+              <p class="dashboard-subtitle">
+                Live signals from registrations, queue flow, services, and kiosk activity to guide daily decisions.
+              </p>
+              <div class="dashboard-actions">
+                <button class="dashboard-refresh" type="button" @click="refreshAll">Refresh data</button>
+                <a class="dashboard-link" href="#queue-control">Jump to queue</a>
+              </div>
+              <p class="dashboard-updated">Updated {{ lastUpdatedLabel }}</p>
+            </div>
+            <div class="dashboard-hero-card">
+              <div class="hero-stat">
+                <p class="hero-stat-label">Active queue</p>
+                <div class="hero-stat-value">
+                  <span>{{ activeQueueCount }}</span>
+                  <span class="hero-stat-unit">tickets</span>
+                </div>
+                <p class="hero-stat-note">{{ queuePressureNote }}</p>
+              </div>
+              <div class="hero-mini-grid">
+                <div class="hero-mini">
+                  <span>Waiting</span>
+                  <strong>{{ queueStatusCounts.waiting }}</strong>
+                </div>
+                <div class="hero-mini">
+                  <span>Serving</span>
+                  <strong>{{ queueStatusCounts.serving }}</strong>
+                </div>
+                <div class="hero-mini">
+                  <span>Avg wait</span>
+                  <strong>{{ averageWaitLabel }}</strong>
+                </div>
+              </div>
+              <div class="hero-meter">
+                <div class="hero-meter-track">
+                  <span class="hero-meter-fill" :style="{ width: `${queuePressurePercent}%` }"></span>
+                </div>
+                <div class="hero-meter-labels">
+                  <span>Low</span>
+                  <span>High</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dashboard-stat-grid">
+            <div class="dashboard-stat">
+              <p class="dashboard-stat-label">Residents</p>
+              <p class="dashboard-stat-value">{{ residentStats.total }}</p>
+              <p class="dashboard-stat-meta">{{ residentStats.approved }} approved</p>
+            </div>
+            <div class="dashboard-stat">
+              <p class="dashboard-stat-label">Pending review</p>
+              <p class="dashboard-stat-value">{{ residentStats.pending }}</p>
+              <p class="dashboard-stat-meta">{{ approvalRateLabel }} approval rate</p>
+            </div>
+            <div class="dashboard-stat">
+              <p class="dashboard-stat-label">Active services</p>
+              <p class="dashboard-stat-value">{{ activeServiceCount }}</p>
+              <p class="dashboard-stat-meta">{{ inactiveServiceCount }} inactive</p>
+            </div>
+            <div class="dashboard-stat">
+              <p class="dashboard-stat-label">Kiosk health</p>
+              <p class="dashboard-stat-value">{{ onlineKioskCount }}</p>
+              <p class="dashboard-stat-meta">{{ offlineKioskCount }} offline</p>
+            </div>
+            <div class="dashboard-stat">
+              <p class="dashboard-stat-label">Total tickets</p>
+              <p class="dashboard-stat-value">{{ queueStatusCounts.total }}</p>
+              <p class="dashboard-stat-meta">{{ queueStatusCounts.done }} completed</p>
+            </div>
+            <div class="dashboard-stat">
+              <p class="dashboard-stat-label">Service focus</p>
+              <p class="dashboard-stat-value">{{ topServiceLabel }}</p>
+              <p class="dashboard-stat-meta">{{ topServiceCountLabel }}</p>
+            </div>
+          </div>
+
+          <div class="dashboard-grid">
+            <div class="dashboard-panel span-7">
+              <div class="dashboard-panel-header">
+                <div>
+                  <h3>Queue flow</h3>
+                  <p>Live composition of queue tickets with status distribution.</p>
+                </div>
+                <span class="panel-badge">Realtime</span>
+              </div>
+              <div class="queue-flow">
+                <div class="queue-bar">
+                  <span class="queue-segment is-waiting" :style="{ width: `${queueStatusPercentages.waiting}%` }"></span>
+                  <span class="queue-segment is-serving" :style="{ width: `${queueStatusPercentages.serving}%` }"></span>
+                  <span class="queue-segment is-done" :style="{ width: `${queueStatusPercentages.done}%` }"></span>
+                  <span class="queue-segment is-cancelled" :style="{ width: `${queueStatusPercentages.cancelled}%` }"></span>
+                </div>
+                <div class="queue-legend">
+                  <div class="legend-item">
+                    <span class="legend-dot is-waiting"></span>
+                    <span>Waiting</span>
+                    <strong>{{ queueStatusCounts.waiting }}</strong>
+                  </div>
+                  <div class="legend-item">
+                    <span class="legend-dot is-serving"></span>
+                    <span>Serving</span>
+                    <strong>{{ queueStatusCounts.serving }}</strong>
+                  </div>
+                  <div class="legend-item">
+                    <span class="legend-dot is-done"></span>
+                    <span>Done</span>
+                    <strong>{{ queueStatusCounts.done }}</strong>
+                  </div>
+                  <div class="legend-item">
+                    <span class="legend-dot is-cancelled"></span>
+                    <span>Cancelled</span>
+                    <strong>{{ queueStatusCounts.cancelled }}</strong>
+                  </div>
+                </div>
+                <p class="queue-insight">{{ queueInsight }}</p>
+              </div>
+            </div>
+
+            <div class="dashboard-panel span-5">
+              <div class="dashboard-panel-header">
+                <div>
+                  <h3>Resident pipeline</h3>
+                  <p>Approval progress across registration statuses.</p>
+                </div>
+              </div>
+              <div class="pipeline-list">
+                <div class="pipeline-row">
+                  <div class="pipeline-label">
+                    <span>Approved</span>
+                    <strong>{{ residentStats.approved }}</strong>
+                  </div>
+                  <div class="pipeline-track">
+                    <span class="pipeline-fill is-success" :style="{ width: `${residentPercentages.approved}%` }"></span>
+                  </div>
+                </div>
+                <div class="pipeline-row">
+                  <div class="pipeline-label">
+                    <span>Pending</span>
+                    <strong>{{ residentStats.pending }}</strong>
+                  </div>
+                  <div class="pipeline-track">
+                    <span class="pipeline-fill is-warning" :style="{ width: `${residentPercentages.pending}%` }"></span>
+                  </div>
+                </div>
+                <div class="pipeline-row">
+                  <div class="pipeline-label">
+                    <span>Rejected</span>
+                    <strong>{{ residentStats.rejected }}</strong>
+                  </div>
+                  <div class="pipeline-track">
+                    <span class="pipeline-fill is-danger" :style="{ width: `${residentPercentages.rejected}%` }"></span>
+                  </div>
+                </div>
+              </div>
+              <p class="pipeline-note">{{ residentInsight }}</p>
+            </div>
+
+            <div class="dashboard-panel span-6">
+              <div class="dashboard-panel-header">
+                <div>
+                  <h3>Most booked service</h3>
+                  <p>Service bookings ranked by ticket volume.</p>
+                </div>
+                <span class="panel-badge is-gold">Volume</span>
+              </div>
+              <div v-if="serviceVolumeBars.length" class="service-chart">
+                <div class="service-chart-bars">
+                  <div v-for="service in serviceVolumeBars" :key="service.id" class="service-bar">
+                    <div class="service-bar-track">
+                      <span class="service-bar-fill" :style="{ height: `${service.percent}%` }"></span>
+                    </div>
+                    <span class="service-bar-label">{{ service.shortLabel }}</span>
+                    <span class="service-bar-value">{{ service.count }}</span>
+                  </div>
+                </div>
+                <div class="service-chart-summary">
+                  <p class="summary-title">{{ topServiceLabel }}</p>
+                  <p class="summary-subtitle">{{ topServiceCountLabel }}</p>
+                  <p class="summary-note">{{ serviceInsight }}</p>
+                </div>
+              </div>
+              <p v-else class="empty-state">No service demand yet. Queue tickets will appear here.</p>
+            </div>
+
+            <div class="dashboard-panel span-6">
+              <div class="dashboard-panel-header">
+                <div>
+                  <h3>Traffic by time</h3>
+                  <p>Ticket volume grouped by 3-hour windows.</p>
+                </div>
+                <span class="panel-badge is-neutral">Hourly</span>
+              </div>
+              <div v-if="trafficBuckets.length" class="traffic-chart">
+                <div class="traffic-bars">
+                  <div v-for="slot in trafficBuckets" :key="slot.label" class="traffic-bar">
+                    <div class="traffic-bar-track">
+                      <span class="traffic-bar-fill" :style="{ height: `${slot.percent}%` }"></span>
+                    </div>
+                    <span class="traffic-bar-label">{{ slot.label }}</span>
+                    <span class="traffic-bar-value">{{ slot.count }}</span>
+                  </div>
+                </div>
+                <p class="traffic-note">{{ trafficInsight }}</p>
+              </div>
+              <p v-else class="empty-state">No traffic data yet. Ticket activity will build this view.</p>
+            </div>
+
+            <div class="dashboard-panel span-6">
+              <div class="dashboard-panel-header">
+                <div>
+                  <h3>Kiosk health</h3>
+                  <p>Heartbeat status from registered devices.</p>
+                </div>
+              </div>
+              <div v-if="kioskStatusList.length" class="kiosk-grid">
+                <div v-for="kiosk in kioskStatusList" :key="kiosk.id" class="kiosk-card" :class="{ 'is-online': kiosk.online }">
+                  <div class="kiosk-card-header">
+                    <span class="kiosk-dot"></span>
+                    <div>
+                      <p class="kiosk-name">{{ kiosk.name }}</p>
+                      <p class="kiosk-id">{{ kiosk.device_id }}</p>
+                    </div>
+                  </div>
+                  <p class="kiosk-time">{{ kiosk.lastSeenLabel }}</p>
+                </div>
+              </div>
+              <p v-else class="empty-state">No kiosk devices registered yet.</p>
+            </div>
+
+            <div class="dashboard-panel span-4">
+              <div class="dashboard-panel-header">
+                <div>
+                  <h3>Insights</h3>
+                  <p>Quick takeaways based on current data.</p>
+                </div>
+              </div>
+              <ul class="insight-list">
+                <li>{{ queueInsight }}</li>
+                <li>{{ serviceInsight }}</li>
+                <li>{{ residentInsight }}</li>
+                <li>{{ kioskInsight }}</li>
+              </ul>
+            </div>
+
+            <div class="dashboard-panel span-8">
+              <div class="dashboard-panel-header">
+                <div>
+                  <h3>Recent activity</h3>
+                  <p>Latest admin actions and system updates.</p>
+                </div>
+                <span class="panel-badge is-neutral">Audit</span>
+              </div>
+              <div v-if="recentLogs.length" class="activity-list">
+                <div v-for="log in recentLogs" :key="log.id" class="activity-row">
+                  <div class="activity-time">{{ formatTime(log.created_at) }}</div>
+                  <div class="activity-meta">
+                    <p class="activity-action">{{ formatAction(log.action) }}</p>
+                    <p class="activity-actor">{{ log.actor_type }} #{{ log.actor_id }}</p>
+                  </div>
+                </div>
+              </div>
+              <p v-else class="empty-state">No recent activity yet.</p>
+            </div>
+          </div>
+        </section>
 
         <div id="resident-verification" class="admin-card mt-10" v-show="activeSection === 'resident-verification'">
       <div class="tool-header">
@@ -646,8 +926,9 @@ const adminInitials = computed(() => {
     .map((part) => part[0].toUpperCase())
     .join('')
 })
-const activeSection = ref('resident-verification')
+const activeSection = ref('dashboard')
 const sectionTitles = {
+  dashboard: 'Admin Dashboard',
   'resident-verification': 'Resident Verification',
   services: 'Services',
   'queue-control': 'Queue Control',
@@ -699,6 +980,256 @@ const newAdmin = ref({
   password: '',
   role: 'staff_admin',
   service_ids: '',
+})
+const lastUpdatedAt = ref(new Date())
+
+const lastUpdatedLabel = computed(() => {
+  if (!lastUpdatedAt.value) return 'just now'
+  return lastUpdatedAt.value.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+})
+
+const residentStats = computed(() => {
+  const stats = { total: residents.value.length, approved: 0, pending: 0, rejected: 0 }
+  residents.value.forEach((resident) => {
+    if (resident.status === 'approved') stats.approved += 1
+    if (resident.status === 'pending') stats.pending += 1
+    if (resident.status === 'rejected') stats.rejected += 1
+  })
+  return stats
+})
+
+const approvalRateLabel = computed(() => {
+  const total = residentStats.value.total
+  if (!total) return '0%'
+  return `${Math.round((residentStats.value.approved / total) * 100)}%`
+})
+
+const residentPercentages = computed(() => {
+  const total = residentStats.value.total || 1
+  return {
+    approved: Math.round((residentStats.value.approved / total) * 100),
+    pending: Math.round((residentStats.value.pending / total) * 100),
+    rejected: Math.round((residentStats.value.rejected / total) * 100),
+  }
+})
+
+const queueStatusCounts = computed(() => {
+  const counts = { waiting: 0, serving: 0, done: 0, cancelled: 0, total: queueTickets.value.length }
+  queueTickets.value.forEach((ticket) => {
+    if (ticket.status === 'waiting') counts.waiting += 1
+    if (ticket.status === 'serving') counts.serving += 1
+    if (ticket.status === 'done') counts.done += 1
+    if (ticket.status === 'cancelled') counts.cancelled += 1
+  })
+  counts.total = queueTickets.value.length
+  return counts
+})
+
+const queueStatusPercentages = computed(() => {
+  const total = queueStatusCounts.value.total || 1
+  return {
+    waiting: Math.round((queueStatusCounts.value.waiting / total) * 100),
+    serving: Math.round((queueStatusCounts.value.serving / total) * 100),
+    done: Math.round((queueStatusCounts.value.done / total) * 100),
+    cancelled: Math.round((queueStatusCounts.value.cancelled / total) * 100),
+  }
+})
+
+const activeQueueCount = computed(() => queueStatusCounts.value.waiting + queueStatusCounts.value.serving)
+
+const averageWaitMinutes = computed(() => {
+  const now = Date.now()
+  const waitingTickets = queueTickets.value.filter((ticket) => ticket.status === 'waiting' && ticket.issued_at)
+  if (!waitingTickets.length) return 0
+  const totalMinutes = waitingTickets.reduce((sum, ticket) => {
+    const issuedAt = new Date(ticket.issued_at).getTime()
+    if (!issuedAt) return sum
+    const minutes = Math.max(0, (now - issuedAt) / 60000)
+    return sum + minutes
+  }, 0)
+  return Math.round(totalMinutes / waitingTickets.length)
+})
+
+const averageWaitLabel = computed(() => {
+  if (!queueStatusCounts.value.waiting) return '--'
+  return `${averageWaitMinutes.value} min`
+})
+
+const queuePressurePercent = computed(() => {
+  const scale = 20
+  const value = activeQueueCount.value
+  return Math.min(100, Math.round((value / scale) * 100))
+})
+
+const queuePressureNote = computed(() => {
+  const active = activeQueueCount.value
+  if (!active) return 'Queue is clear. Counters can focus on walk-ins.'
+  if (averageWaitMinutes.value >= 30) return `Average wait is ${averageWaitMinutes.value} min. Consider opening another counter.`
+  if (active >= 12) return 'High demand. Activate extra counters if available.'
+  if (active >= 6) return 'Moderate load. Keep a steady serving pace.'
+  return 'Light traffic. Keep monitoring the queue.'
+})
+
+const activeServiceCount = computed(() => services.value.filter((service) => service.active).length)
+
+const inactiveServiceCount = computed(() => services.value.filter((service) => !service.active).length)
+
+const serviceDemand = computed(() => {
+  const counts = new Map()
+  queueTickets.value.forEach((ticket) => {
+    const serviceId = ticket.service_id
+    if (!serviceId) return
+    counts.set(serviceId, (counts.get(serviceId) || 0) + 1)
+  })
+  const items = Array.from(counts.entries())
+    .map(([id, count]) => {
+      const service = services.value.find((entry) => entry.id === id)
+      return {
+        id,
+        count,
+        name: service?.name || `Service #${id}`,
+      }
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5)
+  const maxCount = Math.max(...items.map((item) => item.count), 1)
+  return items.map((item) => ({
+    ...item,
+    percent: Math.round((item.count / maxCount) * 100),
+  }))
+})
+
+const shortServiceLabel = (name = '') => {
+  const words = name.split(' ').filter(Boolean)
+  if (!words.length) return 'SVC'
+  if (words.length === 1) return words[0].slice(0, 4).toUpperCase()
+  return words
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join('')
+}
+
+const serviceVolumeBars = computed(() => {
+  const counts = new Map()
+  queueTickets.value.forEach((ticket) => {
+    const serviceId = ticket.service_id
+    if (!serviceId) return
+    counts.set(serviceId, (counts.get(serviceId) || 0) + 1)
+  })
+  if (!counts.size) return []
+  const items = Array.from(counts.entries())
+    .map(([id, count]) => {
+      const service = services.value.find((entry) => entry.id === id)
+      return {
+        id,
+        count,
+        name: service?.name || `Service #${id}`,
+      }
+    })
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 6)
+  const maxCount = Math.max(...items.map((item) => item.count), 1)
+  return items.map((item) => ({
+    ...item,
+    percent: Math.round((item.count / maxCount) * 100),
+    shortLabel: shortServiceLabel(item.name),
+  }))
+})
+
+const topServiceLabel = computed(() => {
+  const top = serviceDemand.value[0]
+  return top ? top.name : 'No demand yet'
+})
+
+const topServiceCountLabel = computed(() => {
+  const top = serviceDemand.value[0]
+  return top ? `${top.count} tickets` : 'Waiting for tickets'
+})
+
+const kioskStatusList = computed(() => {
+  const now = Date.now()
+  return kiosks.value.map((kiosk) => {
+    const lastSeen = kiosk.last_seen_at ? new Date(kiosk.last_seen_at).getTime() : null
+    const minutesAgo = lastSeen ? Math.round((now - lastSeen) / 60000) : null
+    const online = minutesAgo !== null && minutesAgo <= 20
+    return {
+      ...kiosk,
+      online,
+      lastSeenLabel: formatMinutesAgo(minutesAgo),
+    }
+  })
+})
+
+const onlineKioskCount = computed(() => kioskStatusList.value.filter((kiosk) => kiosk.online).length)
+
+const offlineKioskCount = computed(() => Math.max(0, kioskStatusList.value.length - onlineKioskCount.value))
+
+const trafficBuckets = computed(() => {
+  if (!queueTickets.value.length) return []
+  const slots = Array.from({ length: 8 }, (_, index) => ({ index, count: 0 }))
+  queueTickets.value.forEach((ticket) => {
+    if (!ticket.issued_at) return
+    const hour = new Date(ticket.issued_at).getHours()
+    if (Number.isNaN(hour)) return
+    const bucket = Math.floor(hour / 3)
+    const slot = slots[bucket]
+    if (slot) {
+      slot.count += 1
+    }
+  })
+  const maxCount = Math.max(...slots.map((slot) => slot.count), 1)
+  return slots.map((slot) => ({
+    ...slot,
+    percent: Math.round((slot.count / maxCount) * 100),
+    label: formatTimeRange(slot.index * 3),
+  }))
+})
+
+const busiestTrafficSlot = computed(() => {
+  if (!trafficBuckets.value.length) return null
+  return trafficBuckets.value.reduce((best, slot) => {
+    if (!best || slot.count > best.count) return slot
+    return best
+  }, null)
+})
+
+const trafficInsight = computed(() => {
+  if (!busiestTrafficSlot.value || busiestTrafficSlot.value.count === 0) {
+    return 'Not enough traffic data yet. Ticket volume will populate this view.'
+  }
+  return `Highest traffic window: ${busiestTrafficSlot.value.label} with ${busiestTrafficSlot.value.count} tickets.`
+})
+
+const recentLogs = computed(() => auditLogs.value.slice(0, 5))
+
+const queueInsight = computed(() => {
+  if (!queueStatusCounts.value.total) return 'No tickets yet. The queue board is ready for the first visitors.'
+  if (queueStatusCounts.value.waiting > queueStatusCounts.value.serving * 2) {
+    return 'Waiting line is growing faster than serving. Call next tickets to reduce wait time.'
+  }
+  return queuePressureNote.value
+})
+
+const residentInsight = computed(() => {
+  if (!residentStats.value.total) return 'No residents registered yet. Promote the portal to build the base.'
+  if (residentStats.value.pending > residentStats.value.approved) {
+    return 'Pending approvals are high. Prioritize reviews to unlock kiosk access.'
+  }
+  return `${approvalRateLabel.value} of residents are approved and ready to use the kiosk.`
+})
+
+const serviceInsight = computed(() => {
+  const top = serviceDemand.value[0]
+  if (!top) return 'Service demand will surface once tickets are created.'
+  return `${top.name} leads demand with ${top.count} tickets in the queue.`
+})
+
+const kioskInsight = computed(() => {
+  if (!kioskStatusList.value.length) return 'Add kiosks to monitor device readiness.'
+  if (offlineKioskCount.value > 0) {
+    return `${offlineKioskCount.value} kiosk${offlineKioskCount.value > 1 ? 's are' : ' is'} offline. Check connectivity.`
+  }
+  return 'All kiosks are reporting in on time.'
 })
 
 const logout = () => {
@@ -898,6 +1429,22 @@ const createAdmin = async () => {
   }
 }
 
+const refreshAll = async () => {
+  const tasks = [
+    loadResidents(),
+    loadServices(),
+    loadKiosks(),
+    loadQueue(),
+    loadTransactions(),
+    loadAuditLogs(),
+  ]
+  if (isSuperAdmin.value) {
+    tasks.push(loadAdmins())
+  }
+  await Promise.all(tasks)
+  lastUpdatedAt.value = new Date()
+}
+
 const statusTone = (status) => {
   const value = String(status || '').toLowerCase()
   if (['approved', 'active', 'done'].includes(value)) return 'success'
@@ -917,8 +1464,44 @@ const formatDate = (value) => {
   return date.toLocaleDateString()
 }
 
+const formatTime = (value) => {
+  if (!value) return '--'
+  const date = new Date(value)
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+}
+
+const formatAction = (value = '') => {
+  return value
+    .replace(/[_-]+/g, ' ')
+    .replace(/\./g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+const formatMinutesAgo = (minutes) => {
+  if (minutes === null || minutes === undefined) return 'Never checked in'
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  if (!remainder) return `${hours}h ago`
+  return `${hours}h ${remainder}m ago`
+}
+
+const formatHourLabel = (hour) => {
+  const normalized = ((hour % 24) + 24) % 24
+  const period = normalized >= 12 ? 'p' : 'a'
+  const display = normalized % 12 || 12
+  return `${display}${period}`
+}
+
+const formatTimeRange = (startHour) => {
+  const startLabel = formatHourLabel(startHour)
+  const endLabel = formatHourLabel(startHour + 3)
+  return `${startLabel}-${endLabel}`
+}
+
 onMounted(() => {
-  const sectionIds = ['resident-verification', 'services', 'queue-control', 'transactions', 'kiosk-devices', 'audit-logs', 'admin-users']
+  const sectionIds = ['dashboard', 'resident-verification', 'services', 'queue-control', 'transactions', 'kiosk-devices', 'audit-logs', 'admin-users']
   const sections = sectionIds
     .map((id) => document.getElementById(id))
     .filter(Boolean)
@@ -942,15 +1525,7 @@ onMounted(() => {
   )
   sections.forEach((section) => dockObserver.observe(section))
 
-  loadResidents()
-  loadServices()
-  loadKiosks()
-  loadQueue()
-  loadTransactions()
-  loadAuditLogs()
-  if (isSuperAdmin.value) {
-    loadAdmins()
-  }
+  refreshAll()
 })
 
 onBeforeUnmount(() => {
@@ -1407,6 +1982,717 @@ onBeforeUnmount(() => {
   color: #6b7280;
 }
 
+.admin-dashboard {
+  border-radius: 28px;
+  padding: 2.2rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 45%, #f6f1e6 100%);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-dashboard::before {
+  content: '';
+  position: absolute;
+  right: -120px;
+  top: -140px;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(11, 44, 111, 0.14), transparent 70%);
+  pointer-events: none;
+}
+
+.dashboard-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 2rem;
+  align-items: stretch;
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-kicker {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.35em;
+  color: #6b7280;
+}
+
+.dashboard-title {
+  margin-top: 0.5rem;
+  font-size: clamp(1.8rem, 3vw, 2.6rem);
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.dashboard-subtitle {
+  margin-top: 0.75rem;
+  font-size: 1rem;
+  color: #4b5563;
+  max-width: 520px;
+}
+
+.dashboard-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.dashboard-refresh {
+  border: none;
+  border-radius: 999px;
+  padding: 0.65rem 1.4rem;
+  background: #0b2c6f;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-refresh:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.15);
+}
+
+.dashboard-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.6rem 1.3rem;
+  border-radius: 999px;
+  border: 1px solid #0b2c6f;
+  color: #0b2c6f;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.dashboard-updated {
+  margin-top: 0.85rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.dashboard-hero-card {
+  background: linear-gradient(135deg, rgba(11, 44, 111, 0.92), rgba(9, 26, 62, 0.95));
+  border-radius: 24px;
+  padding: 1.8rem;
+  color: #f8fafc;
+  box-shadow: 0 24px 50px rgba(15, 23, 42, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-hero-card::after {
+  content: '';
+  position: absolute;
+  inset: -20% -30%;
+  background: radial-gradient(circle, rgba(242, 195, 0, 0.25), transparent 60%);
+  pointer-events: none;
+}
+
+.hero-stat {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-stat-label {
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-size: 0.7rem;
+  color: rgba(226, 232, 240, 0.8);
+}
+
+.hero-stat-value {
+  margin-top: 0.5rem;
+  font-size: 2.4rem;
+  font-weight: 700;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.hero-stat-unit {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.hero-stat-note {
+  margin-top: 0.6rem;
+  font-size: 0.95rem;
+  color: rgba(226, 232, 240, 0.85);
+}
+
+.hero-mini-grid {
+  margin-top: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-mini {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  padding: 0.75rem 0.9rem;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.hero-mini strong {
+  font-size: 1.2rem;
+  letter-spacing: 0.08em;
+}
+
+.hero-meter {
+  margin-top: 1.4rem;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-meter-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+
+.hero-meter-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #f2c300, #ffffff);
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+
+.hero-meter-labels {
+  margin-top: 0.4rem;
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.dashboard-stat-grid {
+  margin-top: 2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1rem;
+}
+
+.dashboard-stat {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 1rem 1.2rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+}
+
+.dashboard-stat-label {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: #6b7280;
+}
+
+.dashboard-stat-value {
+  margin-top: 0.45rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.dashboard-stat-meta {
+  margin-top: 0.3rem;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.dashboard-grid {
+  margin-top: 2rem;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 1.2rem;
+}
+
+.dashboard-panel {
+  grid-column: span 6;
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 1.5rem;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.dashboard-panel.span-7 {
+  grid-column: span 7;
+}
+
+.dashboard-panel.span-5 {
+  grid-column: span 5;
+}
+
+.dashboard-panel.span-8 {
+  grid-column: span 8;
+}
+
+.dashboard-panel.span-4 {
+  grid-column: span 4;
+}
+
+.dashboard-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.dashboard-panel-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #0b2c6f;
+}
+
+.dashboard-panel-header p {
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.panel-badge {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(11, 44, 111, 0.08);
+  color: #0b2c6f;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.panel-badge.is-gold {
+  background: rgba(242, 195, 0, 0.25);
+  color: #6b4e00;
+}
+
+.panel-badge.is-neutral {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.queue-flow {
+  margin-top: 1.2rem;
+}
+
+.queue-bar {
+  display: flex;
+  height: 16px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e5e7eb;
+}
+
+.queue-segment {
+  height: 100%;
+  min-width: 6px;
+  transition: width 0.4s ease;
+}
+
+.queue-segment.is-waiting {
+  background: #f2c300;
+}
+
+.queue-segment.is-serving {
+  background: #0b2c6f;
+}
+
+.queue-segment.is-done {
+  background: #2e7d32;
+}
+
+.queue-segment.is-cancelled {
+  background: #c0392b;
+}
+
+.queue-legend {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  color: #4b5563;
+}
+
+.legend-item strong {
+  margin-left: auto;
+  color: #111827;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.legend-dot.is-waiting {
+  background: #f2c300;
+}
+
+.legend-dot.is-serving {
+  background: #0b2c6f;
+}
+
+.legend-dot.is-done {
+  background: #2e7d32;
+}
+
+.legend-dot.is-cancelled {
+  background: #c0392b;
+}
+
+.queue-insight {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  color: #4b5563;
+}
+
+.pipeline-list {
+  margin-top: 1.2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.pipeline-row {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.pipeline-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  color: #374151;
+  font-weight: 600;
+}
+
+.pipeline-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  overflow: hidden;
+}
+
+.pipeline-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+
+.pipeline-fill.is-success {
+  background: #2e7d32;
+}
+
+.pipeline-fill.is-warning {
+  background: #f2c300;
+}
+
+.pipeline-fill.is-danger {
+  background: #c0392b;
+}
+
+.pipeline-note {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.demand-list {
+  margin-top: 1.2rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.demand-row {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.demand-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.demand-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  overflow: hidden;
+}
+
+.demand-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(11, 44, 111, 0.9), rgba(242, 195, 0, 0.85));
+  transition: width 0.4s ease;
+}
+
+.service-chart {
+  margin-top: 1.2rem;
+  display: grid;
+  gap: 1.4rem;
+}
+
+.service-chart-bars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: 0.9rem;
+  align-items: end;
+  min-height: 180px;
+}
+
+.service-bar {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: center;
+}
+
+.service-bar-track {
+  width: 42px;
+  height: 120px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: flex-end;
+  padding: 6px;
+}
+
+.service-bar-fill {
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #0b2c6f, #f2c300);
+  transition: height 0.4s ease;
+}
+
+.service-bar-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #6b7280;
+}
+
+.service-bar-value {
+  font-weight: 700;
+  color: #111827;
+}
+
+.service-chart-summary {
+  padding: 0.95rem 1.1rem;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+.summary-title {
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.summary-subtitle {
+  margin-top: 0.2rem;
+  font-size: 0.9rem;
+  color: #374151;
+}
+
+.summary-note {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.traffic-chart {
+  margin-top: 1.2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.traffic-bars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+  min-height: 160px;
+}
+
+.traffic-bar {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: center;
+}
+
+.traffic-bar-track {
+  width: 28px;
+  height: 110px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: flex-end;
+  padding: 5px;
+}
+
+.traffic-bar-fill {
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f2c300, rgba(11, 44, 111, 0.85));
+  transition: height 0.4s ease;
+}
+
+.traffic-bar-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #6b7280;
+}
+
+.traffic-bar-value {
+  font-weight: 600;
+  color: #111827;
+}
+
+.traffic-note {
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.kiosk-grid {
+  margin-top: 1.2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.9rem;
+}
+
+.kiosk-card {
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.kiosk-card.is-online {
+  border-color: rgba(46, 125, 50, 0.4);
+  background: rgba(46, 125, 50, 0.08);
+}
+
+.kiosk-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.kiosk-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #c0392b;
+}
+
+.kiosk-card.is-online .kiosk-dot {
+  background: #2e7d32;
+}
+
+.kiosk-name {
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.kiosk-id {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.kiosk-time {
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.insight-list {
+  margin-top: 1.2rem;
+  display: grid;
+  gap: 0.8rem;
+  padding: 0;
+  list-style: none;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.insight-list li {
+  padding: 0.8rem 1rem;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+.activity-list {
+  margin-top: 1.2rem;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.activity-row {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+.activity-time {
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.activity-action {
+  font-weight: 600;
+  color: #111827;
+}
+
+.activity-actor {
+  margin-top: 0.2rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.empty-state {
+  margin-top: 1.2rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
 @media (max-width: 960px) {
   .admin-shell {
     padding: 2rem 1.25rem 3rem;
@@ -1424,6 +2710,22 @@ onBeforeUnmount(() => {
   .admin-intro {
     align-items: flex-start;
   }
+
+  .dashboard-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+
+  .dashboard-panel,
+  .dashboard-panel.span-7,
+  .dashboard-panel.span-5,
+  .dashboard-panel.span-8,
+  .dashboard-panel.span-4 {
+    grid-column: span 1;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1434,6 +2736,18 @@ onBeforeUnmount(() => {
   .admin-nav-item {
     padding: 0.45rem 0.7rem;
     font-size: 0.95rem;
+  }
+
+  .dashboard-stat-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-mini-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .activity-row {
+    grid-template-columns: 1fr;
   }
 }
 </style>
