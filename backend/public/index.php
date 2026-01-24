@@ -139,14 +139,22 @@ if ($path === '/api/health' && $method === 'GET') {
 }
 
 if ($path === '/api/auth/resident/register' && $method === 'POST') {
-    $body = read_json_body();
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+    $isMultipart = str_contains($contentType, 'multipart/form-data');
+    $body = $isMultipart ? $_POST : read_json_body();
     $email = strtolower(trim($body['email'] ?? ''));
     $password = $body['password'] ?? '';
     $firstName = trim($body['first_name'] ?? '');
     $lastName = trim($body['last_name'] ?? '');
+    $validIdUrl = trim($body['valid_id_url'] ?? '');
+    $uploadedId = $isMultipart ? ($_FILES['valid_id'] ?? null) : null;
 
     if (!$email || !$password) {
         json_response(['error' => 'Email and password are required'], 422);
+        exit;
+    }
+    if (!$validIdUrl && !$uploadedId) {
+        json_response(['error' => 'Valid ID upload is required'], 422);
         exit;
     }
 
@@ -157,12 +165,65 @@ if ($path === '/api/auth/resident/register' && $method === 'POST') {
         exit;
     }
 
+    $fileExtension = null;
+    if ($uploadedId) {
+        if (($uploadedId['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+            json_response(['error' => 'Valid ID upload failed'], 422);
+            exit;
+        }
+        if (($uploadedId['size'] ?? 0) > 5 * 1024 * 1024) {
+            json_response(['error' => 'Valid ID must be 5MB or less'], 422);
+            exit;
+        }
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($uploadedId['tmp_name']);
+        $allowedTypes = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            'application/pdf' => 'pdf',
+        ];
+        if (!isset($allowedTypes[$mimeType])) {
+            json_response(['error' => 'Valid ID must be a JPG, PNG, WEBP, or PDF'], 422);
+            exit;
+        }
+        $fileExtension = $allowedTypes[$mimeType];
+    }
+
     $hash = password_hash($password, PASSWORD_DEFAULT);
     $qrToken = generate_resident_qr_token($pdo);
     $stmt = $pdo->prepare('INSERT INTO residents (first_name, last_name, email, password_hash, qr_token, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())');
     $stmt->execute([$firstName, $lastName, $email, $hash, $qrToken, 'pending']);
     $residentId = (int) $pdo->lastInsertId();
     $token = issue_token('resident', $residentId, $appKey);
+
+    if ($uploadedId) {
+        $uploadDir = __DIR__ . '/uploads/resident-ids';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+            $pdo->prepare('DELETE FROM residents WHERE id = ?')->execute([$residentId]);
+            json_response(['error' => 'Unable to store valid ID upload'], 500);
+            exit;
+        }
+        $filename = sprintf(
+            'resident_%d_%s.%s',
+            $residentId,
+            bin2hex(random_bytes(6)),
+            $fileExtension
+        );
+        $destination = $uploadDir . '/' . $filename;
+        if (!move_uploaded_file($uploadedId['tmp_name'], $destination)) {
+            $pdo->prepare('DELETE FROM residents WHERE id = ?')->execute([$residentId]);
+            json_response(['error' => 'Unable to store valid ID upload'], 500);
+            exit;
+        }
+        $validIdUrl = '/uploads/resident-ids/' . $filename;
+    }
+
+    if ($validIdUrl) {
+        $stmt = $pdo->prepare('INSERT INTO resident_ids (resident_id, valid_id_url, verification_status, created_at) VALUES (?, ?, ?, NOW())');
+        $stmt->execute([$residentId, $validIdUrl, 'pending']);
+    }
 
     json_response([
         'token' => $token,
@@ -173,6 +234,7 @@ if ($path === '/api/auth/resident/register' && $method === 'POST') {
             'email' => $email,
             'status' => 'pending',
             'qr_token' => $qrToken,
+            'valid_id_url' => $validIdUrl ?: null,
         ],
     ], 201);
     exit;
@@ -328,7 +390,11 @@ if ($path === '/api/admin/residents' && $method === 'GET') {
 
     $status = $_GET['status'] ?? null;
     $search = trim($_GET['search'] ?? '');
-    $query = 'SELECT id, first_name, last_name, email, status, created_at FROM residents';
+    $query = 'SELECT r.id, r.first_name, r.last_name, r.email, r.status, r.created_at, ri.valid_id_url, ri.verification_status
+              FROM residents r
+              LEFT JOIN resident_ids ri ON ri.id = (
+                SELECT id FROM resident_ids WHERE resident_id = r.id ORDER BY created_at DESC LIMIT 1
+              )';
     $conditions = [];
     $params = [];
 
@@ -346,7 +412,7 @@ if ($path === '/api/admin/residents' && $method === 'GET') {
     if ($conditions) {
         $query .= ' WHERE ' . implode(' AND ', $conditions);
     }
-    $query .= ' ORDER BY created_at DESC';
+    $query .= ' ORDER BY r.created_at DESC';
 
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
@@ -473,12 +539,21 @@ if (preg_match('#^/api/admin/residents/(\\d+)$#', $path, $matches) && $method ==
         $stmt = $pdo->prepare('UPDATE residents SET qr_token = ? WHERE id = ?');
         $stmt->execute([$qrToken, $residentId]);
     }
+    if ($status !== null) {
+        $stmt = $pdo->prepare('UPDATE resident_ids SET verification_status = ? WHERE resident_id = ?');
+        $stmt->execute([$status, $residentId]);
+    }
 
     log_audit($pdo, 'admin', (int) $payload['id'], 'resident.updated', [
         'resident_id' => $residentId,
     ]);
 
-    $stmt = $pdo->prepare('SELECT id, first_name, last_name, email, status, created_at FROM residents WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT r.id, r.first_name, r.last_name, r.email, r.status, r.created_at, ri.valid_id_url, ri.verification_status
+                           FROM residents r
+                           LEFT JOIN resident_ids ri ON ri.id = (
+                             SELECT id FROM resident_ids WHERE resident_id = r.id ORDER BY created_at DESC LIMIT 1
+                           )
+                           WHERE r.id = ?');
     $stmt->execute([$residentId]);
     json_response(['resident' => $stmt->fetch()]);
     exit;
@@ -535,6 +610,8 @@ if (preg_match('#^/api/admin/residents/(\\d+)/status$#', $path, $matches) && $me
     $residentId = (int) $matches[1];
     $stmt = $pdo->prepare('UPDATE residents SET status = ?, updated_at = NOW() WHERE id = ?');
     $stmt->execute([$status, $residentId]);
+    $stmt = $pdo->prepare('UPDATE resident_ids SET verification_status = ? WHERE resident_id = ?');
+    $stmt->execute([$status, $residentId]);
 
     if ($status === 'approved') {
         $stmt = $pdo->prepare('SELECT qr_token FROM residents WHERE id = ?');
@@ -552,7 +629,12 @@ if (preg_match('#^/api/admin/residents/(\\d+)/status$#', $path, $matches) && $me
         'status' => $status,
     ]);
 
-    $stmt = $pdo->prepare('SELECT id, first_name, last_name, email, status, created_at FROM residents WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT r.id, r.first_name, r.last_name, r.email, r.status, r.created_at, ri.valid_id_url, ri.verification_status
+                           FROM residents r
+                           LEFT JOIN resident_ids ri ON ri.id = (
+                             SELECT id FROM resident_ids WHERE resident_id = r.id ORDER BY created_at DESC LIMIT 1
+                           )
+                           WHERE r.id = ?');
     $stmt->execute([$residentId]);
     $resident = $stmt->fetch();
     if (!$resident) {

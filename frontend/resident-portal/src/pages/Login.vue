@@ -78,10 +78,10 @@
                   </button>
                 </div>
                 </form>
-                <form v-else key="register-form" class="space-y-4" @submit.prevent="onRegister">
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label class="text-base font-semibold text-[#0B2C6F]">First name</label>
+            <form v-else key="register-form" class="space-y-4" @submit.prevent="onRegister">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="text-base font-semibold text-[#0B2C6F]">First name</label>
                       <input
                         v-model="firstName"
                         type="text"
@@ -114,21 +114,34 @@
                       required
                     />
                   </div>
-                  <div>
-                    <label class="text-base font-semibold text-[#0B2C6F]">Password</label>
-                    <input
-                      v-model="regPassword"
-                      type="password"
-                      placeholder="Create a password"
-                      autocomplete="new-password"
-                      class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
-                      required
-                    />
-                  </div>
-                <button
-                  class="w-full pop-action bg-[#F2C300] text-black py-4 rounded-2xl text-xl font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
-                  :disabled="isRegistering"
-                >
+              <div>
+                <label class="text-base font-semibold text-[#0B2C6F]">Password</label>
+                <input
+                  v-model="regPassword"
+                  type="password"
+                  placeholder="Create a password"
+                  autocomplete="new-password"
+                  class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+                  required
+                />
+              </div>
+              <div>
+                <label class="text-base font-semibold text-[#0B2C6F]">Valid ID upload</label>
+                <input
+                  type="file"
+                  accept="image/*,.pdf"
+                  class="mt-2 w-full border border-[#E5E7EB] px-5 py-4 rounded-2xl text-lg file:mr-4 file:rounded-full file:border-0 file:bg-[#0B2C6F] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+                  @change="onValidIdChange"
+                  required
+                />
+                <p class="mt-2 text-sm text-[#6B7280]">
+                  Upload a government-issued ID. Admins will verify this before activating your account.
+                </p>
+              </div>
+            <button
+              class="w-full pop-action bg-[#F2C300] text-black py-4 rounded-2xl text-xl font-semibold disabled:opacity-70 disabled:cursor-not-allowed"
+              :disabled="isRegistering"
+            >
                   {{ isRegistering ? 'Creating...' : 'Create Account' }}
                 </button>
                 <div class="text-base text-[#6B7280]">
@@ -163,6 +176,7 @@ const lastName = ref('')
 const regEmail = ref('')
 const regPassword = ref('')
 const isRegistering = ref(false)
+const validIdFile = ref(null)
 
 const openAuth = () => {
   showAuth.value = true
@@ -193,15 +207,21 @@ const onSubmit = async () => {
 const onRegister = async () => {
   error.value = ''
   isRegistering.value = true
+  if (!validIdFile.value) {
+    error.value = 'Valid ID upload is required.'
+    isRegistering.value = false
+    return
+  }
   try {
+    const formData = new FormData()
+    formData.append('first_name', firstName.value)
+    formData.append('last_name', lastName.value)
+    formData.append('email', regEmail.value)
+    formData.append('password', regPassword.value)
+    formData.append('valid_id', validIdFile.value)
     const data = await request('/api/auth/resident/register', {
       method: 'POST',
-      body: JSON.stringify({
-        first_name: firstName.value,
-        last_name: lastName.value,
-        email: regEmail.value,
-        password: regPassword.value,
-      }),
+      body: formData,
     })
     localStorage.setItem('resident_token', data.token)
     localStorage.setItem('resident_profile', JSON.stringify(data.resident))
@@ -211,6 +231,11 @@ const onRegister = async () => {
   } finally {
     isRegistering.value = false
   }
+}
+
+const onValidIdChange = (event) => {
+  const file = event.target.files?.[0] || null
+  validIdFile.value = file
 }
 
 </script>

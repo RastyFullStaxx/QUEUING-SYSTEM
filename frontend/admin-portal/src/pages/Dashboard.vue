@@ -670,13 +670,14 @@
                       <th class="py-2">Resident</th>
                       <th class="py-2">Email</th>
                       <th class="py-2">Status</th>
+                      <th class="py-2">Valid ID</th>
                       <th class="py-2">Registered</th>
                       <th class="py-2 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr v-if="isLoadingResidents">
-                      <td colspan="5" class="py-6">
+                      <td colspan="6" class="py-6">
                         <div class="table-state">
                           <span class="table-state-icon"></span>
                           <span>Loading residents...</span>
@@ -684,7 +685,7 @@
                       </td>
                     </tr>
                     <tr v-else-if="residents.length === 0">
-                      <td colspan="5" class="py-6">
+                      <td colspan="6" class="py-6">
                         <div class="table-state">
                           <span class="table-state-icon"></span>
                           <span>No residents found.</span>
@@ -708,6 +709,22 @@
                         <span class="status-pill" :class="statusClass(resident.status)">
                           {{ resident.status }}
                         </span>
+                      </td>
+                      <td class="py-4">
+                        <div class="resident-id-link">
+                          <a
+                            v-if="resident.valid_id_url"
+                            :href="resolveIdUrl(resident.valid_id_url)"
+                            target="_blank"
+                            rel="noopener"
+                          >
+                            View ID
+                          </a>
+                          <span v-else class="resident-id-missing">Not uploaded</span>
+                          <small v-if="resident.verification_status" class="resident-id-status">
+                            {{ resident.verification_status }}
+                          </small>
+                        </div>
                       </td>
                       <td class="py-4">{{ formatDate(resident.created_at) }}</td>
                       <td class="py-4 text-right">
@@ -2125,6 +2142,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { baseUrl } from '../api'
 import {
   getResidents,
   createResident as apiCreateResident,
@@ -2157,6 +2175,11 @@ const adminInitials = computed(() => {
     .map((part) => part[0].toUpperCase())
     .join('')
 })
+const resolveIdUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) return url
+  return `${baseUrl}${url}`
+}
 const activeSection = ref('dashboard')
 let dockObserver = null
 let hashListener = null
@@ -4896,6 +4919,35 @@ onBeforeUnmount(() => {
 .resident-email {
   font-weight: 500;
   color: #111827;
+}
+
+.resident-id-link {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.resident-id-link a {
+  color: #0b2c6f;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.resident-id-link a:hover {
+  text-decoration: underline;
+}
+
+.resident-id-missing {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.resident-id-status {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #64748b;
+  font-weight: 700;
 }
 
 .resident-action-group {

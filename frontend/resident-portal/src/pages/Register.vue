@@ -54,6 +54,19 @@
               required
             />
           </div>
+          <div>
+            <label class="text-sm font-semibold text-[#0B2C6F]">Valid ID upload</label>
+            <input
+              type="file"
+              accept="image/*,.pdf"
+              class="mt-2 w-full border border-[#E5E7EB] px-4 py-3 rounded-2xl text-sm file:mr-4 file:rounded-full file:border-0 file:bg-[#0B2C6F] file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white"
+              @change="onValidIdChange"
+              required
+            />
+            <p class="mt-2 text-xs text-[#6B7280]">
+              Upload a government-issued ID so admins can verify your account.
+            </p>
+          </div>
           <button class="w-full bg-[#F2C300] text-black py-3 rounded-2xl text-lg font-semibold">Create Account</button>
         </form>
         <div class="mt-5 flex items-center justify-between text-sm">
@@ -92,18 +105,24 @@ const lastName = ref('')
 const email = ref('')
 const password = ref('')
 const error = ref('')
+const validIdFile = ref(null)
 
 const onSubmit = async () => {
   error.value = ''
+  if (!validIdFile.value) {
+    error.value = 'Valid ID upload is required.'
+    return
+  }
   try {
+    const formData = new FormData()
+    formData.append('first_name', firstName.value)
+    formData.append('last_name', lastName.value)
+    formData.append('email', email.value)
+    formData.append('password', password.value)
+    formData.append('valid_id', validIdFile.value)
     const data = await request('/api/auth/resident/register', {
       method: 'POST',
-      body: JSON.stringify({
-        first_name: firstName.value,
-        last_name: lastName.value,
-        email: email.value,
-        password: password.value,
-      }),
+      body: formData,
     })
     localStorage.setItem('resident_token', data.token)
     localStorage.setItem('resident_profile', JSON.stringify(data.resident))
@@ -111,5 +130,10 @@ const onSubmit = async () => {
   } catch (err) {
     error.value = err.message
   }
+}
+
+const onValidIdChange = (event) => {
+  const file = event.target.files?.[0] || null
+  validIdFile.value = file
 }
 </script>
