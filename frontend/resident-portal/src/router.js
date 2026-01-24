@@ -5,7 +5,7 @@ import Dashboard from './pages/Dashboard.vue'
 import Profile from './pages/Profile.vue'
 
 const routes = [
-  { path: '/', redirect: '/login' },
+  { path: '/', component: Login, alias: '/welcome' },
   { path: '/login', component: Login },
   { path: '/register', component: Register },
   { path: '/dashboard', component: Dashboard },
