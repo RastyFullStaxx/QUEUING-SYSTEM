@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen relative bg-[#F7F8FB]">
-    <div
+  <div class="landing-shell">
+    <section
       class="landing-screen landing-ensure-visible"
       role="button"
       tabindex="0"
@@ -20,7 +20,7 @@
         </div>
       </div>
       <div class="landing-skyline" aria-hidden="true"></div>
-    </div>
+    </section>
 
     <transition name="auth-fade">
       <div v-if="showAuth" class="auth-overlay">
@@ -182,6 +182,7 @@ const isRegistering = ref(false)
 const validIdFile = ref(null)
 
 const openAuth = () => {
+  mode.value = 'login'
   showAuth.value = true
 }
 
