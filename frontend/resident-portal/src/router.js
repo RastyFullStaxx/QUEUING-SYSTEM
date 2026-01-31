@@ -18,4 +18,17 @@ const router = createRouter({
   routes,
 })
 
+router.beforeEach((to) => {
+  if (to.path !== '/dashboard') return true
+  const cached = localStorage.getItem('resident_profile')
+  if (!cached) return '/'
+  try {
+    const profile = JSON.parse(cached)
+    if (profile?.status === 'approved') return true
+  } catch (err) {
+    return '/'
+  }
+  return '/'
+})
+
 export default router
