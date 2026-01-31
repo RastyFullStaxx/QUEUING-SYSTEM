@@ -1728,6 +1728,51 @@ body {
   gap: 1.2rem;
 }
 
+.profile-section {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.profile-grid-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+}
+
+.profile-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.8rem;
+  margin-top: 1.2rem;
+}
+
+.summary-item {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0.75rem 0.9rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.summary-label {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.68rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.summary-value {
+  font-size: 1.02rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
 .field label {
   display: block;
   font-size: 0.85rem;
@@ -1760,6 +1805,18 @@ body {
   color: #64748b;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+.profile-input:disabled {
+  background: rgba(241, 245, 249, 0.9);
+  color: #64748b;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.profile-input[type="date"] {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .profile-section-title {
@@ -1808,6 +1865,31 @@ body {
   margin: 0;
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.9rem;
+}
+
+.upload-input {
+  margin-top: 0.6rem;
+  width: 100%;
+  max-width: 260px;
+  font-size: 0.85rem;
+  color: #ffffff;
+}
+
+.upload-input::file-selector-button {
+  border: none;
+  border-radius: 999px;
+  background: #f2c300;
+  color: #0f172a;
+  padding: 0.35rem 0.9rem;
+  font-weight: 700;
+  margin-right: 0.75rem;
+  cursor: pointer;
+}
+
+.upload-note {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .upload-box:hover {

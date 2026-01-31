@@ -45,19 +45,90 @@
             </span>
           </div>
 
+          <div class="profile-summary">
+            <div class="summary-item">
+              <span class="summary-label">Resident ID</span>
+              <span class="summary-value">{{ residentIdDisplay }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Username</span>
+              <span class="summary-value">{{ form.username || 'Not provided' }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Date of birth</span>
+              <span class="summary-value">{{ form.date_of_birth || 'Not provided' }}</span>
+            </div>
+          </div>
+
           <div class="profile-form card-reveal">
-            <div class="field">
-              <label>First name</label>
-              <input v-model="form.first_name" :readonly="!isEditing" class="profile-input" :class="inputClass" type="text" />
-            </div>
-            <div class="field">
-              <label>Last name</label>
-              <input v-model="form.last_name" :readonly="!isEditing" class="profile-input" :class="inputClass" type="text" />
-            </div>
-            <div class="field">
-              <label>Email</label>
-              <input v-model="form.email" :readonly="!isEditing" class="profile-input" :class="inputClass" type="email" />
-            </div>
+            <section class="profile-section">
+              <h3 class="profile-section-title">Account details</h3>
+              <p class="profile-section-subtitle">Keep your login credentials up to date.</p>
+              <div class="profile-grid-fields">
+                <div class="field">
+                  <label>Username</label>
+                  <input v-model="form.username" :readonly="!isEditing" class="profile-input" :class="inputClass" type="text" />
+                </div>
+                <div class="field">
+                  <label>Email</label>
+                  <input v-model="form.email" :readonly="!isEditing" class="profile-input" :class="inputClass" type="email" />
+                </div>
+              </div>
+            </section>
+
+            <section class="profile-section">
+              <h3 class="profile-section-title">Personal information</h3>
+              <p class="profile-section-subtitle">Match the details on your government ID.</p>
+              <div class="profile-grid-fields">
+                <div class="field">
+                  <label>First name</label>
+                  <input v-model="form.first_name" :readonly="!isEditing" class="profile-input" :class="inputClass" type="text" />
+                </div>
+                <div class="field">
+                  <label>Middle name</label>
+                  <input v-model="form.middle_name" :readonly="!isEditing" class="profile-input" :class="inputClass" type="text" />
+                </div>
+                <div class="field">
+                  <label>Last name</label>
+                  <input v-model="form.last_name" :readonly="!isEditing" class="profile-input" :class="inputClass" type="text" />
+                </div>
+              </div>
+              <div class="profile-grid-fields">
+                <div class="field">
+                  <label>Date of birth</label>
+                  <input v-model="form.date_of_birth" :readonly="!isEditing" class="profile-input" :class="inputClass" type="date" />
+                </div>
+                <div class="field">
+                  <label>Gender</label>
+                  <select v-model="form.gender" class="profile-input" :class="inputClass" :disabled="!isEditing">
+                    <option value="" disabled>Select gender</option>
+                    <option v-for="option in genderOptions" :key="option" :value="option">{{ option }}</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Civil status</label>
+                  <select v-model="form.civil_status" class="profile-input" :class="inputClass" :disabled="!isEditing">
+                    <option value="" disabled>Select status</option>
+                    <option v-for="option in civilStatusOptions" :key="option" :value="option">{{ option }}</option>
+                  </select>
+                </div>
+              </div>
+            </section>
+
+            <section class="profile-section">
+              <h3 class="profile-section-title">Contact & address</h3>
+              <p class="profile-section-subtitle">We use this for verification updates.</p>
+              <div class="profile-grid-fields">
+                <div class="field">
+                  <label>Mobile number</label>
+                  <input v-model="form.mobile_number" :readonly="!isEditing" class="profile-input" :class="inputClass" type="tel" />
+                </div>
+              </div>
+              <div class="field">
+                <label>Barangay address</label>
+                <textarea v-model="form.address" :readonly="!isEditing" class="profile-input" :class="inputClass" rows="3"></textarea>
+              </div>
+            </section>
           </div>
 
           <p v-if="saveMessage" class="status-message success">{{ saveMessage }}</p>
@@ -78,10 +149,18 @@
               </svg>
             </div>
             <div>
-              <p class="upload-title">Drop your ID file here</p>
-              <p class="upload-subtitle">PNG, JPG, or PDF up to 10MB.</p>
+              <p class="upload-title">Upload a new ID</p>
+              <p class="upload-subtitle">{{ validIdName }}</p>
             </div>
+            <input
+              class="upload-input"
+              type="file"
+              accept="image/*,.pdf"
+              :disabled="!isEditing"
+              @change="onValidIdChange"
+            />
           </div>
+          <p class="upload-note">If your details change, upload a new ID for re-verification.</p>
         </section>
       </div>
     </div>
@@ -96,17 +175,28 @@ const resident = ref(null)
 const isEditing = ref(false)
 const saveMessage = ref('')
 const errorMessage = ref('')
+const validIdFile = ref(null)
 const form = ref({
+  username: '',
   first_name: '',
+  middle_name: '',
   last_name: '',
+  date_of_birth: '',
+  gender: '',
+  civil_status: '',
+  mobile_number: '',
+  address: '',
   email: '',
 })
 
 const inputClass = computed(() => (!isEditing.value ? 'is-readonly' : ''))
+const validIdName = computed(() => validIdFile.value?.name || resident.value?.valid_id_name || 'No file selected yet.')
+const genderOptions = ['Male', 'Female', 'Non-binary', 'Prefer not to say']
+const civilStatusOptions = ['Single', 'Married', 'Separated', 'Widowed']
 
 const fullName = computed(() => {
   if (!resident.value) return ''
-  return `${resident.value.first_name || ''} ${resident.value.last_name || ''}`.trim()
+  return `${resident.value.first_name || ''} ${resident.value.middle_name || ''} ${resident.value.last_name || ''}`.trim()
 })
 
 const statusLabel = computed(() => {
@@ -116,10 +206,23 @@ const statusLabel = computed(() => {
   return 'Pending'
 })
 
+const residentIdDisplay = computed(() => {
+  const id = resident.value?.id
+  if (!id && id !== 0) return 'Pending approval'
+  return `BSM-RES-${String(id).padStart(6, '0')}`
+})
+
 const syncForm = (data) => {
   form.value = {
+    username: data?.username || '',
     first_name: data?.first_name || '',
+    middle_name: data?.middle_name || '',
     last_name: data?.last_name || '',
+    date_of_birth: data?.date_of_birth || '',
+    gender: data?.gender || '',
+    civil_status: data?.civil_status || '',
+    mobile_number: data?.mobile_number || '',
+    address: data?.address || '',
     email: data?.email || '',
   }
 }
@@ -145,9 +248,9 @@ const refreshProfile = async () => {
     const data = await request('/api/resident/me', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    resident.value = data.resident
-    syncForm(data.resident)
-    localStorage.setItem('resident_profile', JSON.stringify(data.resident))
+    resident.value = { ...resident.value, ...data.resident }
+    syncForm(resident.value)
+    localStorage.setItem('resident_profile', JSON.stringify(resident.value))
   } catch (err) {
     errorMessage.value = err?.message || 'Unable to refresh profile.'
   }
@@ -161,6 +264,7 @@ const enableEdit = () => {
 
 const cancelEdit = () => {
   isEditing.value = false
+  validIdFile.value = null
   if (resident.value) {
     syncForm(resident.value)
   }
@@ -170,14 +274,30 @@ const saveProfile = () => {
   if (!resident.value) return
   const updated = {
     ...resident.value,
+    username: form.value.username,
     first_name: form.value.first_name,
+    middle_name: form.value.middle_name,
     last_name: form.value.last_name,
+    date_of_birth: form.value.date_of_birth,
+    gender: form.value.gender,
+    civil_status: form.value.civil_status,
+    mobile_number: form.value.mobile_number,
+    address: form.value.address,
     email: form.value.email,
+  }
+  if (validIdFile.value) {
+    updated.valid_id_name = validIdFile.value.name
   }
   resident.value = updated
   localStorage.setItem('resident_profile', JSON.stringify(updated))
   isEditing.value = false
+  validIdFile.value = null
   saveMessage.value = 'Profile updated locally.'
+}
+
+const onValidIdChange = (event) => {
+  const file = event.target.files?.[0] || null
+  validIdFile.value = file
 }
 
 onMounted(() => {
