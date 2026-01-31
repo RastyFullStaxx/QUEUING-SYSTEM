@@ -692,13 +692,22 @@
                         </div>
                       </td>
                     </tr>
-                    <tr v-for="resident in residentPageRows" :key="resident.id" class="border-b border-[#F3F4F6]" :class="rowClass(resident.status)">
+                    <tr
+                      v-for="resident in residentPageRows"
+                      :key="resident.id"
+                      class="border-b border-[#F3F4F6] resident-row"
+                      :class="rowClass(resident.status)"
+                    >
                       <td class="py-4">
                         <div class="resident-identity">
                           <div class="resident-avatar">{{ residentInitials(resident) }}</div>
                           <div>
                             <p class="resident-name">{{ resident.first_name }} {{ resident.last_name }}</p>
-                            <p class="resident-id">ID #{{ resident.id }}</p>
+                            <p class="resident-id">
+                              ID #{{ resident.id }}
+                              <span v-if="resident.username">- {{ resident.username }}</span>
+                            </p>
+                            <p v-if="resident.mobile_number" class="resident-meta">{{ resident.mobile_number }}</p>
                           </div>
                         </div>
                       </td>
@@ -730,7 +739,7 @@
                       <td class="py-4 text-right">
                         <div class="resident-action-group">
                           <button class="resident-action is-outline" type="button" @click="openEditResidentModal(resident)">
-                            Edit
+                            Manage
                           </button>
                           <button class="resident-action is-ghost" type="button" @click="openDeleteResidentModal(resident)">
                             Delete
@@ -765,32 +774,80 @@
                 </div>
               </div>
             </div>
+
           </div>
 
           <div v-if="isResidentModalOpen" class="modal-overlay" @click.self="closeResidentModal">
-            <div class="modal-card" role="dialog" aria-modal="true">
+            <div class="modal-card is-wide" role="dialog" aria-modal="true">
               <div class="modal-header">
                 <div>
                   <h3>{{ residentModalTitle }}</h3>
-                  <p>Keep resident profiles accurate and up to date.</p>
+                  <p>{{ residentModalSubtitle }}</p>
                 </div>
                 <button class="modal-close" type="button" @click="closeResidentModal">Close</button>
               </div>
               <form class="modal-body" @submit.prevent="submitResidentForm">
+                <div class="modal-summary">
+                  <div class="modal-summary-profile">
+                    <img :src="residentModalPhoto" alt="Resident photo" />
+                    <div>
+                      <p class="modal-summary-name">{{ residentModalName || 'Resident profile' }}</p>
+                      <p class="modal-summary-meta">{{ residentForm.email || 'No email on file' }}</p>
+                      <p v-if="residentForm.username" class="modal-summary-meta">@{{ residentForm.username }}</p>
+                    </div>
+                  </div>
+                  <div class="modal-summary-status">
+                    <span class="status-pill" :class="statusClass(residentForm.status)">
+                      {{ residentForm.status || 'pending' }}
+                    </span>
+                    <p class="modal-summary-id">{{ residentModalId }}</p>
+                  </div>
+                </div>
+
                 <div class="modal-grid">
                   <label class="modal-field">
-                    <span>First name</span>
-                    <input v-model="residentForm.first_name" type="text" autocomplete="given-name" required />
-                  </label>
-                  <label class="modal-field">
-                    <span>Last name</span>
-                    <input v-model="residentForm.last_name" type="text" autocomplete="family-name" required />
+                    <span>Username</span>
+                    <input v-model="residentForm.username" type="text" autocomplete="username" />
                   </label>
                   <label class="modal-field">
                     <span>Email</span>
                     <input v-model="residentForm.email" type="email" autocomplete="email" required />
                   </label>
                   <label class="modal-field">
+                    <span>First name</span>
+                    <input v-model="residentForm.first_name" type="text" autocomplete="given-name" required />
+                  </label>
+                  <label class="modal-field">
+                    <span>Middle name</span>
+                    <input v-model="residentForm.middle_name" type="text" autocomplete="additional-name" />
+                  </label>
+                  <label class="modal-field">
+                    <span>Last name</span>
+                    <input v-model="residentForm.last_name" type="text" autocomplete="family-name" required />
+                  </label>
+                  <label class="modal-field">
+                    <span>Mobile number</span>
+                    <input v-model="residentForm.mobile_number" type="tel" autocomplete="tel" />
+                  </label>
+                  <label class="modal-field">
+                    <span>Date of birth</span>
+                    <input v-model="residentForm.date_of_birth" type="date" autocomplete="bday" />
+                  </label>
+                  <label class="modal-field">
+                    <span>Gender</span>
+                    <select v-model="residentForm.gender">
+                      <option value="">Select gender</option>
+                      <option v-for="option in genderOptions" :key="option" :value="option">{{ option }}</option>
+                    </select>
+                  </label>
+                  <label class="modal-field">
+                    <span>Civil status</span>
+                    <select v-model="residentForm.civil_status">
+                      <option value="">Select status</option>
+                      <option v-for="option in civilStatusOptions" :key="option" :value="option">{{ option }}</option>
+                    </select>
+                  </label>
+                  <label v-if="residentModalMode === 'create'" class="modal-field">
                     <span>Status</span>
                     <select v-model="residentForm.status">
                       <option value="pending">Pending</option>
@@ -798,6 +855,37 @@
                       <option value="rejected">Rejected</option>
                     </select>
                   </label>
+                  <label class="modal-field modal-full">
+                    <span>Barangay address</span>
+                    <textarea v-model="residentForm.address" rows="3"></textarea>
+                  </label>
+                  <div class="modal-field modal-full">
+                    <span>Valid ID upload</span>
+                    <div class="modal-id-card">
+                      <div class="modal-id-meta">
+                        <span>Verification status</span>
+                        <strong>{{ residentTarget?.verification_status || 'pending' }}</strong>
+                        <a
+                          v-if="residentTarget?.valid_id_url"
+                          class="modal-id-link"
+                          :href="resolveIdUrl(residentTarget.valid_id_url)"
+                          target="_blank"
+                          rel="noopener"
+                        >
+                          Open file
+                        </a>
+                      </div>
+                      <div v-if="residentTarget?.valid_id_url" class="modal-id-preview">
+                        <img
+                          v-if="isImageUrl(residentTarget.valid_id_url)"
+                          :src="resolveIdUrl(residentTarget.valid_id_url)"
+                          alt="Valid ID preview"
+                        />
+                        <div v-else class="modal-id-file">PDF uploaded</div>
+                      </div>
+                      <p v-else class="modal-id-empty">No ID uploaded yet.</p>
+                    </div>
+                  </div>
                   <label class="modal-field modal-full">
                     <span>Password</span>
                     <input
@@ -809,10 +897,38 @@
                     <small v-if="residentModalMode === 'edit'">Leave blank to keep the existing password.</small>
                   </label>
                 </div>
+
+                <div v-if="residentModalMode === 'edit'" class="modal-status-actions">
+                  <button
+                    class="resident-primary"
+                    type="button"
+                    :disabled="isResidentSaving || residentForm.status === 'approved'"
+                    @click="applyResidentStatus('approved')"
+                  >
+                    Approve resident
+                  </button>
+                  <button
+                    class="resident-secondary"
+                    type="button"
+                    :disabled="isResidentSaving || residentForm.status === 'pending'"
+                    @click="applyResidentStatus('pending')"
+                  >
+                    Mark pending
+                  </button>
+                  <button
+                    class="resident-danger"
+                    type="button"
+                    :disabled="isResidentSaving || residentForm.status === 'rejected'"
+                    @click="applyResidentStatus('rejected')"
+                  >
+                    Reject resident
+                  </button>
+                </div>
+
                 <p v-if="residentFormError" class="modal-error">{{ residentFormError }}</p>
                 <div class="modal-actions">
                   <button class="resident-tertiary" type="button" @click="closeResidentModal">Cancel</button>
-                  <button class="resident-primary" type="submit" :disabled="isResidentSaving">
+                  <button class="resident-secondary" type="submit" :disabled="isResidentSaving">
                     {{ isResidentSaving ? 'Saving...' : residentSubmitLabel }}
                   </button>
                 </div>
@@ -2177,9 +2293,12 @@ const adminInitials = computed(() => {
 })
 const resolveIdUrl = (url) => {
   if (!url) return ''
+  if (url.startsWith('data:')) return url
   if (url.startsWith('http://') || url.startsWith('https://')) return url
   return `${baseUrl}${url}`
 }
+
+const isImageUrl = (url) => /\.(png|jpe?g|gif|webp|bmp)$/i.test(url || '')
 const activeSection = ref('dashboard')
 let dockObserver = null
 let hashListener = null
@@ -2193,11 +2312,19 @@ const residentPageSize = 10
 const isResidentModalOpen = ref(false)
 const residentModalMode = ref('create')
 const residentForm = ref({
+  username: '',
   first_name: '',
+  middle_name: '',
   last_name: '',
+  date_of_birth: '',
+  gender: '',
+  civil_status: '',
+  mobile_number: '',
+  address: '',
   email: '',
   status: 'pending',
   password: '',
+  profile_photo_url: '',
 })
 const residentFormError = ref('')
 const isResidentSaving = ref(false)
@@ -2294,13 +2421,39 @@ const lastUpdatedLabel = computed(() => {
   return lastUpdatedAt.value.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
 })
 
+const genderOptions = ['Male', 'Female', 'Non-binary', 'Prefer not to say']
+const civilStatusOptions = ['Single', 'Married', 'Separated', 'Widowed']
+
 const residentModalTitle = computed(() =>
-  residentModalMode.value === 'create' ? 'Create resident' : 'Update resident'
+  residentModalMode.value === 'create' ? 'Create resident' : 'Manage resident'
 )
 
 const residentSubmitLabel = computed(() =>
-  residentModalMode.value === 'create' ? 'Create resident' : 'Save changes'
+  residentModalMode.value === 'create' ? 'Create resident' : 'Save details'
 )
+
+const residentModalSubtitle = computed(() =>
+  residentModalMode.value === 'create'
+    ? 'Add a new resident profile to the directory.'
+    : 'Review the profile details and decide the verification status.'
+)
+
+const residentModalName = computed(() => {
+  return [residentForm.value.first_name, residentForm.value.middle_name, residentForm.value.last_name]
+    .filter(Boolean)
+    .join(' ')
+})
+
+const residentModalId = computed(() => {
+  const id = residentTarget.value?.id
+  if (!id && id !== 0) return 'ID pending'
+  return `BSM-RES-${String(id).padStart(6, '0')}`
+})
+
+const residentModalPhoto = computed(() => {
+  const url = residentForm.value.profile_photo_url || residentTarget.value?.profile_photo_url || ''
+  return resolveIdUrl(url) || '/favicon.png'
+})
 
 const serviceModalTitle = computed(() =>
   serviceModalMode.value === 'create' ? 'Create service' : 'Update service'
@@ -3466,11 +3619,19 @@ const logout = () => {
 const openCreateResidentModal = () => {
   residentModalMode.value = 'create'
   residentForm.value = {
+    username: '',
     first_name: '',
+    middle_name: '',
     last_name: '',
+    date_of_birth: '',
+    gender: '',
+    civil_status: '',
+    mobile_number: '',
+    address: '',
     email: '',
     status: 'pending',
     password: '',
+    profile_photo_url: '',
   }
   residentTarget.value = null
   residentFormError.value = ''
@@ -3482,11 +3643,19 @@ const openEditResidentModal = (resident) => {
   residentModalMode.value = 'edit'
   residentTarget.value = resident
   residentForm.value = {
+    username: resident.username || '',
     first_name: resident.first_name || '',
+    middle_name: resident.middle_name || '',
     last_name: resident.last_name || '',
+    date_of_birth: resident.date_of_birth || '',
+    gender: resident.gender || '',
+    civil_status: resident.civil_status || '',
+    mobile_number: resident.mobile_number || '',
+    address: resident.address || '',
     email: resident.email || '',
     status: resident.status || 'pending',
     password: '',
+    profile_photo_url: resident.profile_photo_url || '',
   }
   residentFormError.value = ''
   isResidentSaving.value = false
@@ -3761,6 +3930,13 @@ const submitResidentForm = async () => {
     last_name: residentForm.value.last_name.trim(),
     email: residentForm.value.email.trim(),
     status: residentForm.value.status,
+    username: residentForm.value.username.trim() || null,
+    middle_name: residentForm.value.middle_name.trim() || null,
+    date_of_birth: residentForm.value.date_of_birth || null,
+    gender: residentForm.value.gender || null,
+    civil_status: residentForm.value.civil_status || null,
+    mobile_number: residentForm.value.mobile_number.trim() || null,
+    address: residentForm.value.address.trim() || null,
   }
 
   if (!payload.first_name || !payload.last_name || !payload.email) {
@@ -3792,6 +3968,11 @@ const submitResidentForm = async () => {
   } finally {
     isResidentSaving.value = false
   }
+}
+
+const applyResidentStatus = async (status) => {
+  residentForm.value.status = status
+  await submitResidentForm()
 }
 
 const openDeleteResidentModal = (resident) => {
@@ -4615,7 +4796,7 @@ onBeforeUnmount(() => {
 
 .resident-layout {
   display: grid;
-  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr);
   gap: 1.5rem;
   align-items: stretch;
 }
@@ -4841,6 +5022,12 @@ onBeforeUnmount(() => {
   box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08);
   display: grid;
   grid-template-rows: auto 1fr auto;
+}
+
+.resident-meta {
+  margin-top: 0.2rem;
+  font-size: 0.85rem;
+  color: #64748b;
 }
 
 .resident-table-header {
@@ -6766,6 +6953,15 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 
+.modal-card.is-wide {
+  width: min(860px, 100%);
+}
+
+.modal-card.is-wide .modal-body {
+  max-height: 72vh;
+  overflow: auto;
+}
+
 .modal-card.is-danger {
   border-color: rgba(192, 57, 43, 0.4);
 }
@@ -6806,6 +7002,58 @@ onBeforeUnmount(() => {
   gap: 1rem;
 }
 
+.modal-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.modal-summary-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.modal-summary-profile img {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  background: #ffffff;
+}
+
+.modal-summary-name {
+  margin: 0;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.modal-summary-meta {
+  margin-top: 0.2rem;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.modal-summary-status {
+  display: grid;
+  justify-items: end;
+  gap: 0.4rem;
+}
+
+.modal-summary-id {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0b2c6f;
+}
+
 .modal-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6821,12 +7069,17 @@ onBeforeUnmount(() => {
 }
 
 .modal-field input,
-.modal-field select {
+.modal-field select,
+.modal-field textarea {
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 0.55rem 0.75rem;
   font-size: 1rem;
   background: #f9fafb;
+}
+
+.modal-field textarea {
+  resize: vertical;
 }
 
 .modal-field small {
@@ -6844,6 +7097,81 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.modal-id-card {
+  margin-top: 0.5rem;
+  border-radius: 16px;
+  border: 1px dashed rgba(148, 163, 184, 0.5);
+  background: #f8fafc;
+  padding: 0.85rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.modal-id-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.modal-id-meta strong {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 0.7rem;
+  color: #0b2c6f;
+}
+
+.modal-id-link {
+  margin-left: auto;
+  font-weight: 700;
+  color: #0b2c6f;
+  text-decoration: none;
+}
+
+.modal-id-link:hover {
+  text-decoration: underline;
+}
+
+.modal-id-preview img {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.modal-id-file {
+  border-radius: 12px;
+  padding: 0.65rem 0.8rem;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  font-weight: 600;
+  color: #0b2c6f;
+}
+
+.modal-id-empty {
+  color: #94a3b8;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+.modal-status-actions .resident-primary,
+.modal-status-actions .resident-secondary,
+.modal-status-actions .resident-danger {
+  flex: 1 1 160px;
+  justify-content: center;
 }
 
 .modal-error {
@@ -7853,6 +8181,12 @@ onBeforeUnmount(() => {
   margin-top: 1.2rem;
   font-size: 0.9rem;
   color: #6b7280;
+}
+
+@media (max-width: 1200px) {
+  .resident-layout {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 960px) {

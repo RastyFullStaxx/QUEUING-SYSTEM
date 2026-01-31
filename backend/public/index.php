@@ -144,13 +144,31 @@ if ($path === '/api/auth/resident/register' && $method === 'POST') {
     $body = $isMultipart ? $_POST : read_json_body();
     $email = strtolower(trim($body['email'] ?? ''));
     $password = $body['password'] ?? '';
+    $username = trim($body['username'] ?? '');
     $firstName = trim($body['first_name'] ?? '');
+    $middleName = trim($body['middle_name'] ?? '');
     $lastName = trim($body['last_name'] ?? '');
+    $dateOfBirth = trim($body['date_of_birth'] ?? '');
+    $gender = trim($body['gender'] ?? '');
+    $civilStatus = trim($body['civil_status'] ?? '');
+    $mobileNumber = trim($body['mobile_number'] ?? '');
+    $address = trim($body['address'] ?? '');
     $validIdUrl = trim($body['valid_id_url'] ?? '');
     $uploadedId = $isMultipart ? ($_FILES['valid_id'] ?? null) : null;
 
-    if (!$email || !$password) {
-        json_response(['error' => 'Email and password are required'], 422);
+    if (
+        !$email ||
+        !$password ||
+        !$username ||
+        !$firstName ||
+        !$lastName ||
+        !$dateOfBirth ||
+        !$gender ||
+        !$civilStatus ||
+        !$mobileNumber ||
+        !$address
+    ) {
+        json_response(['error' => 'Complete account, personal, and contact details are required'], 422);
         exit;
     }
     if (!$validIdUrl && !$uploadedId) {
@@ -162,6 +180,13 @@ if ($path === '/api/auth/resident/register' && $method === 'POST') {
     $stmt->execute([$email]);
     if ($stmt->fetch()) {
         json_response(['error' => 'Email already registered'], 409);
+        exit;
+    }
+
+    $stmt = $pdo->prepare('SELECT id FROM residents WHERE username = ?');
+    $stmt->execute([$username]);
+    if ($stmt->fetch()) {
+        json_response(['error' => 'Username already taken'], 409);
         exit;
     }
 
@@ -193,8 +218,25 @@ if ($path === '/api/auth/resident/register' && $method === 'POST') {
 
     $hash = password_hash($password, PASSWORD_DEFAULT);
     $qrToken = generate_resident_qr_token($pdo);
-    $stmt = $pdo->prepare('INSERT INTO residents (first_name, last_name, email, password_hash, qr_token, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())');
-    $stmt->execute([$firstName, $lastName, $email, $hash, $qrToken, 'pending']);
+    $stmt = $pdo->prepare(
+        'INSERT INTO residents (username, first_name, middle_name, last_name, date_of_birth, gender, civil_status, mobile_number, address, email, password_hash, qr_token, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
+    );
+    $stmt->execute([
+        $username,
+        $firstName,
+        $middleName !== '' ? $middleName : null,
+        $lastName,
+        $dateOfBirth,
+        $gender,
+        $civilStatus,
+        $mobileNumber,
+        $address,
+        $email,
+        $hash,
+        $qrToken,
+        'pending',
+    ]);
     $residentId = (int) $pdo->lastInsertId();
     $token = issue_token('resident', $residentId, $appKey);
 
@@ -229,12 +271,21 @@ if ($path === '/api/auth/resident/register' && $method === 'POST') {
         'token' => $token,
         'resident' => [
             'id' => $residentId,
+            'username' => $username,
             'first_name' => $firstName,
+            'middle_name' => $middleName !== '' ? $middleName : null,
             'last_name' => $lastName,
+            'date_of_birth' => $dateOfBirth,
+            'gender' => $gender,
+            'civil_status' => $civilStatus,
+            'mobile_number' => $mobileNumber,
+            'address' => $address,
             'email' => $email,
             'status' => 'pending',
             'qr_token' => $qrToken,
+            'profile_photo_url' => null,
             'valid_id_url' => $validIdUrl ?: null,
+            'verification_status' => $validIdUrl ? 'pending' : null,
         ],
     ], 201);
     exit;
@@ -245,7 +296,16 @@ if ($path === '/api/auth/resident/login' && $method === 'POST') {
     $email = strtolower(trim($body['email'] ?? ''));
     $password = $body['password'] ?? '';
 
-    $stmt = $pdo->prepare('SELECT * FROM residents WHERE email = ?');
+    $stmt = $pdo->prepare(
+        'SELECT r.id, r.username, r.first_name, r.middle_name, r.last_name, r.date_of_birth, r.gender,
+                r.civil_status, r.mobile_number, r.address, r.email, r.status, r.qr_token, r.profile_photo_url,
+                r.password_hash, ri.valid_id_url, ri.verification_status
+         FROM residents r
+         LEFT JOIN resident_ids ri ON ri.id = (
+            SELECT id FROM resident_ids WHERE resident_id = r.id ORDER BY created_at DESC LIMIT 1
+         )
+         WHERE r.email = ?'
+    );
     $stmt->execute([$email]);
     $resident = $stmt->fetch();
     if (!$resident || !password_verify($password, $resident['password_hash'])) {
@@ -258,11 +318,21 @@ if ($path === '/api/auth/resident/login' && $method === 'POST') {
         'token' => $token,
         'resident' => [
             'id' => (int) $resident['id'],
+            'username' => $resident['username'],
             'first_name' => $resident['first_name'],
+            'middle_name' => $resident['middle_name'],
             'last_name' => $resident['last_name'],
+            'date_of_birth' => $resident['date_of_birth'],
+            'gender' => $resident['gender'],
+            'civil_status' => $resident['civil_status'],
+            'mobile_number' => $resident['mobile_number'],
+            'address' => $resident['address'],
             'email' => $resident['email'],
             'status' => $resident['status'],
             'qr_token' => $resident['qr_token'],
+            'profile_photo_url' => $resident['profile_photo_url'],
+            'valid_id_url' => $resident['valid_id_url'],
+            'verification_status' => $resident['verification_status'],
         ],
     ]);
     exit;
@@ -274,7 +344,208 @@ if ($path === '/api/resident/me' && $method === 'GET') {
         exit;
     }
 
-    $stmt = $pdo->prepare('SELECT id, first_name, last_name, email, status, qr_token FROM residents WHERE id = ?');
+    $stmt = $pdo->prepare(
+        'SELECT r.id, r.username, r.first_name, r.middle_name, r.last_name, r.date_of_birth, r.gender,
+                r.civil_status, r.mobile_number, r.address, r.email, r.status, r.qr_token, r.profile_photo_url,
+                ri.valid_id_url, ri.verification_status
+         FROM residents r
+         LEFT JOIN resident_ids ri ON ri.id = (
+            SELECT id FROM resident_ids WHERE resident_id = r.id ORDER BY created_at DESC LIMIT 1
+         )
+         WHERE r.id = ?'
+    );
+    $stmt->execute([(int) $payload['id']]);
+    $resident = $stmt->fetch();
+    if (!$resident) {
+        json_response(['error' => 'Resident not found'], 404);
+        exit;
+    }
+
+    json_response(['resident' => $resident]);
+    exit;
+}
+
+if ($path === '/api/resident/profile' && $method === 'POST') {
+    $payload = require_auth('resident', $appKey);
+    if (!$payload) {
+        exit;
+    }
+
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+    $isMultipart = str_contains($contentType, 'multipart/form-data');
+    $body = $isMultipart ? $_POST : read_json_body();
+    $uploadedPhoto = $isMultipart ? ($_FILES['profile_photo'] ?? null) : null;
+    $uploadedId = $isMultipart ? ($_FILES['valid_id'] ?? null) : null;
+
+    if ($uploadedPhoto && ($uploadedPhoto['error'] ?? UPLOAD_ERR_OK) === UPLOAD_ERR_NO_FILE) {
+        $uploadedPhoto = null;
+    }
+    if ($uploadedId && ($uploadedId['error'] ?? UPLOAD_ERR_OK) === UPLOAD_ERR_NO_FILE) {
+        $uploadedId = null;
+    }
+
+    $username = trim($body['username'] ?? '');
+    $firstName = trim($body['first_name'] ?? '');
+    $middleName = trim($body['middle_name'] ?? '');
+    $lastName = trim($body['last_name'] ?? '');
+    $dateOfBirth = trim($body['date_of_birth'] ?? '');
+    $gender = trim($body['gender'] ?? '');
+    $civilStatus = trim($body['civil_status'] ?? '');
+    $mobileNumber = trim($body['mobile_number'] ?? '');
+    $address = trim($body['address'] ?? '');
+    $email = strtolower(trim($body['email'] ?? ''));
+
+    if (!$firstName || !$lastName || !$email) {
+        json_response(['error' => 'First name, last name, and email are required'], 422);
+        exit;
+    }
+
+    $stmt = $pdo->prepare('SELECT id, email, username, profile_photo_url FROM residents WHERE id = ?');
+    $stmt->execute([(int) $payload['id']]);
+    $resident = $stmt->fetch();
+    if (!$resident) {
+        json_response(['error' => 'Resident not found'], 404);
+        exit;
+    }
+
+    if ($email !== $resident['email']) {
+        $stmt = $pdo->prepare('SELECT id FROM residents WHERE email = ? AND id != ?');
+        $stmt->execute([$email, (int) $payload['id']]);
+        if ($stmt->fetch()) {
+            json_response(['error' => 'Email already registered'], 409);
+            exit;
+        }
+    }
+
+    if ($username !== '' && $username !== $resident['username']) {
+        $stmt = $pdo->prepare('SELECT id FROM residents WHERE username = ? AND id != ?');
+        $stmt->execute([$username, (int) $payload['id']]);
+        if ($stmt->fetch()) {
+            json_response(['error' => 'Username already taken'], 409);
+            exit;
+        }
+    }
+
+    $profilePhotoUrl = $resident['profile_photo_url'];
+    if ($uploadedPhoto) {
+        if (($uploadedPhoto['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+            json_response(['error' => 'Profile photo upload failed'], 422);
+            exit;
+        }
+        if (($uploadedPhoto['size'] ?? 0) > 5 * 1024 * 1024) {
+            json_response(['error' => 'Profile photo must be 5MB or less'], 422);
+            exit;
+        }
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($uploadedPhoto['tmp_name']);
+        $allowedTypes = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+        ];
+        if (!isset($allowedTypes[$mimeType])) {
+            json_response(['error' => 'Profile photo must be a JPG, PNG, or WEBP'], 422);
+            exit;
+        }
+
+        $uploadDir = __DIR__ . '/uploads/resident-photos';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+            json_response(['error' => 'Unable to store profile photo upload'], 500);
+            exit;
+        }
+        $filename = sprintf(
+            'resident_%d_%s.%s',
+            (int) $payload['id'],
+            bin2hex(random_bytes(6)),
+            $allowedTypes[$mimeType]
+        );
+        $destination = $uploadDir . '/' . $filename;
+        if (!move_uploaded_file($uploadedPhoto['tmp_name'], $destination)) {
+            json_response(['error' => 'Unable to store profile photo upload'], 500);
+            exit;
+        }
+        $profilePhotoUrl = '/uploads/resident-photos/' . $filename;
+    }
+
+    $validIdUrl = null;
+    if ($uploadedId) {
+        if (($uploadedId['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+            json_response(['error' => 'Valid ID upload failed'], 422);
+            exit;
+        }
+        if (($uploadedId['size'] ?? 0) > 5 * 1024 * 1024) {
+            json_response(['error' => 'Valid ID must be 5MB or less'], 422);
+            exit;
+        }
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($uploadedId['tmp_name']);
+        $allowedTypes = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            'application/pdf' => 'pdf',
+        ];
+        if (!isset($allowedTypes[$mimeType])) {
+            json_response(['error' => 'Valid ID must be a JPG, PNG, WEBP, or PDF'], 422);
+            exit;
+        }
+
+        $uploadDir = __DIR__ . '/uploads/resident-ids';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+            json_response(['error' => 'Unable to store valid ID upload'], 500);
+            exit;
+        }
+        $filename = sprintf(
+            'resident_%d_%s.%s',
+            (int) $payload['id'],
+            bin2hex(random_bytes(6)),
+            $allowedTypes[$mimeType]
+        );
+        $destination = $uploadDir . '/' . $filename;
+        if (!move_uploaded_file($uploadedId['tmp_name'], $destination)) {
+            json_response(['error' => 'Unable to store valid ID upload'], 500);
+            exit;
+        }
+        $validIdUrl = '/uploads/resident-ids/' . $filename;
+    }
+
+    $stmt = $pdo->prepare(
+        'UPDATE residents
+         SET username = ?, first_name = ?, middle_name = ?, last_name = ?, date_of_birth = ?, gender = ?, civil_status = ?,
+             mobile_number = ?, address = ?, email = ?, profile_photo_url = ?, updated_at = NOW()
+         WHERE id = ?'
+    );
+    $stmt->execute([
+        $username !== '' ? $username : null,
+        $firstName,
+        $middleName !== '' ? $middleName : null,
+        $lastName,
+        $dateOfBirth !== '' ? $dateOfBirth : null,
+        $gender !== '' ? $gender : null,
+        $civilStatus !== '' ? $civilStatus : null,
+        $mobileNumber !== '' ? $mobileNumber : null,
+        $address !== '' ? $address : null,
+        $email,
+        $profilePhotoUrl,
+        (int) $payload['id'],
+    ]);
+
+    if ($validIdUrl) {
+        $stmt = $pdo->prepare('INSERT INTO resident_ids (resident_id, valid_id_url, verification_status, created_at) VALUES (?, ?, ?, NOW())');
+        $stmt->execute([(int) $payload['id'], $validIdUrl, 'pending']);
+    }
+
+    $stmt = $pdo->prepare(
+        'SELECT r.id, r.username, r.first_name, r.middle_name, r.last_name, r.date_of_birth, r.gender,
+                r.civil_status, r.mobile_number, r.address, r.email, r.status, r.qr_token, r.profile_photo_url,
+                ri.valid_id_url, ri.verification_status
+         FROM residents r
+         LEFT JOIN resident_ids ri ON ri.id = (
+            SELECT id FROM resident_ids WHERE resident_id = r.id ORDER BY created_at DESC LIMIT 1
+         )
+         WHERE r.id = ?'
+    );
     $stmt->execute([(int) $payload['id']]);
     $resident = $stmt->fetch();
     if (!$resident) {
@@ -390,7 +661,9 @@ if ($path === '/api/admin/residents' && $method === 'GET') {
 
     $status = $_GET['status'] ?? null;
     $search = trim($_GET['search'] ?? '');
-    $query = 'SELECT r.id, r.first_name, r.last_name, r.email, r.status, r.created_at, ri.valid_id_url, ri.verification_status
+    $query = 'SELECT r.id, r.username, r.first_name, r.middle_name, r.last_name, r.date_of_birth, r.gender,
+                     r.civil_status, r.mobile_number, r.address, r.email, r.status, r.profile_photo_url, r.created_at,
+                     ri.valid_id_url, ri.verification_status
               FROM residents r
               LEFT JOIN resident_ids ri ON ri.id = (
                 SELECT id FROM resident_ids WHERE resident_id = r.id ORDER BY created_at DESC LIMIT 1
@@ -403,8 +676,10 @@ if ($path === '/api/admin/residents' && $method === 'GET') {
         $params[] = $status;
     }
     if ($search) {
-        $conditions[] = '(first_name LIKE ? OR last_name LIKE ? OR email LIKE ?)';
+        $conditions[] = '(first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR username LIKE ? OR mobile_number LIKE ?)';
         $term = '%' . $search . '%';
+        $params[] = $term;
+        $params[] = $term;
         $params[] = $term;
         $params[] = $term;
         $params[] = $term;
@@ -430,8 +705,15 @@ if ($path === '/api/admin/residents' && $method === 'POST') {
     $body = read_json_body();
     $email = strtolower(trim($body['email'] ?? ''));
     $password = $body['password'] ?? '';
+    $username = trim($body['username'] ?? '');
     $firstName = trim($body['first_name'] ?? '');
+    $middleName = trim($body['middle_name'] ?? '');
     $lastName = trim($body['last_name'] ?? '');
+    $dateOfBirth = trim($body['date_of_birth'] ?? '');
+    $gender = trim($body['gender'] ?? '');
+    $civilStatus = trim($body['civil_status'] ?? '');
+    $mobileNumber = trim($body['mobile_number'] ?? '');
+    $address = trim($body['address'] ?? '');
     $status = $body['status'] ?? 'pending';
 
     if (!$email || !$password || !$firstName || !$lastName) {
@@ -450,17 +732,43 @@ if ($path === '/api/admin/residents' && $method === 'POST') {
         exit;
     }
 
+    if ($username !== '') {
+        $stmt = $pdo->prepare('SELECT id FROM residents WHERE username = ?');
+        $stmt->execute([$username]);
+        if ($stmt->fetch()) {
+            json_response(['error' => 'Username already taken'], 409);
+            exit;
+        }
+    }
+
     $hash = password_hash($password, PASSWORD_DEFAULT);
     $qrToken = generate_resident_qr_token($pdo);
-    $stmt = $pdo->prepare('INSERT INTO residents (first_name, last_name, email, password_hash, qr_token, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())');
-    $stmt->execute([$firstName, $lastName, $email, $hash, $qrToken, $status]);
+    $stmt = $pdo->prepare(
+        'INSERT INTO residents (username, first_name, middle_name, last_name, date_of_birth, gender, civil_status, mobile_number, address, email, password_hash, qr_token, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
+    );
+    $stmt->execute([
+        $username !== '' ? $username : null,
+        $firstName,
+        $middleName !== '' ? $middleName : null,
+        $lastName,
+        $dateOfBirth !== '' ? $dateOfBirth : null,
+        $gender !== '' ? $gender : null,
+        $civilStatus !== '' ? $civilStatus : null,
+        $mobileNumber !== '' ? $mobileNumber : null,
+        $address !== '' ? $address : null,
+        $email,
+        $hash,
+        $qrToken,
+        $status,
+    ]);
     $residentId = (int) $pdo->lastInsertId();
 
     log_audit($pdo, 'admin', (int) $payload['id'], 'resident.created', [
         'resident_id' => $residentId,
     ]);
 
-    $stmt = $pdo->prepare('SELECT id, first_name, last_name, email, status, created_at FROM residents WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, username, first_name, middle_name, last_name, date_of_birth, gender, civil_status, mobile_number, address, email, status, profile_photo_url, created_at FROM residents WHERE id = ?');
     $stmt->execute([$residentId]);
     json_response(['resident' => $stmt->fetch()], 201);
     exit;
@@ -473,7 +781,7 @@ if (preg_match('#^/api/admin/residents/(\\d+)$#', $path, $matches) && $method ==
     }
 
     $residentId = (int) $matches[1];
-    $stmt = $pdo->prepare('SELECT id, email, qr_token FROM residents WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, email, username, qr_token FROM residents WHERE id = ?');
     $stmt->execute([$residentId]);
     $resident = $stmt->fetch();
     if (!$resident) {
@@ -482,9 +790,16 @@ if (preg_match('#^/api/admin/residents/(\\d+)$#', $path, $matches) && $method ==
     }
 
     $body = read_json_body();
-    $firstName = trim($body['first_name'] ?? '');
-    $lastName = trim($body['last_name'] ?? '');
-    $email = strtolower(trim($body['email'] ?? ''));
+    $firstName = $body['first_name'] ?? null;
+    $middleName = $body['middle_name'] ?? null;
+    $lastName = $body['last_name'] ?? null;
+    $email = $body['email'] ?? null;
+    $username = $body['username'] ?? null;
+    $dateOfBirth = $body['date_of_birth'] ?? null;
+    $gender = $body['gender'] ?? null;
+    $civilStatus = $body['civil_status'] ?? null;
+    $mobileNumber = $body['mobile_number'] ?? null;
+    $address = $body['address'] ?? null;
     $status = $body['status'] ?? null;
     $password = $body['password'] ?? null;
 
@@ -493,26 +808,89 @@ if (preg_match('#^/api/admin/residents/(\\d+)$#', $path, $matches) && $method ==
         exit;
     }
 
-    if ($email !== '' && $email !== $resident['email']) {
-        $stmt = $pdo->prepare('SELECT id FROM residents WHERE email = ? AND id != ?');
-        $stmt->execute([$email, $residentId]);
-        if ($stmt->fetch()) {
-            json_response(['error' => 'Email already registered'], 409);
+    if ($email !== null) {
+        $email = strtolower(trim((string) $email));
+        if ($email === '') {
+            json_response(['error' => 'Email is required'], 422);
             exit;
+        }
+        if ($email !== $resident['email']) {
+            $stmt = $pdo->prepare('SELECT id FROM residents WHERE email = ? AND id != ?');
+            $stmt->execute([$email, $residentId]);
+            if ($stmt->fetch()) {
+                json_response(['error' => 'Email already registered'], 409);
+                exit;
+            }
+        }
+    }
+
+    if ($username !== null) {
+        $username = trim((string) $username);
+        if ($username !== '' && $username !== $resident['username']) {
+            $stmt = $pdo->prepare('SELECT id FROM residents WHERE username = ? AND id != ?');
+            $stmt->execute([$username, $residentId]);
+            if ($stmt->fetch()) {
+                json_response(['error' => 'Username already taken'], 409);
+                exit;
+            }
         }
     }
 
     $updates = [];
     $params = [];
-    if ($firstName !== '') {
+    if ($username !== null) {
+        $updates[] = 'username = ?';
+        $params[] = $username !== '' ? $username : null;
+    }
+    if ($firstName !== null) {
+        $firstName = trim((string) $firstName);
+        if ($firstName === '') {
+            json_response(['error' => 'First name is required'], 422);
+            exit;
+        }
         $updates[] = 'first_name = ?';
         $params[] = $firstName;
     }
-    if ($lastName !== '') {
+    if ($middleName !== null) {
+        $middleName = trim((string) $middleName);
+        $updates[] = 'middle_name = ?';
+        $params[] = $middleName !== '' ? $middleName : null;
+    }
+    if ($lastName !== null) {
+        $lastName = trim((string) $lastName);
+        if ($lastName === '') {
+            json_response(['error' => 'Last name is required'], 422);
+            exit;
+        }
         $updates[] = 'last_name = ?';
         $params[] = $lastName;
     }
-    if ($email !== '') {
+    if ($dateOfBirth !== null) {
+        $dateOfBirth = trim((string) $dateOfBirth);
+        $updates[] = 'date_of_birth = ?';
+        $params[] = $dateOfBirth !== '' ? $dateOfBirth : null;
+    }
+    if ($gender !== null) {
+        $gender = trim((string) $gender);
+        $updates[] = 'gender = ?';
+        $params[] = $gender !== '' ? $gender : null;
+    }
+    if ($civilStatus !== null) {
+        $civilStatus = trim((string) $civilStatus);
+        $updates[] = 'civil_status = ?';
+        $params[] = $civilStatus !== '' ? $civilStatus : null;
+    }
+    if ($mobileNumber !== null) {
+        $mobileNumber = trim((string) $mobileNumber);
+        $updates[] = 'mobile_number = ?';
+        $params[] = $mobileNumber !== '' ? $mobileNumber : null;
+    }
+    if ($address !== null) {
+        $address = trim((string) $address);
+        $updates[] = 'address = ?';
+        $params[] = $address !== '' ? $address : null;
+    }
+    if ($email !== null) {
         $updates[] = 'email = ?';
         $params[] = $email;
     }
@@ -548,7 +926,9 @@ if (preg_match('#^/api/admin/residents/(\\d+)$#', $path, $matches) && $method ==
         'resident_id' => $residentId,
     ]);
 
-    $stmt = $pdo->prepare('SELECT r.id, r.first_name, r.last_name, r.email, r.status, r.created_at, ri.valid_id_url, ri.verification_status
+    $stmt = $pdo->prepare('SELECT r.id, r.username, r.first_name, r.middle_name, r.last_name, r.date_of_birth, r.gender,
+                                  r.civil_status, r.mobile_number, r.address, r.email, r.status, r.profile_photo_url, r.created_at,
+                                  ri.valid_id_url, ri.verification_status
                            FROM residents r
                            LEFT JOIN resident_ids ri ON ri.id = (
                              SELECT id FROM resident_ids WHERE resident_id = r.id ORDER BY created_at DESC LIMIT 1
@@ -629,7 +1009,9 @@ if (preg_match('#^/api/admin/residents/(\\d+)/status$#', $path, $matches) && $me
         'status' => $status,
     ]);
 
-    $stmt = $pdo->prepare('SELECT r.id, r.first_name, r.last_name, r.email, r.status, r.created_at, ri.valid_id_url, ri.verification_status
+    $stmt = $pdo->prepare('SELECT r.id, r.username, r.first_name, r.middle_name, r.last_name, r.date_of_birth, r.gender,
+                                  r.civil_status, r.mobile_number, r.address, r.email, r.status, r.profile_photo_url, r.created_at,
+                                  ri.valid_id_url, ri.verification_status
                            FROM residents r
                            LEFT JOIN resident_ids ri ON ri.id = (
                              SELECT id FROM resident_ids WHERE resident_id = r.id ORDER BY created_at DESC LIMIT 1

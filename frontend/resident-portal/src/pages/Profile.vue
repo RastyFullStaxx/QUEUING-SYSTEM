@@ -16,8 +16,8 @@
           <button v-if="!isEditing" class="primary-button" type="button" @click="enableEdit">
             Edit profile
           </button>
-          <button v-if="isEditing" class="accent-button" type="button" @click="saveProfile">
-            Save changes
+          <button v-if="isEditing" class="accent-button" type="button" :disabled="isSaving" @click="saveProfile">
+            {{ isSaving ? 'Saving...' : 'Save changes' }}
           </button>
           <button v-if="isEditing" class="ghost-button" type="button" @click="cancelEdit">
             Cancel
@@ -155,10 +155,10 @@
           <h2 class="profile-section-title">Verification</h2>
           <p class="profile-section-subtitle">Upload a valid ID to complete verification.</p>
           <div class="upload-box card-reveal">
-            <div v-if="form.valid_id_preview" class="upload-preview">
+            <div v-if="validIdPreviewUrl" class="upload-preview">
               <img
-                v-if="form.valid_id_type?.startsWith('image/')"
-                :src="form.valid_id_preview"
+                v-if="validIdIsImage"
+                :src="validIdPreviewUrl"
                 alt="Valid ID preview"
               />
               <div v-else class="upload-file-chip">PDF uploaded</div>
@@ -171,7 +171,7 @@
               </svg>
             </div>
             <div>
-              <p class="upload-title">{{ form.valid_id_preview ? 'Replace ID file' : 'Upload a new ID' }}</p>
+              <p class="upload-title">{{ validIdPreviewUrl ? 'Replace ID file' : 'Upload a new ID' }}</p>
               <p class="upload-subtitle">{{ validIdName }}</p>
             </div>
             <input
@@ -191,10 +191,11 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { request } from '../api'
+import { baseUrl, request } from '../api'
 
 const resident = ref(null)
 const isEditing = ref(false)
+const isSaving = ref(false)
 const saveMessage = ref('')
 const errorMessage = ref('')
 const validIdFile = ref(null)
@@ -217,9 +218,35 @@ const form = ref({
 })
 
 const inputClass = computed(() => (!isEditing.value ? 'is-readonly' : ''))
-const profilePhotoUrl = computed(() => form.value.profile_photo_url || resident.value?.profile_photo_url || '/favicon.png')
+const resolveAssetUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url
+  return `${baseUrl}${url}`
+}
+const profilePhotoUrl = computed(() => {
+  const url = form.value.profile_photo_url || resident.value?.profile_photo_url || ''
+  return resolveAssetUrl(url) || '/favicon.png'
+})
+const validIdPreviewUrl = computed(() => {
+  if (form.value.valid_id_preview) return form.value.valid_id_preview
+  if (resident.value?.valid_id_url) return resolveAssetUrl(resident.value.valid_id_url)
+  return ''
+})
+const validIdIsImage = computed(() => {
+  if (form.value.valid_id_preview) {
+    return form.value.valid_id_type?.startsWith('image/')
+  }
+  const url = resident.value?.valid_id_url || ''
+  return /\.(png|jpe?g|gif|webp|bmp)(\?|$)/i.test(url)
+})
 const validIdName = computed(() => {
-  return validIdFile.value?.name || form.value.valid_id_name || resident.value?.valid_id_name || 'No file selected yet.'
+  if (validIdFile.value?.name) return validIdFile.value.name
+  if (form.value.valid_id_name) return form.value.valid_id_name
+  if (resident.value?.valid_id_url) {
+    const filename = resident.value.valid_id_url.split('/').pop() || ''
+    return filename.split('?')[0] || 'Uploaded ID'
+  }
+  return 'No file selected yet.'
 })
 const genderOptions = ['Male', 'Female', 'Non-binary', 'Prefer not to say']
 const civilStatusOptions = ['Single', 'Married', 'Separated', 'Widowed']
@@ -312,37 +339,54 @@ const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
   reader.readAsDataURL(file)
 })
 
-const saveProfile = () => {
-  if (!resident.value) return
-  const updated = {
-    ...resident.value,
-    profile_photo_url: form.value.profile_photo_url,
-    valid_id_preview: form.value.valid_id_preview,
-    valid_id_type: form.value.valid_id_type,
-    valid_id_name: form.value.valid_id_name,
-    username: form.value.username,
-    first_name: form.value.first_name,
-    middle_name: form.value.middle_name,
-    last_name: form.value.last_name,
-    date_of_birth: form.value.date_of_birth,
-    gender: form.value.gender,
-    civil_status: form.value.civil_status,
-    mobile_number: form.value.mobile_number,
-    address: form.value.address,
-    email: form.value.email,
+const saveProfile = async () => {
+  if (!resident.value || isSaving.value) return
+  saveMessage.value = ''
+  errorMessage.value = ''
+  const token = localStorage.getItem('resident_token')
+  if (!token) {
+    errorMessage.value = 'Please sign in again to update your profile.'
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('username', form.value.username || '')
+  formData.append('first_name', form.value.first_name || '')
+  formData.append('middle_name', form.value.middle_name || '')
+  formData.append('last_name', form.value.last_name || '')
+  formData.append('date_of_birth', form.value.date_of_birth || '')
+  formData.append('gender', form.value.gender || '')
+  formData.append('civil_status', form.value.civil_status || '')
+  formData.append('mobile_number', form.value.mobile_number || '')
+  formData.append('address', form.value.address || '')
+  formData.append('email', form.value.email || '')
+
+  if (profilePhotoFile.value) {
+    formData.append('profile_photo', profilePhotoFile.value)
   }
   if (validIdFile.value) {
-    updated.valid_id_name = validIdFile.value.name
+    formData.append('valid_id', validIdFile.value)
   }
-  if (profilePhotoFile.value && form.value.profile_photo_url) {
-    updated.profile_photo_url = form.value.profile_photo_url
+
+  isSaving.value = true
+  try {
+    const data = await request('/api/resident/profile', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    })
+    resident.value = { ...resident.value, ...data.resident }
+    syncForm(resident.value)
+    localStorage.setItem('resident_profile', JSON.stringify(resident.value))
+    isEditing.value = false
+    validIdFile.value = null
+    profilePhotoFile.value = null
+    saveMessage.value = 'Profile updated.'
+  } catch (err) {
+    errorMessage.value = err?.message || 'Unable to update profile.'
+  } finally {
+    isSaving.value = false
   }
-  resident.value = updated
-  localStorage.setItem('resident_profile', JSON.stringify(updated))
-  isEditing.value = false
-  validIdFile.value = null
-  profilePhotoFile.value = null
-  saveMessage.value = 'Profile updated locally.'
 }
 
 const onValidIdChange = (event) => {

@@ -225,7 +225,7 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { request } from '../api'
+import { baseUrl, request } from '../api'
 import QRCode from 'qrcode'
 
 const router = useRouter()
@@ -319,7 +319,15 @@ const residentCode = computed(() => {
 
 const qrPayload = computed(() => `BSM|RESIDENT|${residentIdPadded.value}|${qrTokenValue.value}`)
 const qrPngUrl = ref('')
-const profilePhotoSrc = computed(() => resident.value?.profile_photo_url || '/favicon.png')
+const resolveAssetUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url
+  return `${baseUrl}${url}`
+}
+const profilePhotoSrc = computed(() => {
+  const url = resident.value?.profile_photo_url
+  return resolveAssetUrl(url) || '/favicon.png'
+})
 
 const generateQr = async () => {
   if (status.value !== 'approved') {
@@ -423,6 +431,7 @@ const copyResidentCode = () => {
 
 const loadImage = (src) => new Promise((resolve, reject) => {
   const img = new Image()
+  img.crossOrigin = 'anonymous'
   img.onload = () => resolve(img)
   img.onerror = reject
   img.src = src
