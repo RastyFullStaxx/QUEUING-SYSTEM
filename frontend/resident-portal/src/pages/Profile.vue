@@ -30,11 +30,8 @@
           <span class="card-orbs" aria-hidden="true"></span>
           <span class="card-corner" aria-hidden="true"></span>
           <div class="profile-card-header">
-            <div class="profile-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="8" r="4" />
-                <path d="M4 20c1.8-4 6-6 8-6s6.2 2 8 6" />
-              </svg>
+            <div class="profile-avatar" aria-hidden="true">
+              <img class="profile-photo" :src="profilePhotoUrl" alt="Resident photo" />
             </div>
             <div>
               <p class="profile-card-kicker">Resident card</p>
@@ -61,6 +58,23 @@
           </div>
 
           <div class="profile-form card-reveal">
+            <section class="profile-section">
+              <h3 class="profile-section-title">Profile photo</h3>
+              <p class="profile-section-subtitle">This will appear on your Resident ID.</p>
+              <div class="profile-photo-row">
+                <img class="profile-photo-preview" :src="profilePhotoUrl" alt="Profile preview" />
+                <div class="profile-photo-actions">
+                  <input
+                    class="profile-photo-input"
+                    type="file"
+                    accept="image/*"
+                    :disabled="!isEditing"
+                    @change="onProfilePhotoChange"
+                  />
+                  <p class="profile-photo-note">PNG or JPG up to 5MB.</p>
+                </div>
+              </div>
+            </section>
             <section class="profile-section">
               <h3 class="profile-section-title">Account details</h3>
               <p class="profile-section-subtitle">Keep your login credentials up to date.</p>
@@ -141,7 +155,15 @@
           <h2 class="profile-section-title">Verification</h2>
           <p class="profile-section-subtitle">Upload a valid ID to complete verification.</p>
           <div class="upload-box card-reveal">
-            <div class="upload-icon" aria-hidden="true">
+            <div v-if="form.valid_id_preview" class="upload-preview">
+              <img
+                v-if="form.valid_id_type?.startsWith('image/')"
+                :src="form.valid_id_preview"
+                alt="Valid ID preview"
+              />
+              <div v-else class="upload-file-chip">PDF uploaded</div>
+            </div>
+            <div v-else class="upload-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                 <path d="M12 16V6" stroke-linecap="round" />
                 <path d="M8 10l4-4 4 4" stroke-linecap="round" stroke-linejoin="round" />
@@ -149,7 +171,7 @@
               </svg>
             </div>
             <div>
-              <p class="upload-title">Upload a new ID</p>
+              <p class="upload-title">{{ form.valid_id_preview ? 'Replace ID file' : 'Upload a new ID' }}</p>
               <p class="upload-subtitle">{{ validIdName }}</p>
             </div>
             <input
@@ -176,7 +198,12 @@ const isEditing = ref(false)
 const saveMessage = ref('')
 const errorMessage = ref('')
 const validIdFile = ref(null)
+const profilePhotoFile = ref(null)
 const form = ref({
+  profile_photo_url: '',
+  valid_id_preview: '',
+  valid_id_type: '',
+  valid_id_name: '',
   username: '',
   first_name: '',
   middle_name: '',
@@ -190,7 +217,10 @@ const form = ref({
 })
 
 const inputClass = computed(() => (!isEditing.value ? 'is-readonly' : ''))
-const validIdName = computed(() => validIdFile.value?.name || resident.value?.valid_id_name || 'No file selected yet.')
+const profilePhotoUrl = computed(() => form.value.profile_photo_url || resident.value?.profile_photo_url || '/favicon.png')
+const validIdName = computed(() => {
+  return validIdFile.value?.name || form.value.valid_id_name || resident.value?.valid_id_name || 'No file selected yet.'
+})
 const genderOptions = ['Male', 'Female', 'Non-binary', 'Prefer not to say']
 const civilStatusOptions = ['Single', 'Married', 'Separated', 'Widowed']
 
@@ -214,6 +244,10 @@ const residentIdDisplay = computed(() => {
 
 const syncForm = (data) => {
   form.value = {
+    profile_photo_url: data?.profile_photo_url || '',
+    valid_id_preview: data?.valid_id_preview || '',
+    valid_id_type: data?.valid_id_type || '',
+    valid_id_name: data?.valid_id_name || '',
     username: data?.username || '',
     first_name: data?.first_name || '',
     middle_name: data?.middle_name || '',
@@ -265,15 +299,27 @@ const enableEdit = () => {
 const cancelEdit = () => {
   isEditing.value = false
   validIdFile.value = null
+  profilePhotoFile.value = null
   if (resident.value) {
     syncForm(resident.value)
   }
 }
 
+const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader()
+  reader.onload = () => resolve(reader.result)
+  reader.onerror = reject
+  reader.readAsDataURL(file)
+})
+
 const saveProfile = () => {
   if (!resident.value) return
   const updated = {
     ...resident.value,
+    profile_photo_url: form.value.profile_photo_url,
+    valid_id_preview: form.value.valid_id_preview,
+    valid_id_type: form.value.valid_id_type,
+    valid_id_name: form.value.valid_id_name,
     username: form.value.username,
     first_name: form.value.first_name,
     middle_name: form.value.middle_name,
@@ -288,16 +334,43 @@ const saveProfile = () => {
   if (validIdFile.value) {
     updated.valid_id_name = validIdFile.value.name
   }
+  if (profilePhotoFile.value && form.value.profile_photo_url) {
+    updated.profile_photo_url = form.value.profile_photo_url
+  }
   resident.value = updated
   localStorage.setItem('resident_profile', JSON.stringify(updated))
   isEditing.value = false
   validIdFile.value = null
+  profilePhotoFile.value = null
   saveMessage.value = 'Profile updated locally.'
 }
 
 const onValidIdChange = (event) => {
   const file = event.target.files?.[0] || null
   validIdFile.value = file
+  if (!file) return
+  readFileAsDataUrl(file)
+    .then((result) => {
+      form.value.valid_id_preview = result
+      form.value.valid_id_type = file.type || ''
+      form.value.valid_id_name = file.name
+    })
+    .catch(() => {
+      errorMessage.value = 'Unable to read the uploaded ID.'
+    })
+}
+
+const onProfilePhotoChange = (event) => {
+  const file = event.target.files?.[0] || null
+  profilePhotoFile.value = file
+  if (!file) return
+  readFileAsDataUrl(file)
+    .then((result) => {
+      form.value.profile_photo_url = result
+    })
+    .catch(() => {
+      errorMessage.value = 'Unable to read the profile photo.'
+    })
 }
 
 onMounted(() => {

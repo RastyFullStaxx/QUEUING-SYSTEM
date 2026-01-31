@@ -338,6 +338,31 @@
                     </form>
                   </transition>
                   <p v-if="error" class="auth-error">{{ error }}</p>
+                  <div v-if="showVerifyDialog" class="auth-modal-overlay" role="alertdialog" aria-modal="true">
+                    <div class="auth-modal-card">
+                      <div class="auth-modal-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                          <path d="M12 8v5" stroke-linecap="round" />
+                          <circle cx="12" cy="16.5" r="1" fill="currentColor" />
+                          <path d="M10.2 3.8 3.7 16a2 2 0 0 0 1.8 3h13a2 2 0 0 0 1.8-3l-6.5-12a2 2 0 0 0-3.6 0Z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 class="auth-modal-title">Account not verified</h3>
+                        <p class="auth-modal-text">
+                          Your registration is still under review. You can sign in once the barangay team approves your account.
+                        </p>
+                      </div>
+                      <div class="auth-modal-actions">
+                        <button class="auth-modal-primary" type="button" @click="showVerifyDialog = false">
+                          Okay
+                        </button>
+                        <button class="auth-modal-ghost" type="button" @click="mode = 'register'; showVerifyDialog = false">
+                          Update details
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -374,6 +399,7 @@ const mobileNumber = ref('')
 const address = ref('')
 const isRegistering = ref(false)
 const validIdFile = ref(null)
+const showVerifyDialog = ref(false)
 const helpLink = 'mailto:helpdesk@barangay.local'
 
 const genderOptions = ['Male', 'Female', 'Non-binary', 'Prefer not to say']
@@ -387,12 +413,14 @@ const isPasswordMismatch = computed(() => {
 const openAuth = () => {
   mode.value = 'login'
   error.value = ''
+  showVerifyDialog.value = false
   showAuth.value = true
 }
 
 const closeAuth = () => {
   showAuth.value = false
   error.value = ''
+  showVerifyDialog.value = false
 }
 
 const onSubmit = async () => {
@@ -404,7 +432,7 @@ const onSubmit = async () => {
       body: JSON.stringify({ email: email.value, password: password.value }),
     })
     if (data.resident?.status !== 'approved') {
-      error.value = 'Your account is pending verification. You can sign in once approved.'
+      showVerifyDialog.value = true
       return
     }
     localStorage.setItem('resident_token', data.token)
@@ -469,7 +497,7 @@ const onRegister = async () => {
     }
     localStorage.setItem('resident_profile', JSON.stringify(enrichedResident))
     if (data.resident?.status !== 'approved') {
-      error.value = 'Account created. Please wait for verification before signing in.'
+      showVerifyDialog.value = true
       return
     }
     localStorage.setItem('resident_token', data.token)

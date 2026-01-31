@@ -319,6 +319,7 @@ const residentCode = computed(() => {
 
 const qrPayload = computed(() => `BSM|RESIDENT|${residentIdPadded.value}|${qrTokenValue.value}`)
 const qrPngUrl = ref('')
+const profilePhotoSrc = computed(() => resident.value?.profile_photo_url || '/favicon.png')
 
 const generateQr = async () => {
   if (status.value !== 'approved') {
@@ -459,39 +460,65 @@ const buildResidentIdImage = async () => {
     ctx.fillStyle = background
     ctx.fillRect(0, 0, width, height)
 
-    const band = ctx.createLinearGradient(0, 0, 320, height)
+    const bandWidth = 340
+    const band = ctx.createLinearGradient(0, 0, bandWidth, height)
     band.addColorStop(0, '#0b2c6f')
     band.addColorStop(1, '#1e40af')
     ctx.fillStyle = band
-    ctx.fillRect(0, 0, 320, height)
+    ctx.fillRect(0, 0, bandWidth, height)
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.18)'
     ctx.beginPath()
-    ctx.moveTo(240, 0)
-    ctx.lineTo(320, 0)
-    ctx.lineTo(200, height)
-    ctx.lineTo(120, height)
+    ctx.moveTo(bandWidth - 80, 0)
+    ctx.lineTo(bandWidth, 0)
+    ctx.lineTo(bandWidth - 120, height)
+    ctx.lineTo(bandWidth - 200, height)
     ctx.closePath()
     ctx.fill()
 
     ctx.fillStyle = '#ffffff'
-    ctx.font = '700 28px "Space Grotesk", "Trebuchet MS", sans-serif'
-    ctx.fillText('Barangay San Miguel', 32, 64)
-    ctx.font = '600 14px "Space Grotesk", "Trebuchet MS", sans-serif'
-    ctx.fillText('Official Resident ID', 32, 90)
+    const titleText = 'Barangay San Miguel'
+    let titleFontSize = 26
+    ctx.font = `700 ${titleFontSize}px "Space Grotesk", "Trebuchet MS", sans-serif`
+    const maxTitleWidth = bandWidth - 60
+    if (ctx.measureText(titleText).width > maxTitleWidth) {
+      titleFontSize = 22
+      ctx.font = `700 ${titleFontSize}px "Space Grotesk", "Trebuchet MS", sans-serif`
+    }
+    ctx.fillText(titleText, 28, 64)
+    ctx.font = '600 13px "Space Grotesk", "Trebuchet MS", sans-serif'
+    ctx.fillText('Official Resident ID', 28, 90)
 
+    const photoCenterX = 170
+    const photoCenterY = 235
+    const photoRadius = 86
     ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'
     ctx.beginPath()
-    ctx.arc(160, 230, 90, 0, Math.PI * 2)
+    ctx.arc(photoCenterX, photoCenterY, photoRadius, 0, Math.PI * 2)
     ctx.fill()
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)'
     ctx.lineWidth = 2
     ctx.stroke()
-    ctx.fillStyle = '#ffffff'
-    ctx.font = '600 14px "Space Grotesk", "Trebuchet MS", sans-serif'
-    ctx.fillText('Photo ID', 120, 330)
+    try {
+      const photo = await loadImage(profilePhotoSrc.value)
+      ctx.save()
+      ctx.beginPath()
+      ctx.arc(photoCenterX, photoCenterY, photoRadius - 4, 0, Math.PI * 2)
+      ctx.clip()
+      const targetSize = (photoRadius - 4) * 2
+      const scale = Math.max(targetSize / photo.width, targetSize / photo.height)
+      const drawW = photo.width * scale
+      const drawH = photo.height * scale
+      const drawX = photoCenterX - drawW / 2
+      const drawY = photoCenterY - drawH / 2
+      ctx.drawImage(photo, drawX, drawY, drawW, drawH)
+      ctx.restore()
+    } catch (err) {
+      // keep placeholder if image fails to load
+    }
+    // No caption under profile photo.
 
-    const rightX = 350
+    const rightX = bandWidth + 30
     ctx.fillStyle = '#64748b'
     ctx.font = '700 14px "Space Grotesk", "Trebuchet MS", sans-serif'
     ctx.fillText('RESIDENT ID', rightX, 70)
@@ -551,12 +578,22 @@ const buildResidentIdImage = async () => {
     })
 
     const qrImage = await loadImage(qrPngUrl.value)
+    const qrBoxX = 740
+    const qrBoxY = 400
+    const qrBoxSize = 190
+    const qrInset = 8
     ctx.fillStyle = '#ffffff'
     ctx.shadowColor = 'rgba(15, 23, 42, 0.15)'
     ctx.shadowBlur = 20
-    ctx.fillRect(760, 360, 190, 190)
+    ctx.fillRect(qrBoxX, qrBoxY, qrBoxSize, qrBoxSize)
     ctx.shadowBlur = 0
-    ctx.drawImage(qrImage, 765, 365, 180, 180)
+    ctx.drawImage(
+      qrImage,
+      qrBoxX + qrInset,
+      qrBoxY + qrInset,
+      qrBoxSize - qrInset * 2,
+      qrBoxSize - qrInset * 2
+    )
 
     idIssuedOn.value = formatDate(new Date())
     ctx.fillStyle = '#64748b'
