@@ -4,8 +4,8 @@
       <div class="brand">
         <img class="brand-logo" src="/logo.png" alt="Barangay logo" />
         <div class="brand-stack">
-          <h1 class="brand-title">Baranggay Profile</h1>
-          <p class="brand-kicker">Community verification dashboard</p>
+          <h1 class="brand-title">Barangay Resident Portal</h1>
+          <p class="brand-kicker">Resident dashboard</p>
         </div>
       </div>
       <div class="header-actions">
@@ -36,83 +36,188 @@
       </div>
     </header>
 
-    <section class="hero">
+    <main class="dashboard-body">
       <div class="sunray" aria-hidden="true"></div>
-      <div class="hero-grid">
-        <div class="hero-card">
-          <span class="card-orbs" aria-hidden="true"></span>
-          <span class="card-corner" aria-hidden="true"></span>
-          <div class="hero-left">
-            <h2 class="hero-title">Welcome, {{ residentName }}</h2>
-            <p class="hero-subtitle">{{ statusMessage }}</p>
-
-            <div class="hero-highlights">
-              <div class="highlight">
-                <div class="highlight-row">
-                  <span class="highlight-label">Resident ID</span>
-                  <button class="highlight-copy" type="button" aria-label="Copy resident ID" @click="copyResidentId">
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <rect x="8" y="8" width="10" height="12" rx="2" stroke="currentColor" stroke-width="1.6" />
-                      <rect x="5" y="4" width="10" height="12" rx="2" stroke="currentColor" stroke-width="1.6" />
-                    </svg>
-                  </button>
-                </div>
-                <span class="highlight-value">{{ residentIdDisplay }}</span>
-              </div>
-              <div class="highlight" :class="{ locked: status !== 'approved' }">
-                <div class="highlight-row">
-                  <span class="highlight-label">Resident code</span>
-                  <button
-                    class="highlight-copy"
-                    type="button"
-                    aria-label="Copy resident code"
-                    :disabled="status !== 'approved'"
-                    @click="copyResidentCode"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <rect x="8" y="8" width="10" height="12" rx="2" stroke="currentColor" stroke-width="1.6" />
-                      <rect x="5" y="4" width="10" height="12" rx="2" stroke="currentColor" stroke-width="1.6" />
-                    </svg>
-                  </button>
-                </div>
-                <span class="highlight-value">{{ residentCode }}</span>
-              </div>
-            </div>
-
-            <div class="hero-actions card-reveal">
-              <router-link class="ghost-button" to="/profile">Update profile</router-link>
-              <a class="primary-button" :href="helpLink">Contact support</a>
-            </div>
-
-            <span v-if="copyStatus" class="copy-status copy-indicator">{{ copyStatus }}</span>
-            <p class="hero-note">{{ statusDetail }}</p>
-          </div>
-        </div>
-
-        <div class="qr-showcase">
-          <span class="card-orbs" aria-hidden="true"></span>
-          <span class="card-corner" aria-hidden="true"></span>
-          <div class="qr-showcase-head">
-            <h2 class="hero-title">Resident QR</h2>
-          </div>
-          <div v-if="status === 'approved' && qrSvg" class="qr-render qr-glow" v-html="qrSvg"></div>
-          <div v-else-if="status === 'approved'" class="qr-locked">Generating QR</div>
-          <div v-else class="qr-locked">QR locked</div>
-          <div class="qr-actions card-reveal">
-            <button class="ghost-button" type="button" :disabled="status !== 'approved'" @click="downloadQr">
-              Download QR
+      <section class="dashboard-hero">
+        <div class="hero-copy">
+          <span class="status-pill" :class="`status-${status}`">{{ statusCopy }}</span>
+          <h2 class="hero-title">Welcome, {{ residentName }}</h2>
+          <p class="hero-subtitle">{{ statusMessage }}</p>
+          <p class="hero-note">{{ statusDetail }}</p>
+          <div class="hero-actions">
+            <button
+              class="primary-button"
+              type="button"
+              :disabled="status !== 'approved' || !idCardPngUrl || isIdExporting"
+              @click="downloadResidentId"
+            >
+              {{ isIdExporting ? 'Preparing ID...' : 'Download ID' }}
             </button>
-            <button class="primary-button" type="button" :disabled="status !== 'approved'" @click="copyQr">
-              Copy QR
-            </button>
+            <router-link class="ghost-button" to="/profile">Update profile</router-link>
+            <button class="ghost-button" type="button" @click="refreshStatus">Refresh status</button>
           </div>
+          <span v-if="copyStatus" class="copy-status copy-indicator">{{ copyStatus }}</span>
           <div v-if="errorMessage" class="status-alert">
             {{ errorMessage }}
           </div>
         </div>
-      </div>
+
+        <div class="hero-progress">
+          <h3>Verification journey</h3>
+          <div class="status-steps">
+            <div class="status-step is-complete">
+              <span>Registration submitted</span>
+            </div>
+            <div class="status-step" :class="{ 'is-complete': status !== 'pending' }">
+              <span>Admin verification</span>
+            </div>
+            <div class="status-step" :class="{ 'is-complete': status === 'approved' }">
+              <span>Resident ID ready</span>
+            </div>
+          </div>
+          <p class="hero-meta-note">
+            Need changes? Update your profile and re-submit if requested by the barangay.
+          </p>
+        </div>
+      </section>
+
+      <section class="dashboard-grid">
+        <section class="dashboard-card id-card-panel">
+          <span class="card-orbs" aria-hidden="true"></span>
+          <span class="card-corner" aria-hidden="true"></span>
+          <div class="card-header">
+            <div>
+              <p class="card-kicker">Resident ID</p>
+              <h3 class="card-title">Digital Resident ID</h3>
+              <p class="card-subtitle">Your QR is embedded for kiosk validation.</p>
+            </div>
+            <span class="status-pill" :class="`status-${status}`">{{ statusCopy }}</span>
+          </div>
+          <div class="id-preview" :class="{ locked: status !== 'approved' }">
+            <img
+              v-if="status === 'approved' && idCardPngUrl"
+              class="id-preview-image"
+              :src="idCardPngUrl"
+              alt="Resident ID preview"
+            />
+            <div v-else class="id-placeholder">
+              <p v-if="status === 'approved'">Generating your Resident ID...</p>
+              <p v-else>Your Resident ID will appear after verification.</p>
+            </div>
+          </div>
+          <div class="id-actions">
+            <button class="ghost-button" type="button" @click="copyResidentId">
+              Copy ID
+            </button>
+            <button
+              class="ghost-button"
+              type="button"
+              :disabled="status !== 'approved'"
+              @click="copyResidentCode"
+            >
+              Copy code
+            </button>
+            <button
+              class="primary-button"
+              type="button"
+              :disabled="status !== 'approved' || !idCardPngUrl || isIdExporting"
+              @click="downloadResidentId"
+            >
+              {{ isIdExporting ? 'Preparing ID...' : 'Download ID' }}
+            </button>
+          </div>
+          <div class="id-meta-grid">
+            <div class="id-meta">
+              <span class="meta-label">Resident ID</span>
+              <span class="meta-value">{{ residentIdDisplay }}</span>
+            </div>
+            <div class="id-meta">
+              <span class="meta-label">Resident code</span>
+              <span class="meta-value">{{ residentCode }}</span>
+            </div>
+            <div class="id-meta">
+              <span class="meta-label">Issued</span>
+              <span class="meta-value">{{ idIssuedOn || 'Pending approval' }}</span>
+            </div>
+          </div>
+          <p class="id-note">
+            Keep a copy on your phone or print the card for faster service.
+          </p>
+          <div v-if="idCardError" class="status-alert">
+            {{ idCardError }}
+          </div>
+        </section>
+
+        <div class="dashboard-stack">
+          <section class="dashboard-card">
+            <div class="card-header">
+              <div>
+                <p class="card-kicker">Profile overview</p>
+                <h3 class="card-title">Resident details</h3>
+                <p class="card-subtitle">Make sure your contact info stays current.</p>
+              </div>
+            </div>
+            <div class="detail-list">
+              <div class="detail-row">
+                <span class="detail-label">Full name</span>
+                <span class="detail-value">{{ residentName }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Email</span>
+                <span class="detail-value">{{ resident?.email || 'Not provided' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Mobile</span>
+                <span class="detail-value">{{ resident?.mobile_number || 'Not provided' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Address</span>
+                <span class="detail-value">{{ resident?.address || 'Not provided' }}</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="dashboard-card">
+            <div class="card-header">
+              <div>
+                <p class="card-kicker">Transactions</p>
+                <h3 class="card-title">Recent activity</h3>
+                <p class="card-subtitle">Completed kiosk requests and barangay services.</p>
+              </div>
+            </div>
+            <ul v-if="transactions.length" class="transaction-list">
+              <li v-for="(item, index) in transactions" :key="item.id || index" class="transaction-item">
+                <div>
+                  <p class="transaction-title">{{ item.title || item.service || 'Service request' }}</p>
+                  <p class="transaction-meta">{{ item.date || item.issued_at || 'Date not available' }}</p>
+                </div>
+                <span class="transaction-status" :class="`status-${item.status}`">
+                  {{ item.status || 'pending' }}
+                </span>
+              </li>
+            </ul>
+            <div v-else class="empty-state">
+              No transactions yet. Your completed kiosk requests will show here.
+            </div>
+          </section>
+
+          <section class="dashboard-card">
+            <div class="card-header">
+              <div>
+                <p class="card-kicker">Support</p>
+                <h3 class="card-title">Need assistance?</h3>
+                <p class="card-subtitle">Contact the barangay for updates or corrections.</p>
+              </div>
+            </div>
+            <div class="support-panel">
+              <p class="support-text">We respond during office hours and will guide you on next steps.</p>
+              <a class="primary-button" :href="helpLink">Contact support</a>
+            </div>
+          </section>
+        </div>
+      </section>
       <div class="buildings-back" aria-hidden="true"></div>
-    </section>
+    </main>
 
   </div>
 </template>
@@ -127,13 +232,20 @@ const router = useRouter()
 const resident = ref(null)
 const status = ref('pending')
 const errorMessage = ref('')
+const idCardError = ref('')
 const copyStatus = ref('')
 const isProfileMenuOpen = ref(false)
+const idCardPngUrl = ref('')
+const isIdExporting = ref(false)
+const idIssuedOn = ref('')
 const helpLink = 'mailto:helpdesk@barangay.local'
 
 const residentName = computed(() => {
   if (!resident.value) return 'Resident'
-  return `${resident.value.first_name} ${resident.value.last_name}`.trim() || 'Resident'
+  return [resident.value.first_name, resident.value.middle_name, resident.value.last_name]
+    .filter(Boolean)
+    .join(' ')
+    .trim() || 'Resident'
 })
 
 const profileInitials = computed(() => {
@@ -170,12 +282,17 @@ const statusMessage = computed(() => {
 
 const statusDetail = computed(() => {
   if (status.value === 'approved') {
-    return 'Use your resident code to start a queue at the kiosk.'
+    return 'Download your Resident ID and use the QR code at the kiosk.'
   }
   if (status.value === 'rejected') {
     return 'Review your profile details or visit the barangay office.'
   }
   return 'We will notify you once a decision is made.'
+})
+
+const transactions = computed(() => {
+  const items = resident.value?.transactions
+  return Array.isArray(items) ? items : []
 })
 
 const residentIdPadded = computed(() => {
@@ -201,26 +318,16 @@ const residentCode = computed(() => {
 })
 
 const qrPayload = computed(() => `BSM|RESIDENT|${residentIdPadded.value}|${qrTokenValue.value}`)
-const qrSvg = ref('')
 const qrPngUrl = ref('')
 
 const generateQr = async () => {
   if (status.value !== 'approved') {
-    qrSvg.value = ''
     qrPngUrl.value = ''
+    idCardPngUrl.value = ''
+    idCardError.value = ''
     return
   }
   try {
-    qrSvg.value = await QRCode.toString(qrPayload.value, {
-      type: 'svg',
-      width: 220,
-      margin: 1,
-      errorCorrectionLevel: 'M',
-      color: {
-        dark: '#0b2c6f',
-        light: '#ffffff',
-      },
-    })
     qrPngUrl.value = await QRCode.toDataURL(qrPayload.value, {
       width: 600,
       margin: 1,
@@ -230,9 +337,10 @@ const generateQr = async () => {
         light: '#ffffff',
       },
     })
+    await buildResidentIdImage()
   } catch (err) {
-    qrSvg.value = ''
     qrPngUrl.value = ''
+    idCardPngUrl.value = ''
   }
 }
 
@@ -256,8 +364,8 @@ const hydrateFromCache = () => {
   try {
     const data = JSON.parse(cached)
     if (data) {
-      resident.value = data
-      status.value = data.status || 'pending'
+      resident.value = { ...resident.value, ...data }
+      status.value = data.status || status.value || 'pending'
     }
   } catch (err) {
     return
@@ -276,9 +384,9 @@ const refreshStatus = async () => {
     const data = await request('/api/resident/me', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    resident.value = data.resident
-    status.value = data.resident?.status || 'pending'
-    localStorage.setItem('resident_profile', JSON.stringify(data.resident))
+    resident.value = { ...resident.value, ...data.resident }
+    status.value = data.resident?.status || status.value || 'pending'
+    localStorage.setItem('resident_profile', JSON.stringify(resident.value))
   } catch (err) {
     errorMessage.value = err?.message || 'Unable to refresh your status.'
   }
@@ -312,44 +420,172 @@ const copyResidentCode = () => {
   copyToClipboard(residentCodeValue.value, 'Resident code copied.', 'Unable to copy the resident code.')
 }
 
-const downloadQr = () => {
-  if (!qrPngUrl.value || status.value !== 'approved') {
-    errorMessage.value = 'QR is not ready for download.'
+const loadImage = (src) => new Promise((resolve, reject) => {
+  const img = new Image()
+  img.onload = () => resolve(img)
+  img.onerror = reject
+  img.src = src
+})
+
+const formatDate = (date) => {
+  return date.toLocaleDateString('en-PH', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  })
+}
+
+const buildResidentIdImage = async () => {
+  if (status.value !== 'approved' || !qrPngUrl.value) {
+    idCardPngUrl.value = ''
+    return
+  }
+  isIdExporting.value = true
+  idCardError.value = ''
+  try {
+    const canvas = document.createElement('canvas')
+    const width = 1000
+    const height = 630
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      throw new Error('Canvas is not supported.')
+    }
+
+    const background = ctx.createLinearGradient(0, 0, width, height)
+    background.addColorStop(0, '#f8fafc')
+    background.addColorStop(1, '#eef2ff')
+    ctx.fillStyle = background
+    ctx.fillRect(0, 0, width, height)
+
+    const band = ctx.createLinearGradient(0, 0, 320, height)
+    band.addColorStop(0, '#0b2c6f')
+    band.addColorStop(1, '#1e40af')
+    ctx.fillStyle = band
+    ctx.fillRect(0, 0, 320, height)
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.18)'
+    ctx.beginPath()
+    ctx.moveTo(240, 0)
+    ctx.lineTo(320, 0)
+    ctx.lineTo(200, height)
+    ctx.lineTo(120, height)
+    ctx.closePath()
+    ctx.fill()
+
+    ctx.fillStyle = '#ffffff'
+    ctx.font = '700 28px "Space Grotesk", "Trebuchet MS", sans-serif'
+    ctx.fillText('Barangay San Miguel', 32, 64)
+    ctx.font = '600 14px "Space Grotesk", "Trebuchet MS", sans-serif'
+    ctx.fillText('Official Resident ID', 32, 90)
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'
+    ctx.beginPath()
+    ctx.arc(160, 230, 90, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)'
+    ctx.lineWidth = 2
+    ctx.stroke()
+    ctx.fillStyle = '#ffffff'
+    ctx.font = '600 14px "Space Grotesk", "Trebuchet MS", sans-serif'
+    ctx.fillText('Photo ID', 120, 330)
+
+    const rightX = 350
+    ctx.fillStyle = '#64748b'
+    ctx.font = '700 14px "Space Grotesk", "Trebuchet MS", sans-serif'
+    ctx.fillText('RESIDENT ID', rightX, 70)
+    ctx.fillStyle = '#0b2c6f'
+    ctx.font = '700 28px "Space Grotesk", "Trebuchet MS", sans-serif'
+    ctx.fillText(residentIdDisplay.value, rightX, 105)
+
+    ctx.fillStyle = '#64748b'
+    ctx.font = '600 13px "Space Grotesk", "Trebuchet MS", sans-serif'
+    ctx.fillText('RESIDENT CODE', rightX, 138)
+    ctx.fillStyle = '#0f172a'
+    ctx.font = '600 18px "Space Grotesk", "Trebuchet MS", sans-serif'
+    ctx.fillText(residentCodeValue.value, rightX, 162)
+
+    const detailStartY = 210
+    const lineGap = 52
+    const drawDetail = (label, value, x, y, maxWidth = 360) => {
+      ctx.fillStyle = '#64748b'
+      ctx.font = '600 12px "Space Grotesk", "Trebuchet MS", sans-serif'
+      ctx.fillText(label, x, y)
+      ctx.fillStyle = '#0f172a'
+      ctx.font = '600 18px "Space Grotesk", "Trebuchet MS", sans-serif'
+      const clipped = value.length > 26 ? `${value.slice(0, 25)}...` : value
+      ctx.fillText(clipped, x, y + 22, maxWidth)
+    }
+
+    drawDetail('FULL NAME', residentName.value.toUpperCase(), rightX, detailStartY)
+    drawDetail('USERNAME', (resident.value?.username || 'Not provided').toString(), rightX, detailStartY + lineGap)
+    drawDetail('DATE OF BIRTH', resident.value?.date_of_birth || 'Not provided', rightX, detailStartY + lineGap * 2)
+    drawDetail('GENDER', resident.value?.gender || 'Not provided', rightX, detailStartY + lineGap * 3)
+
+    const rightColX = 640
+    drawDetail('MOBILE', resident.value?.mobile_number || 'Not provided', rightColX, detailStartY)
+    drawDetail('CIVIL STATUS', resident.value?.civil_status || 'Not provided', rightColX, detailStartY + lineGap)
+
+    ctx.fillStyle = '#64748b'
+    ctx.font = '600 12px "Space Grotesk", "Trebuchet MS", sans-serif'
+    ctx.fillText('ADDRESS', rightColX, detailStartY + lineGap * 2)
+    ctx.fillStyle = '#0f172a'
+    ctx.font = '600 16px "Space Grotesk", "Trebuchet MS", sans-serif'
+    const address = resident.value?.address || 'Not provided'
+    const addressLines = []
+    const words = address.split(' ')
+    let line = ''
+    words.forEach((word) => {
+      const testLine = line ? `${line} ${word}` : word
+      if (ctx.measureText(testLine).width > 240 && line) {
+        addressLines.push(line)
+        line = word
+      } else {
+        line = testLine
+      }
+    })
+    if (line) addressLines.push(line)
+    addressLines.slice(0, 2).forEach((text, index) => {
+      ctx.fillText(text, rightColX, detailStartY + lineGap * 2 + 24 + index * 18)
+    })
+
+    const qrImage = await loadImage(qrPngUrl.value)
+    ctx.fillStyle = '#ffffff'
+    ctx.shadowColor = 'rgba(15, 23, 42, 0.15)'
+    ctx.shadowBlur = 20
+    ctx.fillRect(760, 360, 190, 190)
+    ctx.shadowBlur = 0
+    ctx.drawImage(qrImage, 765, 365, 180, 180)
+
+    idIssuedOn.value = formatDate(new Date())
+    ctx.fillStyle = '#64748b'
+    ctx.font = '600 12px "Space Grotesk", "Trebuchet MS", sans-serif'
+    ctx.fillText(`Issued: ${idIssuedOn.value}`, 350, 590)
+    ctx.fillText('Status: Verified', 350, 612)
+
+    idCardPngUrl.value = canvas.toDataURL('image/png')
+  } catch (err) {
+    idCardPngUrl.value = ''
+    idCardError.value = 'Unable to generate the Resident ID image.'
+  } finally {
+    isIdExporting.value = false
+  }
+}
+
+const downloadResidentId = () => {
+  if (!idCardPngUrl.value || status.value !== 'approved') {
+    idCardError.value = 'Resident ID is not ready for download.'
     return
   }
   const link = document.createElement('a')
-  link.href = qrPngUrl.value
-  link.download = `resident-qr-${residentIdPadded.value}.png`
+  link.href = idCardPngUrl.value
+  link.download = `resident-id-${residentIdPadded.value}.png`
   link.click()
-  copyStatus.value = 'QR downloaded.'
+  copyStatus.value = 'Resident ID downloaded.'
   window.setTimeout(() => {
     copyStatus.value = ''
   }, 2000)
-}
-
-const copyQr = async () => {
-  if (status.value !== 'approved') {
-    errorMessage.value = 'Resident QR is locked until approval.'
-    return
-  }
-  if (!qrPngUrl.value) {
-    errorMessage.value = 'QR is not ready to copy.'
-    return
-  }
-  if (window.ClipboardItem && navigator?.clipboard?.write) {
-    try {
-      const blob = await fetch(qrPngUrl.value).then((res) => res.blob())
-      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })])
-      copyStatus.value = 'QR copied to clipboard.'
-      window.setTimeout(() => {
-        copyStatus.value = ''
-      }, 2000)
-      return
-    } catch (err) {
-      errorMessage.value = 'Unable to copy the QR image.'
-    }
-  }
-  copyToClipboard(qrPayload.value, 'QR payload copied.', 'Unable to copy the QR payload.')
 }
 
 onMounted(() => {
@@ -365,4 +601,10 @@ onBeforeUnmount(() => {
 watch([qrPayload, status], () => {
   generateQr()
 }, { immediate: true })
+
+watch(resident, () => {
+  if (status.value === 'approved' && qrPngUrl.value) {
+    buildResidentIdImage()
+  }
+}, { deep: true })
 </script>

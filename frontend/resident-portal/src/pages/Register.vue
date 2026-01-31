@@ -11,69 +11,195 @@
             <p class="text-sm text-[#6B7280]">Get approved to access kiosk services.</p>
           </div>
         </div>
-        <form class="space-y-4" @submit.prevent="onSubmit">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="text-sm font-semibold text-[#0B2C6F]">First name</label>
+        <form class="auth-form" @submit.prevent="onSubmit">
+          <section class="auth-section">
+            <div class="auth-section-head">
+              <div>
+                <h3>Account setup</h3>
+                <p>Choose a username and secure password.</p>
+              </div>
+            </div>
+            <div class="auth-grid">
+              <div class="auth-field">
+                <label>Username</label>
+                <input
+                  v-model="username"
+                  type="text"
+                  placeholder="bsm-resident"
+                  autocomplete="username"
+                  class="auth-input"
+                  required
+                />
+              </div>
+              <div class="auth-field">
+                <label>Email</label>
+                <input
+                  v-model="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  autocomplete="email"
+                  class="auth-input"
+                  required
+                />
+              </div>
+            </div>
+            <div class="auth-grid">
+              <div class="auth-field">
+                <label>Password</label>
+                <input
+                  v-model="password"
+                  type="password"
+                  placeholder="Create a password"
+                  autocomplete="new-password"
+                  class="auth-input"
+                  required
+                />
+              </div>
+              <div class="auth-field">
+                <label>Confirm password</label>
+                <input
+                  v-model="confirmPassword"
+                  type="password"
+                  placeholder="Re-enter password"
+                  autocomplete="new-password"
+                  class="auth-input"
+                  required
+                />
+              </div>
+            </div>
+          </section>
+
+          <section class="auth-section">
+            <div class="auth-section-head">
+              <div>
+                <h3>Personal information</h3>
+                <p>Ensure your details match your government ID.</p>
+              </div>
+            </div>
+            <div class="auth-grid">
+              <div class="auth-field">
+                <label>First name</label>
+                <input
+                  v-model="firstName"
+                  type="text"
+                  placeholder="Juan"
+                  autocomplete="given-name"
+                  class="auth-input"
+                  required
+                />
+              </div>
+              <div class="auth-field">
+                <label>Middle name</label>
+                <input
+                  v-model="middleName"
+                  type="text"
+                  placeholder="Santos"
+                  autocomplete="additional-name"
+                  class="auth-input"
+                />
+              </div>
+              <div class="auth-field">
+                <label>Last name</label>
+                <input
+                  v-model="lastName"
+                  type="text"
+                  placeholder="Dela Cruz"
+                  autocomplete="family-name"
+                  class="auth-input"
+                  required
+                />
+              </div>
+            </div>
+            <div class="auth-grid">
+              <div class="auth-field">
+                <label>Date of birth</label>
+                <input
+                  v-model="dateOfBirth"
+                  type="date"
+                  autocomplete="bday"
+                  class="auth-input"
+                  required
+                />
+              </div>
+              <div class="auth-field">
+                <label>Gender</label>
+                <select v-model="gender" class="auth-select" required>
+                  <option value="" disabled>Select gender</option>
+                  <option v-for="option in genderOptions" :key="option" :value="option">{{ option }}</option>
+                </select>
+              </div>
+              <div class="auth-field">
+                <label>Civil status</label>
+                <select v-model="civilStatus" class="auth-select" required>
+                  <option value="" disabled>Select status</option>
+                  <option v-for="option in civilStatusOptions" :key="option" :value="option">{{ option }}</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <section class="auth-section">
+            <div class="auth-section-head">
+              <div>
+                <h3>Contact & address</h3>
+                <p>We will use this for verification updates.</p>
+              </div>
+            </div>
+            <div class="auth-grid">
+              <div class="auth-field">
+                <label>Mobile number</label>
+                <input
+                  v-model="mobileNumber"
+                  type="tel"
+                  placeholder="09xx xxx xxxx"
+                  autocomplete="tel"
+                  class="auth-input"
+                  required
+                />
+              </div>
+            </div>
+            <div class="auth-field">
+              <label>Barangay address</label>
+              <textarea
+                v-model="address"
+                rows="3"
+                placeholder="House no., street, barangay, city"
+                autocomplete="street-address"
+                class="auth-textarea"
+                required
+              ></textarea>
+            </div>
+          </section>
+
+          <section class="auth-section">
+            <div class="auth-section-head">
+              <div>
+                <h3>ID verification</h3>
+                <p>Upload a clear photo or PDF of your government-issued ID.</p>
+              </div>
+            </div>
+            <div class="auth-field">
+              <label>Valid ID upload</label>
               <input
-                v-model="firstName"
-                type="text"
-                placeholder="Juan"
-                class="mt-2 w-full border border-[#E5E7EB] px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
+                type="file"
+                accept="image/*,.pdf"
+                class="auth-file"
+                @change="onValidIdChange"
                 required
               />
+              <p class="auth-help">{{ validIdName }}</p>
             </div>
-            <div>
-              <label class="text-sm font-semibold text-[#0B2C6F]">Last name</label>
-              <input
-                v-model="lastName"
-                type="text"
-                placeholder="Dela Cruz"
-                class="mt-2 w-full border border-[#E5E7EB] px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
-                required
-              />
-            </div>
-          </div>
-          <div>
-            <label class="text-sm font-semibold text-[#0B2C6F]">Email</label>
-            <input
-              v-model="email"
-              type="email"
-              placeholder="you@example.com"
-              class="mt-2 w-full border border-[#E5E7EB] px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
-              required
-            />
-          </div>
-          <div>
-            <label class="text-sm font-semibold text-[#0B2C6F]">Password</label>
-            <input
-              v-model="password"
-              type="password"
-              placeholder="Create a password"
-              class="mt-2 w-full border border-[#E5E7EB] px-4 py-3 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#0B2C6F]"
-              required
-            />
-          </div>
-          <div>
-            <label class="text-sm font-semibold text-[#0B2C6F]">Valid ID upload</label>
-            <input
-              type="file"
-              accept="image/*,.pdf"
-              class="mt-2 w-full border border-[#E5E7EB] px-4 py-3 rounded-2xl text-sm file:mr-4 file:rounded-full file:border-0 file:bg-[#0B2C6F] file:px-4 file:py-2 file:text-xs file:font-semibold file:text-white"
-              @change="onValidIdChange"
-              required
-            />
-            <p class="mt-2 text-xs text-[#6B7280]">
-              Upload a government-issued ID so admins can verify your account.
-            </p>
-          </div>
-          <button class="w-full bg-[#F2C300] text-black py-3 rounded-2xl text-lg font-semibold">Create Account</button>
+          </section>
+
+          <button class="auth-primary" :disabled="isSubmitting || isPasswordMismatch">
+            {{ isSubmitting ? 'Creating...' : 'Create Account' }}
+          </button>
         </form>
         <div class="mt-5 flex items-center justify-between text-sm">
           <span class="text-[#6B7280]">Already registered?</span>
           <router-link class="text-[#0B2C6F] font-semibold" to="/login">Login</router-link>
         </div>
-        <p v-if="error" class="mt-4 text-red-600 text-sm">{{ error }}</p>
+        <p v-if="error" class="auth-error">{{ error }}</p>
       </div>
       <div class="order-1 lg:order-2 space-y-6">
         <div>
@@ -95,28 +221,59 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { request } from '../api'
 
 const router = useRouter()
 const firstName = ref('')
+const middleName = ref('')
 const lastName = ref('')
 const email = ref('')
 const password = ref('')
+const confirmPassword = ref('')
+const username = ref('')
+const dateOfBirth = ref('')
+const gender = ref('')
+const civilStatus = ref('')
+const mobileNumber = ref('')
+const address = ref('')
 const error = ref('')
 const validIdFile = ref(null)
+const isSubmitting = ref(false)
+
+const genderOptions = ['Male', 'Female', 'Non-binary', 'Prefer not to say']
+const civilStatusOptions = ['Single', 'Married', 'Separated', 'Widowed']
+const validIdName = computed(() => validIdFile.value?.name || 'No file selected yet.')
+const isPasswordMismatch = computed(() => {
+  if (!password.value || !confirmPassword.value) return false
+  return password.value !== confirmPassword.value
+})
 
 const onSubmit = async () => {
   error.value = ''
+  isSubmitting.value = true
   if (!validIdFile.value) {
     error.value = 'Valid ID upload is required.'
+    isSubmitting.value = false
+    return
+  }
+  if (isPasswordMismatch.value) {
+    error.value = 'Passwords do not match.'
+    isSubmitting.value = false
     return
   }
   try {
     const formData = new FormData()
+    formData.append('username', username.value)
     formData.append('first_name', firstName.value)
+    formData.append('middle_name', middleName.value)
     formData.append('last_name', lastName.value)
+    formData.append('date_of_birth', dateOfBirth.value)
+    formData.append('gender', gender.value)
+    formData.append('mobile_number', mobileNumber.value)
+    formData.append('civil_status', civilStatus.value)
+    formData.append('address', address.value)
     formData.append('email', email.value)
     formData.append('password', password.value)
     formData.append('valid_id', validIdFile.value)
@@ -125,10 +282,22 @@ const onSubmit = async () => {
       body: formData,
     })
     localStorage.setItem('resident_token', data.token)
-    localStorage.setItem('resident_profile', JSON.stringify(data.resident))
+    const enrichedResident = {
+      ...data.resident,
+      username: username.value,
+      middle_name: middleName.value,
+      date_of_birth: dateOfBirth.value,
+      gender: gender.value,
+      mobile_number: mobileNumber.value,
+      civil_status: civilStatus.value,
+      address: address.value,
+    }
+    localStorage.setItem('resident_profile', JSON.stringify(enrichedResident))
     router.push('/dashboard')
   } catch (err) {
     error.value = err.message
+  } finally {
+    isSubmitting.value = false
   }
 }
 
