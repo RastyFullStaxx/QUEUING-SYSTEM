@@ -113,15 +113,23 @@ function getQueue({ service_id = '', status = '' } = {}) {
 }
 
 function queueNext(service_id) {
+  const payload = service_id ? { service_id } : {}
   return request('/api/admin/queue/next', {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ service_id }),
+    body: JSON.stringify(payload),
   })
 }
 
 function queueServe(id) {
   return request(`/api/admin/queue/${id}/serve`, {
+    method: 'POST',
+    headers: authHeaders(),
+  })
+}
+
+function queueCall(id) {
+  return request(`/api/admin/queue/${id}/call`, {
     method: 'POST',
     headers: authHeaders(),
   })
@@ -155,6 +163,7 @@ export {
   updateKiosk,
   getQueue,
   queueNext,
+  queueCall,
   queueServe,
   queueCancel,
   getAuditLogs,

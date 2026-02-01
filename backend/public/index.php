@@ -133,6 +133,29 @@ function log_audit(PDO $pdo, string $actorType, int $actorId, string $action, ar
     ]);
 }
 
+function fetch_queue_ticket(PDO $pdo, int $ticketId): ?array
+{
+    $stmt = $pdo->prepare(
+        'SELECT q.id, q.ticket_no, q.resident_id, q.service_id, q.status, q.issued_at,
+                r.username AS resident_username,
+                r.first_name AS resident_first_name,
+                r.middle_name AS resident_middle_name,
+                r.last_name AS resident_last_name,
+                r.email AS resident_email,
+                r.mobile_number AS resident_mobile_number,
+                r.address AS resident_address,
+                r.date_of_birth AS resident_date_of_birth,
+                r.gender AS resident_gender,
+                r.civil_status AS resident_civil_status
+         FROM queue_tickets q
+         JOIN residents r ON r.id = q.resident_id
+         WHERE q.id = ?'
+    );
+    $stmt->execute([$ticketId]);
+    $ticket = $stmt->fetch();
+    return $ticket ?: null;
+}
+
 if ($path === '/api/health' && $method === 'GET') {
     json_response(['status' => 'ok']);
     exit;
@@ -1345,22 +1368,34 @@ if ($path === '/api/admin/queue' && $method === 'GET') {
 
     $serviceId = (int) ($_GET['service_id'] ?? 0);
     $status = $_GET['status'] ?? null;
-    $query = 'SELECT id, ticket_no, resident_id, service_id, status, issued_at FROM queue_tickets';
+    $query = 'SELECT q.id, q.ticket_no, q.resident_id, q.service_id, q.status, q.issued_at,
+                     r.username AS resident_username,
+                     r.first_name AS resident_first_name,
+                     r.middle_name AS resident_middle_name,
+                     r.last_name AS resident_last_name,
+                     r.email AS resident_email,
+                     r.mobile_number AS resident_mobile_number,
+                     r.address AS resident_address,
+                     r.date_of_birth AS resident_date_of_birth,
+                     r.gender AS resident_gender,
+                     r.civil_status AS resident_civil_status
+              FROM queue_tickets q
+              JOIN residents r ON r.id = q.resident_id';
     $conditions = [];
     $params = [];
 
     if ($serviceId) {
-        $conditions[] = 'service_id = ?';
+        $conditions[] = 'q.service_id = ?';
         $params[] = $serviceId;
     }
     if ($status) {
-        $conditions[] = 'status = ?';
+        $conditions[] = 'q.status = ?';
         $params[] = $status;
     }
     if ($conditions) {
         $query .= ' WHERE ' . implode(' AND ', $conditions);
     }
-    $query .= ' ORDER BY issued_at ASC';
+    $query .= ' ORDER BY q.issued_at ASC';
 
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
@@ -1375,28 +1410,68 @@ if ($path === '/api/admin/queue/next' && $method === 'POST') {
     }
 
     $body = read_json_body();
-    $serviceId = (int) ($body['service_id'] ?? 0);
-    if (!$serviceId) {
-        json_response(['error' => 'service_id is required'], 422);
-        exit;
+    $serviceId = isset($body['service_id']) ? (int) $body['service_id'] : 0;
+    if ($serviceId) {
+        $stmt = $pdo->prepare('SELECT id FROM queue_tickets WHERE service_id = ? AND status = ? ORDER BY issued_at ASC LIMIT 1');
+        $stmt->execute([$serviceId, 'waiting']);
+    } else {
+        $stmt = $pdo->prepare('SELECT id FROM queue_tickets WHERE status = ? ORDER BY issued_at ASC LIMIT 1');
+        $stmt->execute(['waiting']);
     }
-
-    $stmt = $pdo->prepare('SELECT id FROM queue_tickets WHERE service_id = ? AND status = ? ORDER BY issued_at ASC LIMIT 1');
-    $stmt->execute([$serviceId, 'waiting']);
-    $ticket = $stmt->fetch();
-    if (!$ticket) {
+    $ticketRow = $stmt->fetch();
+    if (!$ticketRow) {
         json_response(['error' => 'No waiting tickets'], 404);
         exit;
     }
 
-    $ticketId = (int) $ticket['id'];
+    $ticketId = (int) $ticketRow['id'];
     $stmt = $pdo->prepare('UPDATE queue_tickets SET status = ? WHERE id = ?');
     $stmt->execute(['serving', $ticketId]);
     log_audit($pdo, 'admin', (int) $payload['id'], 'queue.serving', ['ticket_id' => $ticketId]);
 
-    $stmt = $pdo->prepare('SELECT id, ticket_no, resident_id, service_id, status, issued_at FROM queue_tickets WHERE id = ?');
+    $ticket = fetch_queue_ticket($pdo, $ticketId);
+    if (!$ticket) {
+        json_response(['error' => 'Ticket not found'], 404);
+        exit;
+    }
+
+    json_response(['ticket' => $ticket]);
+    exit;
+}
+
+if (preg_match('#^/api/admin/queue/(\\d+)/call$#', $path, $matches) && $method === 'POST') {
+    $payload = require_auth('admin', $appKey);
+    if (!$payload) {
+        exit;
+    }
+
+    $ticketId = (int) $matches[1];
+    $stmt = $pdo->prepare('SELECT id, status FROM queue_tickets WHERE id = ?');
     $stmt->execute([$ticketId]);
-    json_response(['ticket' => $stmt->fetch()]);
+    $ticketRow = $stmt->fetch();
+    if (!$ticketRow) {
+        json_response(['error' => 'Ticket not found'], 404);
+        exit;
+    }
+    if ($ticketRow['status'] !== 'waiting') {
+        json_response(['error' => 'Only waiting tickets can be called'], 422);
+        exit;
+    }
+
+    $stmt = $pdo->prepare('UPDATE queue_tickets SET status = ? WHERE id = ?');
+    $stmt->execute(['serving', $ticketId]);
+
+    log_audit($pdo, 'admin', (int) $payload['id'], 'queue.called', [
+        'ticket_id' => $ticketId,
+    ]);
+
+    $ticket = fetch_queue_ticket($pdo, $ticketId);
+    if (!$ticket) {
+        json_response(['error' => 'Ticket not found'], 404);
+        exit;
+    }
+
+    json_response(['ticket' => $ticket]);
     exit;
 }
 
@@ -1437,8 +1512,10 @@ if ($path === '/api/admin/audit-logs' && $method === 'GET') {
     }
 
     $limit = (int) ($_GET['limit'] ?? 100);
-    $stmt = $pdo->prepare('SELECT id, actor_type, actor_id, action, meta_json, created_at FROM audit_logs ORDER BY created_at DESC LIMIT ?');
-    $stmt->execute([$limit]);
+    $limit = max(1, min($limit, 500));
+    $stmt = $pdo->query(
+        'SELECT id, actor_type, actor_id, action, meta_json, created_at FROM audit_logs ORDER BY created_at DESC LIMIT ' . $limit
+    );
     $logs = $stmt->fetchAll();
     foreach ($logs as &$log) {
         $log['meta_json'] = $log['meta_json'] ? json_decode($log['meta_json'], true) : null;
