@@ -81,7 +81,12 @@
         </a>
       </nav>
       <div class="admin-dock-divider"></div>
-      <button class="admin-logout" type="button" @click="logout">
+      <div class="admin-time">
+        <span class="admin-time-label">PH time</span>
+        <span class="admin-time-value">{{ phTimeLabel }}</span>
+      </div>
+      <div class="admin-dock-divider"></div>
+      <button class="admin-logout" type="button" @click="openLogoutModal">
         Sign out
       </button>
     </header>
@@ -2348,6 +2353,41 @@
               </form>
             </div>
           </div>
+
+        </div>
+      </div>
+    </div>
+    <div v-if="isLogoutModalOpen" class="modal-overlay" @click.self="closeLogoutModal">
+      <div class="modal-card is-logout" role="dialog" aria-modal="true">
+        <div class="modal-header">
+          <div>
+            <h3>Sign out</h3>
+            <p>Confirm you want to end this admin session.</p>
+          </div>
+          <button class="modal-close" type="button" @click="closeLogoutModal">Close</button>
+        </div>
+        <div class="modal-body logout-modal-body">
+          <div class="logout-modal-hero">
+            <div class="logout-modal-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M15 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-2"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                />
+                <path d="M10 12h9m0 0-3-3m3 3-3 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <div>
+              <p class="logout-modal-title">You’re about to sign out.</p>
+              <p class="logout-modal-subtitle">Make sure any pending actions are saved before leaving.</p>
+            </div>
+          </div>
+          <div class="modal-actions logout-modal-actions">
+            <button class="resident-tertiary" type="button" @click="closeLogoutModal">Stay signed in</button>
+            <button class="resident-danger" type="button" @click="confirmLogout">Sign out now</button>
+          </div>
         </div>
       </div>
     </div>
@@ -2497,6 +2537,7 @@ const adminSortDirection = ref('desc')
 const adminPage = ref(1)
 const adminPageSize = 10
 const isAdminModalOpen = ref(false)
+const isLogoutModalOpen = ref(false)
 const adminForm = ref({ name: '', email: '', role: 'staff_admin', password: '', service_ids: '' })
 const adminFormError = ref('')
 const isAdminSaving = ref(false)
@@ -2516,6 +2557,8 @@ const analyticsStatus = ref('all')
 const analyticsStartDate = ref('')
 const analyticsEndDate = ref('')
 const lastUpdatedAt = ref(new Date())
+const phTimeLabel = ref('')
+const phTimeTimer = ref(null)
 
 const lastUpdatedLabel = computed(() => {
   if (!lastUpdatedAt.value) return 'just now'
@@ -3750,6 +3793,19 @@ const kioskInsight = computed(() => {
   return 'All kiosks are reporting in on time.'
 })
 
+const openLogoutModal = () => {
+  isLogoutModalOpen.value = true
+}
+
+const closeLogoutModal = () => {
+  isLogoutModalOpen.value = false
+}
+
+const confirmLogout = () => {
+  isLogoutModalOpen.value = false
+  logout()
+}
+
 const logout = () => {
   localStorage.removeItem('admin_token')
   localStorage.removeItem('admin_profile')
@@ -4668,6 +4724,18 @@ const formatTimeRange = (startHour) => {
 }
 
 onMounted(() => {
+  const updatePhTime = () => {
+    const formatter = new Intl.DateTimeFormat('en-PH', {
+      timeZone: 'Asia/Manila',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+    phTimeLabel.value = formatter.format(new Date())
+  }
+  updatePhTime()
+  phTimeTimer.value = setInterval(updatePhTime, 60 * 1000)
+
   const sectionIds = ['dashboard', 'queue-control', 'resident-verification', 'services', 'transactions', 'kiosk-devices', 'audit-logs', 'admin-users']
   const sections = sectionIds
     .map((id) => document.getElementById(id))
@@ -4701,6 +4769,9 @@ onBeforeUnmount(() => {
   }
   if (hashListener) {
     window.removeEventListener('hashchange', hashListener)
+  }
+  if (phTimeTimer.value) {
+    clearInterval(phTimeTimer.value)
   }
 })
 </script>
@@ -4851,6 +4922,33 @@ onBeforeUnmount(() => {
   cursor: pointer;
   box-shadow: 0 14px 26px rgba(242, 195, 0, 0.3);
   transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-time {
+  display: grid;
+  gap: 0.2rem;
+  text-align: right;
+  color: #ffffff;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(242, 195, 0, 0.18), rgba(255, 255, 255, 0.08));
+  border: 1px solid rgba(242, 195, 0, 0.25);
+  box-shadow: 0 10px 22px rgba(11, 44, 111, 0.18);
+}
+
+.admin-time-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: rgba(226, 232, 240, 0.75);
+}
+
+.admin-time-value {
+  font-size: 1.05rem;
+  color: #fef3c7;
+  letter-spacing: 0.1em;
+  font-weight: 700;
 }
 
 .admin-logout:hover {
@@ -7526,6 +7624,18 @@ onBeforeUnmount(() => {
   border-color: rgba(192, 57, 43, 0.4);
 }
 
+.modal-card.is-logout {
+  border-color: rgba(11, 44, 111, 0.2);
+  box-shadow: 0 26px 65px rgba(11, 44, 111, 0.25);
+}
+
+.modal-card.is-logout::before {
+  content: '';
+  display: block;
+  height: 4px;
+  background: linear-gradient(90deg, #0b2c6f 0%, #f2c300 55%, #f59e0b 100%);
+}
+
 .modal-header {
   display: flex;
   align-items: center;
@@ -7657,6 +7767,53 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
   flex-wrap: wrap;
   gap: 0.75rem;
+}
+
+.logout-modal-body {
+  gap: 1.25rem;
+}
+
+.logout-modal-hero {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.85rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(11, 44, 111, 0.08), rgba(242, 195, 0, 0.15));
+  border: 1px solid rgba(11, 44, 111, 0.1);
+}
+
+.logout-modal-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: #0b2c6f;
+  color: #f2c300;
+  box-shadow: 0 12px 25px rgba(11, 44, 111, 0.3);
+}
+
+.logout-modal-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.logout-modal-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.logout-modal-subtitle {
+  margin-top: 0.3rem;
+  color: #6b7280;
+}
+
+.logout-modal-actions {
+  justify-content: space-between;
+  align-items: center;
 }
 
 .modal-id-card {
@@ -8845,6 +9002,11 @@ onBeforeUnmount(() => {
     font-size: 0.95rem;
   }
 
+  .admin-time {
+    width: 100%;
+    text-align: left;
+  }
+
   .dashboard-stat-grid {
     grid-template-columns: 1fr;
   }
@@ -8929,6 +9091,16 @@ onBeforeUnmount(() => {
 
   .queue-call-cta {
     width: 100%;
+  }
+
+  .logout-modal-hero {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .logout-modal-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 
   .queue-filter-grid {
