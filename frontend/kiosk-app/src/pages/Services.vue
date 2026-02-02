@@ -5,10 +5,10 @@
     </div>
     <div v-if="showStageReveal" class="kiosk-stage-reveal" aria-hidden="true"></div>
     <div
-      class="relative z-10 min-h-screen flex items-center justify-center px-6 py-10 kiosk-service-body"
+      class="relative z-10 min-h-screen flex items-stretch justify-center px-6 py-8 kiosk-service-body"
       :class="{ 'kiosk-dim': showConfirm || showReminder || showStepFlash }"
     >
-      <div v-if="!showStepFlash" class="w-full max-w-none mx-auto grid gap-10">
+      <div v-if="!showStepFlash" class="kiosk-step-shell kiosk-service-shell">
         <div class="kiosk-service-hero kiosk-fade">
           <div class="kiosk-step-header">
             <div class="kiosk-pill">
@@ -53,14 +53,7 @@
           </span>
         </div>
 
-        <div v-if="services.length" class="kiosk-service-stage-row kiosk-fade kiosk-fade-delay-1">
-          <button
-            class="kiosk-arrow-button kiosk-arrow-button--back kiosk-action"
-            type="button"
-            @click="handleBack"
-          >
-            <span>{{ labels.back }}</span>
-          </button>
+        <div v-if="services.length" class="kiosk-service-grid-wrap kiosk-fade kiosk-fade-delay-1">
           <div class="kiosk-service-grid">
             <button
               v-for="(service, index) in services"
@@ -182,15 +175,6 @@
 
             </button>
           </div>
-          <button
-            class="kiosk-arrow-button kiosk-arrow-button--proceed kiosk-action"
-            :class="{ 'is-disabled': !selectedServices.length }"
-            type="button"
-            :aria-disabled="!selectedServices.length"
-            @click="handleProceed"
-          >
-            <span>{{ labels.proceed }}</span>
-          </button>
         </div>
 
         <div v-else class="kiosk-service-empty kiosk-fade kiosk-fade-delay-1">
@@ -199,6 +183,26 @@
         </div>
 
         <p v-if="error" class="kiosk-service-error">{{ error }}</p>
+
+        <div class="kiosk-step-actions">
+          <button
+            class="kiosk-arrow-button kiosk-arrow-button--back kiosk-action"
+            type="button"
+            @click="handleBack"
+          >
+            <span>{{ labels.back }}</span>
+          </button>
+          <button
+            class="kiosk-arrow-button kiosk-arrow-button--proceed kiosk-action"
+            :class="{ 'is-disabled': !selectedServices.length }"
+            type="button"
+            :disabled="!selectedServices.length"
+            :aria-disabled="!selectedServices.length"
+            @click="handleProceed"
+          >
+            <span>{{ labels.proceed }}</span>
+          </button>
+        </div>
       </div>
     </div>
 

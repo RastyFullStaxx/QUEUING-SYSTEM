@@ -1,102 +1,135 @@
 <template>
-  <div class="min-h-screen kiosk-scan kiosk-stage">
+  <div class="min-h-screen kiosk-scan kiosk-stage overflow-hidden">
     <div v-if="showStepFlash" class="kiosk-step-flash" aria-hidden="true">
       <span class="kiosk-step-flash-text">{{ labels.stepFlash }}</span>
     </div>
     <div v-if="showStageReveal" class="kiosk-stage-reveal" aria-hidden="true"></div>
     <div
-      class="relative z-10 min-h-screen flex items-center justify-center px-6 py-10"
+      class="relative z-10 h-screen flex items-stretch justify-center px-6 overflow-hidden"
       :class="{ 'kiosk-dim': showLanguagePrompt || showInstructions || showManualEntry || showBackConfirm || showStepFlash }"
     >
       <transition name="kiosk-page">
-        <div v-if="isReady && !showStepFlash" class="kiosk-scan-shell">
-          <div class="kiosk-hero kiosk-hero-centered kiosk-fade">
-            <div class="kiosk-step-header">
-              <div class="kiosk-pill">
-                <span class="scan-dot"></span>
-                {{ labels.stepBadge }}
-              </div>
-            </div>
-            <h1 class="mt-6 text-4xl sm:text-5xl lg:text-6xl font-semibold text-[#0B2C6F] font-hero">
-              {{ labels.heroTitle }}
-            </h1>
-            <p class="mt-4 text-lg text-slate-700/80 max-w-xl">{{ labels.heroSubtitle }}</p>
-            <p class="kiosk-hero-tip">{{ labels.heroTip }}</p>
-          </div>
-          <div class="kiosk-scan-stage-row kiosk-fade kiosk-fade-delay-2">
-            <button class="kiosk-arrow-button kiosk-arrow-button--back kiosk-action" type="button" @click="openBackConfirm">
-              <span>{{ labels.back }}</span>
-            </button>
-            <div class="kiosk-scan-panel kiosk-option-card kiosk-option-card--alt kiosk-scan-spotlight">
-              <div class="kiosk-scan-panel-header">
-                <div class="kiosk-option-label">{{ labels.scannerReady }}</div>
-                <div class="kiosk-scan-live">
-                  <span class="scan-live-dot" aria-hidden="true"></span>
-                  <span>{{ labels.cameraActive }}</span>
+        <div v-if="isReady && !showStepFlash" class="kiosk-scan-shell kiosk-step-shell">
+          <div class="kiosk-step-main kiosk-scan-layout">
+            <div class="kiosk-hero kiosk-hero-left kiosk-fade">
+              <div class="kiosk-step-header">
+                <div class="kiosk-pill">
+                  <span class="scan-dot"></span>
+                  {{ labels.stepBadge }}
                 </div>
               </div>
-              <input
-                ref="inputRef"
-                v-model="qrCode"
-                class="sr-only"
-                :placeholder="labels.manualPlaceholder"
-                @keyup.enter="onSubmit"
-              />
-              <div class="scan-frame scan-frame-hero" :class="{ 'is-locked': hasQr }">
-                <span class="scan-corner corner-tl" aria-hidden="true"></span>
-                <span class="scan-corner corner-tr" aria-hidden="true"></span>
-                <span class="scan-corner corner-bl" aria-hidden="true"></span>
-                <span class="scan-corner corner-br" aria-hidden="true"></span>
-                <div class="scan-grid" aria-hidden="true"></div>
-                <div class="scan-beam" :class="{ 'is-locked': hasQr }"></div>
-                <div class="scan-center">
-                  <div class="scan-state-icon" :class="{ 'is-locked': hasQr }">
-                    <svg v-if="hasQr" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M5 12l4 4 10-10" />
-                    </svg>
-                    <svg v-else class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                      <path d="M3 7V3h4" />
-                      <path d="M17 3h4v4" />
-                      <path d="M21 17v4h-4" />
-                      <path d="M7 21H3v-4" />
-                      <path d="M7 12h10" />
-                    </svg>
+              <h1 class="mt-6 text-4xl sm:text-5xl lg:text-6xl font-semibold text-[#0B2C6F] font-hero">
+                {{ labels.heroTitle }}
+              </h1>
+              <p class="mt-4 text-lg text-slate-700/80 max-w-xl">{{ labels.heroSubtitle }}</p>
+              <p class="kiosk-hero-tip">{{ labels.heroTip }}</p>
+              <div class="kiosk-scan-guide">
+                <div class="kiosk-scan-guide-card">
+                  <span>01</span>
+                  <strong>{{ labels.step1Title }}</strong>
+                  <p>{{ labels.step1Body }}</p>
+                </div>
+                <div class="kiosk-scan-guide-card">
+                  <span>02</span>
+                  <strong>{{ labels.step2Title }}</strong>
+                  <p>{{ labels.step2Body }}</p>
+                </div>
+                <div class="kiosk-scan-guide-card">
+                  <span>03</span>
+                  <strong>{{ labels.step3Title }}</strong>
+                  <p>{{ labels.step3Body }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="kiosk-scan-panel-stack kiosk-fade kiosk-fade-delay-1">
+              <div class="kiosk-scan-panel kiosk-option-card kiosk-option-card--alt kiosk-scan-spotlight">
+                <div class="kiosk-scan-panel-header">
+                  <div class="kiosk-option-label">{{ labels.scannerReady }}</div>
+                  <div class="kiosk-scan-live">
+                    <span class="scan-live-dot" aria-hidden="true"></span>
+                    <span>{{ labels.cameraActive }}</span>
                   </div>
-                  <div class="scan-state-title">{{ scanTitle }}</div>
-                  <p class="scan-state-text">{{ scanSubtitle }}</p>
                 </div>
-              </div>
-              <div class="scan-status">
-                <span class="scan-status-pill" :class="hasQr ? 'is-locked' : 'is-ready'">
-                  {{ hasQr ? labels.statusLocked : labels.statusReady }}
-                </span>
-                <p class="scan-status-text" :class="{ 'is-searching': !hasQr }">
-                  {{ scanStatusText }}
-                </p>
-              </div>
-              <div class="kiosk-scan-tips">
-                <span class="kiosk-scan-tip">{{ labels.tipHoldSteady }}</span>
-                <span class="kiosk-scan-tip">{{ labels.tipAvoidGlare }}</span>
-                <span class="kiosk-scan-tip">{{ labels.tipMoveCloser }}</span>
-              </div>
-              <div class="kiosk-manual-card">
-                <div class="kiosk-manual-copy">
-                  <p class="kiosk-manual-kicker">{{ labels.manualPrompt }}</p>
-                  <p class="kiosk-manual-text">{{ labels.manualAction }}</p>
+                <input
+                  ref="inputRef"
+                  v-model="qrCode"
+                  class="sr-only"
+                  :placeholder="labels.manualPlaceholder"
+                  @keyup.enter="onSubmit"
+                />
+                <div class="scan-frame scan-frame-hero" :class="{ 'is-locked': hasQr }">
+                  <span class="scan-corner corner-tl" aria-hidden="true"></span>
+                  <span class="scan-corner corner-tr" aria-hidden="true"></span>
+                  <span class="scan-corner corner-bl" aria-hidden="true"></span>
+                  <span class="scan-corner corner-br" aria-hidden="true"></span>
+                  <div class="scan-grid" aria-hidden="true"></div>
+                  <div class="scan-beam" :class="{ 'is-locked': hasQr }"></div>
+                  <div class="scan-center">
+                    <div class="scan-state-icon" :class="{ 'is-locked': hasQr }">
+                      <svg v-if="hasQr" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12l4 4 10-10" />
+                      </svg>
+                      <svg v-else class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 7V3h4" />
+                        <path d="M17 3h4v4" />
+                        <path d="M21 17v4h-4" />
+                        <path d="M7 21H3v-4" />
+                        <path d="M7 12h10" />
+                      </svg>
+                    </div>
+                    <div class="scan-state-title">{{ scanTitle }}</div>
+                    <p class="scan-state-text">{{ scanSubtitle }}</p>
+                  </div>
                 </div>
-                <button class="kiosk-manual-button" type="button" @click="openManualEntry">
-                  {{ labels.manualButton }}
-                </button>
+                <div class="scan-status">
+                  <span class="scan-status-pill" :class="hasQr ? 'is-locked' : 'is-ready'">
+                    {{ hasQr ? labels.statusLocked : labels.statusReady }}
+                  </span>
+                  <p class="scan-status-text" :class="{ 'is-searching': !hasQr }">
+                    {{ scanStatusText }}
+                  </p>
+                </div>
+                <div class="kiosk-scan-tips">
+                  <span class="kiosk-scan-tip">{{ labels.tipHoldSteady }}</span>
+                  <span class="kiosk-scan-tip">{{ labels.tipAvoidGlare }}</span>
+                  <span class="kiosk-scan-tip">{{ labels.tipMoveCloser }}</span>
+                </div>
+                <div class="kiosk-manual-card">
+                  <div class="kiosk-manual-copy">
+                    <p class="kiosk-manual-kicker">{{ labels.manualPrompt }}</p>
+                    <p class="kiosk-manual-text">{{ labels.manualAction }}</p>
+                  </div>
+                  <button class="kiosk-manual-button" type="button" @click="openManualEntry">
+                    {{ labels.manualButton }}
+                  </button>
+                </div>
               </div>
             </div>
-            <div aria-hidden="true"></div>
           </div>
+
           <div
             v-if="error && !showManualEntry"
             class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm"
             role="alert"
           >
             {{ error }}
+          </div>
+
+          <div class="kiosk-step-actions">
+            <button class="kiosk-arrow-button kiosk-arrow-button--back kiosk-action" type="button" @click="openBackConfirm">
+              <span>{{ labels.back }}</span>
+            </button>
+            <button
+              class="kiosk-arrow-button kiosk-arrow-button--proceed kiosk-action"
+              :class="{ 'is-disabled': !hasQr }"
+              :aria-disabled="!hasQr"
+              :disabled="!hasQr"
+              type="button"
+              @click="onSubmit"
+            >
+              <span>{{ labels.proceed }}</span>
+            </button>
           </div>
         </div>
       </transition>
@@ -300,6 +333,7 @@ const copy = {
     manualAction: 'Enter code instead.',
     manualButton: 'Enter code manually',
     back: 'Go back',
+    proceed: 'Proceed',
     backKicker: 'Back',
     backTitle: 'Go back to the main menu?',
     backSubtitle: 'This will end the current scan.',
@@ -356,6 +390,7 @@ const copy = {
     manualAction: 'Ilagay ang code.',
     manualButton: 'Maglagay ng code',
     back: 'Bumalik',
+    proceed: 'Magpatuloy',
     backKicker: 'Bumalik',
     backTitle: 'Bumalik sa main menu?',
     backSubtitle: 'Matatapos ang kasalukuyang scan.',

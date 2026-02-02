@@ -1,10 +1,10 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center px-6 py-10">
+  <div class="min-h-screen flex items-stretch justify-center px-6 py-8">
     <div v-if="showStepFlash" class="kiosk-step-flash" aria-hidden="true">
       <span class="kiosk-step-flash-text">STEP 3</span>
     </div>
     <div v-if="showStageReveal" class="kiosk-stage-reveal" aria-hidden="true"></div>
-    <div v-if="!showStepFlash" class="kiosk-ticket-wrapper">
+    <div v-if="!showStepFlash" class="kiosk-step-shell kiosk-ticket-shell">
       <div class="kiosk-step-header">
         <div class="kiosk-pill">
           <span class="scan-dot"></span>
@@ -76,23 +76,14 @@
       </div>
 
       <p class="kiosk-ticket-note">Please wait for your number to be called.</p>
-
-      <div class="kiosk-ticket-actions">
-        <router-link class="kiosk-ticket-link kiosk-action" to="/welcome">
-          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-          Main Menu
+      </div>
+      <div class="kiosk-step-actions">
+        <router-link class="kiosk-arrow-button kiosk-arrow-button--back kiosk-action" to="/welcome">
+          <span>Main menu</span>
         </router-link>
-        <button class="kiosk-ticket-download kiosk-action" type="button" @click="downloadTicket">
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 3v12" />
-            <path d="M7 10l5 5 5-5" />
-            <path d="M5 21h14" />
-          </svg>
+        <button class="kiosk-arrow-button kiosk-arrow-button--proceed kiosk-action" type="button" @click="downloadTicket">
           <span>Download</span>
         </button>
-      </div>
       </div>
     </div>
   </div>
