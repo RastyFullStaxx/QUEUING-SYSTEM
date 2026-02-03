@@ -271,8 +271,11 @@ $tickets = [
     ],
 ];
 
-$doneTicketIds = [];
+$doneTicketEntries = [];
+$ticketSessions = [];
+$ticketIndex = 0;
 foreach ($tickets as $ticket) {
+    $ticketIndex += 1;
     $residentId = $residentIds[$ticket['resident_email']] ?? null;
     $serviceId = $serviceIds[$ticket['service_code']] ?? null;
     $kioskId = $kioskIds[$ticket['kiosk_device_id']] ?? null;
@@ -295,22 +298,83 @@ foreach ($tickets as $ticket) {
     ]);
     $ticketId = (int) $pdo->lastInsertId();
     if ($ticket['status'] === 'done') {
-        $doneTicketIds[] = [
+        $serveOffsetMinutes = 4 + ($ticketIndex % 3);
+        $serveOffsetSeconds = 15 * ($ticketIndex % 4);
+        $completeOffsetMinutes = 14 + ($ticketIndex % 5) * 3;
+        $completeOffsetSeconds = 20 * ($ticketIndex % 5);
+        $doneTicketEntries[] = [
             'id' => $ticketId,
-            'completed_at' => seed_datetime($ticket['issued_at'] . ' + 18 minutes'),
+            'ticket_no' => $ticket['ticket_no'],
+            'issued_at' => $issuedAt,
+            'serve_at' => seed_datetime($ticket['issued_at'] . " + {$serveOffsetMinutes} minutes + {$serveOffsetSeconds} seconds"),
+            'completed_at' => seed_datetime($ticket['issued_at'] . " + {$completeOffsetMinutes} minutes + {$completeOffsetSeconds} seconds"),
         ];
     }
+    $sessionOffsetMinutes = 2 + ($ticketIndex % 3);
+    $sessionOffsetSeconds = 10 * ($ticketIndex % 6);
+    $ticketSessions[] = [
+        'session_id' => 'seed-session-' . $ticketIndex,
+        'resident_id' => $residentId,
+        'service_id' => $serviceId,
+        'kiosk_id' => $kioskId,
+        'ticket_id' => $ticketId,
+        'issued_at' => $issuedAt,
+        'session_start' => seed_datetime($ticket['issued_at'] . " - {$sessionOffsetMinutes} minutes - {$sessionOffsetSeconds} seconds"),
+    ];
     echo "Seeded ticket: {$ticket['ticket_no']}\n";
 }
 
 if ($superAdminId) {
-    foreach ($doneTicketIds as $ticket) {
+    foreach ($ticketSessions as $session) {
+        $stmt = $pdo->prepare('INSERT INTO audit_logs (actor_type, actor_id, action, meta_json, created_at) VALUES (?, ?, ?, ?, ?)');
+        $stmt->execute([
+            'kiosk',
+            $session['kiosk_id'] ?: 0,
+            'kiosk.session.start',
+            json_encode([
+                'session_id' => $session['session_id'],
+                'resident_id' => $session['resident_id'],
+                'kiosk_device_id' => $session['kiosk_id'] ?: null,
+                'approved' => true,
+            ]),
+            $session['session_start'],
+        ]);
+        $stmt->execute([
+            'kiosk',
+            $session['kiosk_id'] ?: 0,
+            'kiosk.ticket.issued',
+            json_encode([
+                'session_id' => $session['session_id'],
+                'ticket_id' => $session['ticket_id'],
+                'service_id' => $session['service_id'],
+                'resident_id' => $session['resident_id'],
+                'kiosk_device_id' => $session['kiosk_id'] ?: null,
+            ]),
+            $session['issued_at'],
+        ]);
+    }
+    foreach ($doneTicketEntries as $ticket) {
+        $stmt = $pdo->prepare('INSERT INTO audit_logs (actor_type, actor_id, action, meta_json, created_at) VALUES (?, ?, ?, ?, ?)');
+        $stmt->execute([
+            'admin',
+            $superAdminId,
+            'queue.serving',
+            json_encode(['ticket_id' => $ticket['id']]),
+            $ticket['serve_at'],
+        ]);
         $stmt = $pdo->prepare('INSERT INTO audit_logs (actor_type, actor_id, action, meta_json, created_at) VALUES (?, ?, ?, ?, ?)');
         $stmt->execute([
             'admin',
             $superAdminId,
             'queue.updated',
             json_encode(['ticket_id' => $ticket['id'], 'status' => 'done']),
+            $ticket['completed_at'],
+        ]);
+        $stmt->execute([
+            'admin',
+            $superAdminId,
+            'queue.completed',
+            json_encode(['ticket_no' => $ticket['ticket_no']]),
             $ticket['completed_at'],
         ]);
     }

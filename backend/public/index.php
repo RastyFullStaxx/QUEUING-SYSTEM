@@ -133,6 +133,40 @@ function log_audit(PDO $pdo, string $actorType, int $actorId, string $action, ar
     ]);
 }
 
+function compute_time_stats(array $values): array
+{
+    $count = count($values);
+    if (!$count) {
+        return [
+            'count' => 0,
+            'avg_minutes' => null,
+            'median_minutes' => null,
+            'p90_minutes' => null,
+            'min_minutes' => null,
+            'max_minutes' => null,
+        ];
+    }
+    sort($values);
+    $sum = array_sum($values);
+    $avg = $sum / $count;
+    $medianIndex = (int) floor(($count - 1) / 2);
+    if ($count % 2 === 0) {
+        $median = ($values[$medianIndex] + $values[$medianIndex + 1]) / 2;
+    } else {
+        $median = $values[$medianIndex];
+    }
+    $p90Index = (int) max(0, ceil($count * 0.9) - 1);
+    $p90 = $values[$p90Index];
+    return [
+        'count' => $count,
+        'avg_minutes' => round($avg, 1),
+        'median_minutes' => round($median, 1),
+        'p90_minutes' => round($p90, 1),
+        'min_minutes' => round($values[0], 1),
+        'max_minutes' => round($values[$count - 1], 1),
+    ];
+}
+
 function fetch_queue_ticket(PDO $pdo, int $ticketId): ?array
 {
     $stmt = $pdo->prepare(
@@ -1594,6 +1628,268 @@ if ($path === '/api/admin/audit-logs' && $method === 'GET') {
     exit;
 }
 
+if ($path === '/api/admin/analytics/timings' && $method === 'GET') {
+    $payload = require_auth('admin', $appKey);
+    if (!$payload) {
+        exit;
+    }
+
+    $startParam = trim($_GET['start'] ?? '');
+    $endParam = trim($_GET['end'] ?? '');
+    $serviceId = (int) ($_GET['service_id'] ?? 0);
+
+    $startDateTime = $startParam ? $startParam . ' 00:00:00' : null;
+    $endDateTime = $endParam ? $endParam . ' 23:59:59' : null;
+
+    $logConditions = [];
+    $logParams = [];
+    if ($startDateTime) {
+        $logConditions[] = 'created_at >= ?';
+        $logParams[] = $startDateTime;
+    }
+    if ($endDateTime) {
+        $logConditions[] = 'created_at <= ?';
+        $logParams[] = $endDateTime;
+    }
+    $logWhere = $logConditions ? (' AND ' . implode(' AND ', $logConditions)) : '';
+
+    $ticketLogStmt = $pdo->prepare(
+        'SELECT action, meta_json, created_at FROM audit_logs WHERE action = ?' . $logWhere . ' ORDER BY created_at ASC'
+    );
+    $ticketLogStmt->execute(array_merge(['kiosk.ticket.issued'], $logParams));
+    $ticketLogs = $ticketLogStmt->fetchAll();
+
+    $sessionTicketTimes = [];
+    $sessionIds = [];
+    foreach ($ticketLogs as $log) {
+        $meta = $log['meta_json'] ? json_decode($log['meta_json'], true) : null;
+        if (!$meta) {
+            continue;
+        }
+        $sessionId = $meta['session_id'] ?? null;
+        if (!$sessionId) {
+            continue;
+        }
+        if ($serviceId && (int) ($meta['service_id'] ?? 0) !== $serviceId) {
+            continue;
+        }
+        $sessionIds[$sessionId] = true;
+        $sessionTicketTimes[$sessionId][] = strtotime($log['created_at']);
+    }
+
+    $sessionStarts = [];
+    if (!empty($sessionIds)) {
+        $sessionPlaceholders = implode(',', array_fill(0, count($sessionIds), '?'));
+        $sessionStmt = $pdo->prepare(
+            'SELECT meta_json, created_at FROM audit_logs WHERE action = ? AND JSON_UNQUOTE(JSON_EXTRACT(meta_json, "$.session_id")) IN (' .
+                $sessionPlaceholders . ')'
+        );
+        $sessionStmt->execute(array_merge(['kiosk.session.start'], array_keys($sessionIds)));
+        foreach ($sessionStmt->fetchAll() as $log) {
+            $meta = $log['meta_json'] ? json_decode($log['meta_json'], true) : null;
+            if (!$meta) {
+                continue;
+            }
+            $sessionId = $meta['session_id'] ?? null;
+            if (!$sessionId) {
+                continue;
+            }
+            $sessionStarts[$sessionId] = strtotime($log['created_at']);
+        }
+    }
+
+    $kioskDurations = [];
+    $kioskSeriesBuckets = [];
+    foreach ($sessionTicketTimes as $sessionId => $times) {
+        $startTime = $sessionStarts[$sessionId] ?? null;
+        if (!$startTime) {
+            continue;
+        }
+        $endTime = max($times);
+        if ($endTime > $startTime) {
+            $durationMinutes = ($endTime - $startTime) / 60;
+            $kioskDurations[] = $durationMinutes;
+            $dateKey = date('Y-m-d', $endTime);
+            if (!isset($kioskSeriesBuckets[$dateKey])) {
+                $kioskSeriesBuckets[$dateKey] = ['sum' => 0, 'count' => 0];
+            }
+            $kioskSeriesBuckets[$dateKey]['sum'] += $durationMinutes;
+            $kioskSeriesBuckets[$dateKey]['count'] += 1;
+        }
+    }
+
+    $queueLogStmt = $pdo->prepare(
+        'SELECT action, meta_json, created_at FROM audit_logs WHERE action IN (?, ?)' . $logWhere . ' ORDER BY created_at ASC'
+    );
+    $queueLogStmt->execute(array_merge(['queue.updated', 'queue.completed'], $logParams));
+    $queueLogs = $queueLogStmt->fetchAll();
+
+    $completedTickets = [];
+    $completedTicketNos = [];
+    foreach ($queueLogs as $log) {
+        $meta = $log['meta_json'] ? json_decode($log['meta_json'], true) : null;
+        if (!$meta) {
+            continue;
+        }
+        if ($log['action'] === 'queue.updated') {
+            if (($meta['status'] ?? '') !== 'done') {
+                continue;
+            }
+            $ticketId = (int) ($meta['ticket_id'] ?? 0);
+            if (!$ticketId) {
+                continue;
+            }
+            if (!isset($completedTickets[$ticketId])) {
+                $completedTickets[$ticketId] = strtotime($log['created_at']);
+            }
+        } elseif ($log['action'] === 'queue.completed') {
+            $ticketNo = $meta['ticket_no'] ?? null;
+            if (!$ticketNo) {
+                continue;
+            }
+            if (!isset($completedTicketNos[$ticketNo])) {
+                $completedTicketNos[$ticketNo] = strtotime($log['created_at']);
+            }
+        }
+    }
+
+    $ticketIds = array_keys($completedTickets);
+    $ticketIssuedMap = [];
+    if (!empty($ticketIds)) {
+        $placeholders = implode(',', array_fill(0, count($ticketIds), '?'));
+        $ticketStmt = $pdo->prepare(
+            'SELECT id, service_id, issued_at FROM queue_tickets WHERE id IN (' . $placeholders . ')'
+        );
+        $ticketStmt->execute($ticketIds);
+        foreach ($ticketStmt->fetchAll() as $ticket) {
+            if ($serviceId && (int) $ticket['service_id'] !== $serviceId) {
+                continue;
+            }
+            $ticketIssuedMap[(int) $ticket['id']] = $ticket;
+        }
+    }
+
+    if (!empty($completedTicketNos)) {
+        $ticketNos = array_keys($completedTicketNos);
+        $placeholders = implode(',', array_fill(0, count($ticketNos), '?'));
+        $ticketStmt = $pdo->prepare(
+            'SELECT id, ticket_no, service_id, issued_at FROM queue_tickets WHERE ticket_no IN (' . $placeholders . ')'
+        );
+        $ticketStmt->execute($ticketNos);
+        foreach ($ticketStmt->fetchAll() as $ticket) {
+            if ($serviceId && (int) $ticket['service_id'] !== $serviceId) {
+                continue;
+            }
+            $ticketId = (int) $ticket['id'];
+            if (!isset($completedTickets[$ticketId])) {
+                $completedTickets[$ticketId] = $completedTicketNos[$ticket['ticket_no']] ?? null;
+            }
+            $ticketIssuedMap[$ticketId] = $ticket;
+        }
+    }
+
+    $ticketDurations = [];
+    $ticketSeriesBuckets = [];
+    $waitSeriesBuckets = [];
+    $serviceSeriesBuckets = [];
+    foreach ($ticketIssuedMap as $id => $ticket) {
+        $completedAt = $completedTickets[$id] ?? null;
+        $issuedAt = isset($ticket['issued_at']) ? strtotime($ticket['issued_at']) : null;
+        if ($completedAt && $issuedAt && $completedAt > $issuedAt) {
+            $durationMinutes = ($completedAt - $issuedAt) / 60;
+            $ticketDurations[] = $durationMinutes;
+            $dateKey = date('Y-m-d', $issuedAt);
+            if (!isset($ticketSeriesBuckets[$dateKey])) {
+                $ticketSeriesBuckets[$dateKey] = ['sum' => 0, 'count' => 0];
+            }
+            $ticketSeriesBuckets[$dateKey]['sum'] += $durationMinutes;
+            $ticketSeriesBuckets[$dateKey]['count'] += 1;
+        }
+    }
+
+    $serveLogStmt = $pdo->prepare(
+        'SELECT action, meta_json, created_at FROM audit_logs WHERE action IN (?, ?)' . $logWhere . ' ORDER BY created_at ASC'
+    );
+    $serveLogStmt->execute(array_merge(['queue.serving', 'queue.called'], $logParams));
+    $serveLogs = $serveLogStmt->fetchAll();
+
+    $serveTimes = [];
+    foreach ($serveLogs as $log) {
+        $meta = $log['meta_json'] ? json_decode($log['meta_json'], true) : null;
+        if (!$meta) {
+            continue;
+        }
+        $ticketId = (int) ($meta['ticket_id'] ?? 0);
+        if (!$ticketId || !isset($ticketIssuedMap[$ticketId])) {
+            continue;
+        }
+        if (!isset($serveTimes[$ticketId])) {
+            $serveTimes[$ticketId] = strtotime($log['created_at']);
+        }
+    }
+
+    $waitToServe = [];
+    $serviceDurations = [];
+    foreach ($ticketIssuedMap as $id => $ticket) {
+        $issuedAt = isset($ticket['issued_at']) ? strtotime($ticket['issued_at']) : null;
+        $serveAt = $serveTimes[$id] ?? null;
+        $completedAt = $completedTickets[$id] ?? null;
+        if ($issuedAt && $serveAt && $serveAt > $issuedAt) {
+            $durationMinutes = ($serveAt - $issuedAt) / 60;
+            $waitToServe[] = $durationMinutes;
+            $dateKey = date('Y-m-d', $issuedAt);
+            if (!isset($waitSeriesBuckets[$dateKey])) {
+                $waitSeriesBuckets[$dateKey] = ['sum' => 0, 'count' => 0];
+            }
+            $waitSeriesBuckets[$dateKey]['sum'] += $durationMinutes;
+            $waitSeriesBuckets[$dateKey]['count'] += 1;
+        }
+        if ($serveAt && $completedAt && $completedAt > $serveAt) {
+            $durationMinutes = ($completedAt - $serveAt) / 60;
+            $serviceDurations[] = $durationMinutes;
+            $dateKey = date('Y-m-d', $serveAt);
+            if (!isset($serviceSeriesBuckets[$dateKey])) {
+                $serviceSeriesBuckets[$dateKey] = ['sum' => 0, 'count' => 0];
+            }
+            $serviceSeriesBuckets[$dateKey]['sum'] += $durationMinutes;
+            $serviceSeriesBuckets[$dateKey]['count'] += 1;
+        }
+    }
+
+    $buildSeries = static function (array $buckets): array {
+        if (!$buckets) {
+            return [];
+        }
+        ksort($buckets);
+        $series = [];
+        foreach ($buckets as $date => $bucket) {
+            if (!$bucket['count']) {
+                continue;
+            }
+            $series[] = [
+                'date' => $date,
+                'avg_minutes' => round($bucket['sum'] / $bucket['count'], 1),
+                'count' => $bucket['count'],
+            ];
+        }
+        return $series;
+    };
+
+    json_response([
+        'kiosk' => compute_time_stats($kioskDurations),
+        'ticket_cycle' => compute_time_stats($ticketDurations),
+        'wait_to_serve' => compute_time_stats($waitToServe),
+        'service_duration' => compute_time_stats($serviceDurations),
+        'series' => [
+            'kiosk_completion' => $buildSeries($kioskSeriesBuckets),
+            'ticket_cycle' => $buildSeries($ticketSeriesBuckets),
+            'wait_to_serve' => $buildSeries($waitSeriesBuckets),
+            'service_duration' => $buildSeries($serviceSeriesBuckets),
+        ],
+    ]);
+    exit;
+}
+
 if ($path === '/api/services' && $method === 'GET') {
     $stmt = $pdo->query('SELECT id, name, code, active FROM services WHERE active = 1 ORDER BY name');
     $services = $stmt->fetchAll();
@@ -1604,6 +1900,7 @@ if ($path === '/api/services' && $method === 'GET') {
 if ($path === '/api/kiosk/validate-qr' && $method === 'POST') {
     $body = read_json_body();
     $residentId = (int) ($body['resident_id'] ?? 0);
+    $kioskDeviceId = (int) ($body['kiosk_device_id'] ?? 0);
     $qrToken = null;
     if (!$residentId && !empty($body['qr_code'])) {
         $parsed = parse_resident_qr_code((string) $body['qr_code']);
@@ -1641,10 +1938,19 @@ if ($path === '/api/kiosk/validate-qr' && $method === 'POST') {
         $services = $stmt->fetchAll();
     }
 
+    $sessionId = bin2hex(random_bytes(8));
+    log_audit($pdo, 'kiosk', $kioskDeviceId ?: 0, 'kiosk.session.start', [
+        'session_id' => $sessionId,
+        'resident_id' => (int) $resident['id'],
+        'kiosk_device_id' => $kioskDeviceId ?: null,
+        'approved' => $approved,
+    ]);
+
     json_response([
         'approved' => $approved,
         'resident' => $resident,
         'allowed_services' => $services,
+        'session_id' => $sessionId,
     ]);
     exit;
 }
@@ -1655,6 +1961,7 @@ if ($path === '/api/kiosk/tickets' && $method === 'POST') {
     $serviceId = (int) ($body['service_id'] ?? 0);
     $kioskDeviceId = (int) ($body['kiosk_device_id'] ?? 0);
     $idempotencyKey = trim($body['idempotency_key'] ?? '');
+    $sessionId = trim($body['session_id'] ?? '');
 
     if (!$residentId || !$serviceId || !$idempotencyKey) {
         json_response(['error' => 'resident_id, service_id, and idempotency_key are required'], 422);
@@ -1682,6 +1989,16 @@ if ($path === '/api/kiosk/tickets' && $method === 'POST') {
     $stmt = $pdo->prepare('SELECT * FROM queue_tickets WHERE id = ?');
     $stmt->execute([$ticketId]);
     $ticket = $stmt->fetch();
+
+    if ($sessionId) {
+        log_audit($pdo, 'kiosk', $kioskDeviceId ?: 0, 'kiosk.ticket.issued', [
+            'session_id' => $sessionId,
+            'ticket_id' => $ticketId,
+            'service_id' => $serviceId,
+            'resident_id' => $residentId,
+            'kiosk_device_id' => $kioskDeviceId ?: null,
+        ]);
+    }
 
     json_response(['ticket' => $ticket], 201);
     exit;

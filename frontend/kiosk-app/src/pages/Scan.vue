@@ -579,11 +579,14 @@ const onSubmit = async () => {
   try {
     const data = await request('/api/kiosk/validate-qr', {
       method: 'POST',
-      body: JSON.stringify({ qr_code: qrCode.value }),
+      body: JSON.stringify({ qr_code: qrCode.value, kiosk_device_id: 1 }),
     })
     localStorage.setItem('kiosk_resident', JSON.stringify(data.resident))
     localStorage.setItem('kiosk_allowed_services', JSON.stringify(data.allowed_services || []))
     localStorage.setItem('kiosk_approved', String(data.approved))
+    if (data.session_id) {
+      localStorage.setItem('kiosk_session_id', data.session_id)
+    }
 
     if (!data.approved) {
       error.value = ''
@@ -604,6 +607,7 @@ onMounted(() => {
   localStorage.removeItem('kiosk_ticket')
   localStorage.removeItem('kiosk_service')
   localStorage.removeItem('kiosk_approved')
+  localStorage.removeItem('kiosk_session_id')
   if (isReady.value) {
     setTimeout(() => inputRef.value?.focus(), 50)
   }

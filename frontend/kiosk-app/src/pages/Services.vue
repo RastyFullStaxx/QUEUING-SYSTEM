@@ -806,6 +806,7 @@ const confirmProceed = async () => {
       error.value = 'Missing service selection.'
       return
     }
+    const sessionId = localStorage.getItem('kiosk_session_id') || ''
     const idempotencyKey =
       crypto.randomUUID?.() || `${Date.now()}-${resident.id}-${service.id}`
     const data = await request('/api/kiosk/tickets', {
@@ -815,6 +816,7 @@ const confirmProceed = async () => {
         service_id: service.id,
         kiosk_device_id: 1,
         idempotency_key: idempotencyKey,
+        session_id: sessionId,
       }),
     })
     const requirements = selectedServices.value.flatMap((item) =>

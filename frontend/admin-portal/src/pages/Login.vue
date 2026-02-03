@@ -11,11 +11,11 @@
       <div class="landing-sunray admin-sunray" aria-hidden="true"></div>
       <div class="landing-content">
         <img class="landing-logo" src="/logo.png" alt="Barangay San Miguel" />
-        <p class="landing-kicker">Admin command center</p>
+        <p class="landing-kicker">Admin Command Center</p>
         <h1 class="landing-title">Barangay San Miguel</h1>
         <div class="landing-tap">
           <span class="landing-line"></span>
-          <span class="landing-text">Tap anywhere to begin</span>
+          <span class="landing-text">Tap Anywhere to Begin</span>
           <span class="landing-line"></span>
         </div>
       </div>
@@ -35,16 +35,16 @@
 
               <div class="auth-layout" :class="{ 'auth-layout--single': mode === 'register' }">
                 <aside v-if="mode === 'signin'" class="auth-aside admin-auth-aside">
-                  <div class="auth-kicker">Admin portal</div>
+                  <div class="auth-kicker">Admin Portal</div>
                   <h1 class="auth-title">
-                    Queue operations
-                    <span>command center</span>
+                    Queue Operations
+                    <span>Command Center</span>
                   </h1>
                   <p class="auth-subtitle">
                     Orchestrate kiosks, services, and staff decisions from a single operational view built for speed and trust.
                   </p>
                   <div class="auth-support-note">
-                    <p class="auth-support-title">Admin access only</p>
+                    <p class="auth-support-title">Admin Access Only</p>
                     <p class="auth-support-subtitle">Use your authorized barangay account to continue.</p>
                   </div>
                 </aside>
@@ -60,7 +60,7 @@
                       </div>
                       <div>
                         <p class="auth-brand-title">Barangay Service Hub</p>
-                        <p class="auth-brand-subtitle">Admin access only</p>
+                        <p class="auth-brand-subtitle">Admin Access Only</p>
                       </div>
                     </div>
 
@@ -71,7 +71,7 @@
                         type="button"
                         @click="setMode('signin')"
                       >
-                        Sign in
+                        Sign In
                       </button>
                       <button
                         class="auth-tab"
@@ -85,7 +85,7 @@
 
                     <form v-if="mode === 'signin'" class="auth-form" @submit.prevent="submitLogin">
                       <label class="auth-field">
-                        <span>Email address</span>
+                        <span>Email Address</span>
                         <input
                           v-model="loginEmail"
                           type="email"
@@ -107,14 +107,14 @@
                         />
                       </label>
                       <div class="auth-actions">
-                        <button class="auth-button" type="submit" :disabled="isSubmitting">Sign in</button>
-                        <button class="auth-ghost" type="button" @click="setMode('register')">Need access?</button>
+                        <button class="auth-button" type="submit" :disabled="isSubmitting">Sign In</button>
+                        <button class="auth-ghost" type="button" @click="setMode('register')">Need Access?</button>
                       </div>
                     </form>
 
                     <form v-else class="auth-form" @submit.prevent="submitRegister">
                       <label class="auth-field">
-                        <span>Full name</span>
+                        <span>Full Name</span>
                         <input
                           v-model="registerName"
                           type="text"
@@ -125,7 +125,7 @@
                         />
                       </label>
                       <label class="auth-field">
-                        <span>Email address</span>
+                        <span>Email Address</span>
                         <input
                           v-model="registerEmail"
                           type="email"
@@ -162,8 +162,8 @@
                         to create your account.
                       </div>
                       <div class="auth-actions">
-                        <button class="auth-button" type="submit" :disabled="isSubmitting">Create admin</button>
-                        <button class="auth-ghost" type="button" @click="setMode('signin')">Back to sign in</button>
+                        <button class="auth-button" type="submit" :disabled="isSubmitting">Create Admin</button>
+                        <button class="auth-ghost" type="button" @click="setMode('signin')">Back to Sign In</button>
                       </div>
                     </form>
 

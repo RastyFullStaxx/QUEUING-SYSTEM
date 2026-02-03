@@ -82,12 +82,12 @@
       </nav>
       <div class="admin-dock-divider"></div>
       <div class="admin-time">
-        <span class="admin-time-label">PH time</span>
+        <span class="admin-time-label">PH Time</span>
         <span class="admin-time-value">{{ phTimeLabel }}</span>
       </div>
       <div class="admin-dock-divider"></div>
       <button class="admin-logout" type="button" @click="openLogoutModal">
-        Sign out
+        Sign Out
       </button>
     </header>
 
@@ -96,20 +96,20 @@
         <section id="dashboard" class="admin-dashboard" v-show="activeSection === 'dashboard'">
           <div class="dashboard-hero">
             <div class="dashboard-hero-main">
-              <p class="dashboard-kicker">Operations snapshot</p>
+              <p class="dashboard-kicker">Operations Snapshot</p>
               <h2 class="dashboard-title">Admin Analytics Dashboard</h2>
               <p class="dashboard-subtitle">
                 Live signals from registrations, queue flow, services, and kiosk activity to guide daily decisions.
               </p>
               <div class="dashboard-actions">
-                <button class="dashboard-refresh" type="button" @click="refreshAll">Refresh data</button>
-                <a class="dashboard-link" href="#queue-control">Jump to queue</a>
+                <button class="dashboard-refresh" type="button" @click="refreshAll">Refresh Data</button>
+                <a class="dashboard-link" href="#queue-control">Jump to Queue</a>
               </div>
               <p class="dashboard-updated">Updated {{ lastUpdatedLabel }}</p>
             </div>
             <div class="dashboard-hero-card">
               <div class="hero-stat">
-                <p class="hero-stat-label">Active queue</p>
+                <p class="hero-stat-label">Active Queue</p>
                 <div class="hero-stat-value">
                   <span>{{ todayActiveQueueCount }}</span>
                   <span class="hero-stat-unit">tickets</span>
@@ -126,7 +126,7 @@
                   <strong>{{ todayQueueStatusCounts.serving }}</strong>
                 </div>
                 <div class="hero-mini">
-                  <span>Avg wait</span>
+                  <span>Avg Wait</span>
                   <strong>{{ todayAverageWaitLabel }}</strong>
                 </div>
               </div>
@@ -149,27 +149,27 @@
               <p class="dashboard-stat-meta">{{ residentStats.approved }} approved</p>
             </div>
             <div class="dashboard-stat">
-              <p class="dashboard-stat-label">Pending review</p>
+              <p class="dashboard-stat-label">Pending Review</p>
               <p class="dashboard-stat-value">{{ residentStats.pending }}</p>
               <p class="dashboard-stat-meta">{{ approvalRateLabel }} approval rate</p>
             </div>
             <div class="dashboard-stat">
-              <p class="dashboard-stat-label">Active services</p>
+              <p class="dashboard-stat-label">Active Services</p>
               <p class="dashboard-stat-value">{{ activeServiceCount }}</p>
               <p class="dashboard-stat-meta">{{ inactiveServiceCount }} inactive</p>
             </div>
             <div class="dashboard-stat">
-              <p class="dashboard-stat-label">Kiosk health</p>
+              <p class="dashboard-stat-label">Kiosk Health</p>
               <p class="dashboard-stat-value">{{ onlineKioskCount }}</p>
               <p class="dashboard-stat-meta">{{ offlineKioskCount }} offline</p>
             </div>
             <div class="dashboard-stat">
-              <p class="dashboard-stat-label">Total tickets</p>
+              <p class="dashboard-stat-label">Total Tickets</p>
               <p class="dashboard-stat-value">{{ queueStatusCounts.total }}</p>
               <p class="dashboard-stat-meta">{{ queueStatusCounts.done }} completed</p>
             </div>
             <div class="dashboard-stat">
-              <p class="dashboard-stat-label">Service focus</p>
+              <p class="dashboard-stat-label">Service Focus</p>
               <p class="dashboard-stat-value">{{ topServiceLabel }}</p>
               <p class="dashboard-stat-meta">{{ topServiceCountLabel }}</p>
             </div>
@@ -179,10 +179,10 @@
             <div class="dashboard-panel span-7">
               <div class="dashboard-panel-header">
                 <div>
-                  <h3>Queue flow</h3>
+                  <h3>Queue Flow</h3>
                   <p>Live composition of queue tickets with status distribution.</p>
                 </div>
-                <span class="panel-badge">Realtime</span>
+                <span class="panel-badge">Real-Time</span>
               </div>
               <div class="queue-flow">
                 <div class="queue-bar">
@@ -220,7 +220,7 @@
             <div class="dashboard-panel span-5">
               <div class="dashboard-panel-header">
                 <div>
-                  <h3>Resident pipeline</h3>
+                  <h3>Resident Pipeline</h3>
                   <p>Approval progress across registration statuses.</p>
                 </div>
               </div>
@@ -259,7 +259,7 @@
             <div class="dashboard-panel span-6">
               <div class="dashboard-panel-header">
                 <div>
-                  <h3>Kiosk health</h3>
+                  <h3>Kiosk Health</h3>
                   <p>Heartbeat status from registered devices.</p>
                 </div>
               </div>
@@ -293,107 +293,247 @@
               </ul>
             </div>
 
-            <div class="dashboard-panel span-12">
-              <div class="dashboard-panel-header">
-                <div>
-                  <h3>Recent activity</h3>
-                  <p>Latest admin actions and system updates.</p>
-                </div>
-                <span class="panel-badge is-neutral">Audit</span>
-              </div>
-              <div v-if="recentLogs.length" class="activity-list">
-                <div v-for="log in recentLogs" :key="log.id" class="activity-row">
-                  <div class="activity-time">{{ formatTime(log.created_at) }}</div>
-                  <div class="activity-meta">
-                    <p class="activity-action">{{ formatAction(log.action) }}</p>
-                    <p class="activity-actor">{{ log.actor_type }} #{{ log.actor_id }}</p>
-                  </div>
-                </div>
-              </div>
-              <p v-else class="empty-state">No recent activity yet.</p>
-            </div>
           </div>
 
           <div class="analytics-zone">
             <div class="analytics-header">
               <div>
-                <p class="analytics-kicker">Deep analytics</p>
+                <p class="analytics-kicker">Deep Analytics</p>
                 <h3 class="analytics-title">Operational Intelligence</h3>
                 <p class="analytics-subtitle">
                   Visualize demand, approvals, and traffic patterns. Filters below apply to every chart.
                 </p>
                 <p class="analytics-range">Showing: {{ analyticsRangeLabel }}</p>
               </div>
-              <div class="analytics-filters">
-                <div class="filter-field">
-                  <label class="filter-label">Range</label>
-                  <select v-model="analyticsRange" class="filter-input">
-                    <option value="today">Today</option>
-                    <option value="7d">Last 7 days</option>
-                    <option value="30d">Last 30 days</option>
-                    <option value="90d">Last 90 days</option>
-                    <option value="all">All time</option>
-                    <option value="custom">Custom</option>
-                  </select>
+              <div class="analytics-controls">
+                <div class="analytics-actions">
+                  <button class="analytics-export is-csv" type="button" @click="downloadAnalyticsCsv">
+                    Download CSV
+                  </button>
+                  <button class="analytics-export is-pdf" type="button" @click="downloadAnalyticsPdf">
+                    Download PDF
+                  </button>
                 </div>
-                <div v-if="analyticsRange === 'custom'" class="filter-field">
-                  <label class="filter-label">Start</label>
-                  <input v-model="analyticsStartDate" type="date" class="filter-input" />
+                <div class="analytics-filters">
+                  <div class="filter-field">
+                    <label class="filter-label">Range</label>
+                    <select v-model="analyticsRange" class="filter-input">
+                      <option value="today">Today</option>
+                      <option value="7d">Last 7 Days</option>
+                      <option value="30d">Last 30 Days</option>
+                      <option value="90d">Last 90 Days</option>
+                      <option value="all">All Time</option>
+                      <option value="custom">Custom Range</option>
+                    </select>
+                  </div>
+                  <div v-if="analyticsRange === 'custom'" class="filter-field">
+                    <label class="filter-label">Start</label>
+                    <input v-model="analyticsStartDate" type="date" class="filter-input" />
+                  </div>
+                  <div v-if="analyticsRange === 'custom'" class="filter-field">
+                    <label class="filter-label">End</label>
+                    <input v-model="analyticsEndDate" type="date" class="filter-input" />
+                  </div>
+                  <div class="filter-field">
+                    <label class="filter-label">Service</label>
+                    <select v-model="analyticsServiceId" class="filter-input">
+                      <option value="">All Services</option>
+                      <option v-for="service in services" :key="service.id" :value="service.id">
+                        {{ service.name }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="filter-field">
+                    <label class="filter-label">Status</label>
+                    <select v-model="analyticsStatus" class="filter-input">
+                      <option value="all">All Statuses</option>
+                      <option value="waiting">Waiting</option>
+                      <option value="serving">Serving</option>
+                      <option value="done">Done</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                  <button class="filter-reset" type="button" @click="resetAnalyticsFilters">
+                    Reset
+                  </button>
                 </div>
-                <div v-if="analyticsRange === 'custom'" class="filter-field">
-                  <label class="filter-label">End</label>
-                  <input v-model="analyticsEndDate" type="date" class="filter-input" />
-                </div>
-                <div class="filter-field">
-                  <label class="filter-label">Service</label>
-                  <select v-model="analyticsServiceId" class="filter-input">
-                    <option value="">All services</option>
-                    <option v-for="service in services" :key="service.id" :value="service.id">
-                      {{ service.name }}
-                    </option>
-                  </select>
-                </div>
-                <div class="filter-field">
-                  <label class="filter-label">Status</label>
-                  <select v-model="analyticsStatus" class="filter-input">
-                    <option value="all">All statuses</option>
-                    <option value="waiting">Waiting</option>
-                    <option value="serving">Serving</option>
-                    <option value="done">Done</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </div>
-                <button class="filter-reset" type="button" @click="resetAnalyticsFilters">
-                  Reset
-                </button>
               </div>
             </div>
 
             <div class="analytics-grid">
+              <div class="analytics-card span-12 timing-card">
+                <div class="chart-header">
+                  <div>
+                    <h4>Experience Timing</h4>
+                    <p>Measure kiosk completion speed and ticket turnaround times.</p>
+                  </div>
+                  <span class="timing-badge">Timing</span>
+                </div>
+                <p class="timing-definition">
+                  Kiosk completion starts when a QR is validated (scan/manual) and ends when a ticket is issued.
+                  Sessions reset when users return to the kiosk landing screen. Ticket cycle metrics use completed tickets only.
+                </p>
+                <p class="timing-filter-note">Filtered By: {{ analyticsFilterNote }}</p>
+                <div v-if="timingError" class="timing-error">{{ timingError }}</div>
+                <div v-else-if="timingLoading" class="timing-loading">Loading timing analytics...</div>
+                <div v-else>
+                  <div class="timing-grid">
+                    <div class="timing-tile timing-total">
+                      <p class="timing-label">End-to-End Completion</p>
+                      <p class="timing-value">{{ experienceTotalLabel }}</p>
+                      <div class="timing-meta">
+                        <span>Kiosk {{ kioskAvgLabel }}</span>
+                        <span>Ticket Cycle {{ ticketCycleAvgLabel }}</span>
+                      </div>
+                    </div>
+                    <div class="timing-tile">
+                      <p class="timing-label">Kiosk Completion</p>
+                      <p class="timing-value">{{ kioskAvgLabel }}</p>
+                      <div class="timing-meta">
+                        <span>Median {{ kioskMedianLabel }}</span>
+                        <span>P90 {{ kioskP90Label }}</span>
+                      </div>
+                    </div>
+                    <div class="timing-tile is-gold">
+                      <p class="timing-label">Ticket Cycle</p>
+                      <p class="timing-value">{{ ticketCycleAvgLabel }}</p>
+                      <div class="timing-meta">
+                        <span>Median {{ ticketCycleMedianLabel }}</span>
+                        <span>P90 {{ ticketCycleP90Label }}</span>
+                      </div>
+                    </div>
+                    <div class="timing-tile is-slate">
+                      <p class="timing-label">Queue Split</p>
+                      <p class="timing-value">{{ waitToServeLabel }}</p>
+                      <div class="timing-meta">
+                        <span>Wait to Serve</span>
+                        <span>Service {{ serviceDurationLabel }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="timing-chart-grid">
+                    <div class="timing-chart">
+                      <div class="timing-chart-header">
+                        <div>
+                          <h5>Kiosk Completion Trend</h5>
+                          <p>Average Time per Day</p>
+                        </div>
+                      </div>
+                      <div v-if="kioskTimingSeries.length" class="mini-line-chart">
+                        <svg class="mini-line-svg" viewBox="0 0 640 220" preserveAspectRatio="none" aria-hidden="true">
+                          <defs>
+                            <linearGradient id="kioskTimingFill" x1="0" x2="0" y1="0" y2="1">
+                              <stop offset="0%" stop-color="#0b2c6f" stop-opacity="0.2" />
+                              <stop offset="100%" stop-color="#0b2c6f" stop-opacity="0" />
+                            </linearGradient>
+                          </defs>
+                          <g class="line-grid">
+                            <line v-for="grid in lineGrid" :key="`kiosk-timing-grid-${grid}`" :x1="24" :x2="616" :y1="grid" :y2="grid" />
+                          </g>
+                          <path class="line-area" :d="kioskTimingTrend.areaPath" fill="url(#kioskTimingFill)" />
+                          <path class="line-path" :d="kioskTimingTrend.linePath" />
+                        </svg>
+                        <div class="line-axis">
+                          <span v-for="label in kioskTimingAxis" :key="`kiosk-timing-axis-${label}`">{{ label }}</span>
+                        </div>
+                      </div>
+                      <p v-else class="empty-state">No kiosk completion data yet.</p>
+                      <p class="analysis-note">{{ kioskTimingInsight }}</p>
+                    </div>
+
+                    <div class="timing-chart">
+                      <div class="timing-chart-header">
+                        <div>
+                          <h5>Ticket Cycle Trend</h5>
+                          <p>Issued to Done Over Time</p>
+                        </div>
+                      </div>
+                      <div v-if="ticketCycleSeries.length" class="mini-line-chart">
+                        <svg class="mini-line-svg" viewBox="0 0 640 220" preserveAspectRatio="none" aria-hidden="true">
+                          <defs>
+                            <linearGradient id="ticketCycleFill" x1="0" x2="0" y1="0" y2="1">
+                              <stop offset="0%" stop-color="#f2c300" stop-opacity="0.25" />
+                              <stop offset="100%" stop-color="#f2c300" stop-opacity="0" />
+                            </linearGradient>
+                          </defs>
+                          <g class="line-grid">
+                            <line v-for="grid in lineGrid" :key="`ticket-cycle-grid-${grid}`" :x1="24" :x2="616" :y1="grid" :y2="grid" />
+                          </g>
+                          <path class="line-area is-gold" :d="ticketCycleTrend.areaPath" fill="url(#ticketCycleFill)" />
+                          <path class="line-path is-gold" :d="ticketCycleTrend.linePath" />
+                        </svg>
+                        <div class="line-axis">
+                          <span v-for="label in ticketCycleAxis" :key="`ticket-cycle-axis-${label}`">{{ label }}</span>
+                        </div>
+                      </div>
+                      <p v-else class="empty-state">No ticket cycle data yet.</p>
+                      <p class="analysis-note">{{ ticketTimingInsight }}</p>
+                    </div>
+
+                    <div class="timing-chart timing-journey">
+                      <div class="timing-chart-header">
+                        <div>
+                          <h5>Experience Journey</h5>
+                          <p>Average Time Split by Phase</p>
+                        </div>
+                      </div>
+                      <div v-if="experienceHasData" class="journey-body">
+                        <div class="journey-bar">
+                          <span class="journey-segment is-kiosk" :style="{ width: `${experienceSegments.kiosk}%` }"></span>
+                          <span class="journey-segment is-wait" :style="{ width: `${experienceSegments.wait}%` }"></span>
+                          <span class="journey-segment is-serve" :style="{ width: `${experienceSegments.serve}%` }"></span>
+                        </div>
+                        <div class="journey-legend">
+                          <div class="journey-item">
+                            <span class="journey-swatch is-kiosk"></span>
+                            <span>Kiosk</span>
+                            <strong>{{ kioskAvgLabel }}</strong>
+                          </div>
+                          <div class="journey-item">
+                            <span class="journey-swatch is-wait"></span>
+                            <span>Wait</span>
+                            <strong>{{ waitToServeLabel }}</strong>
+                          </div>
+                          <div class="journey-item">
+                            <span class="journey-swatch is-serve"></span>
+                            <span>Service</span>
+                            <strong>{{ serviceDurationLabel }}</strong>
+                          </div>
+                        </div>
+                      </div>
+                      <p v-else class="empty-state">No experience timing data yet.</p>
+                      <p class="analysis-note">{{ queueBreakdownInsight }}</p>
+                    </div>
+                  </div>
+                  <p v-if="timingScopeNote" class="timing-scope-note">{{ timingScopeNote }}</p>
+                </div>
+              </div>
+
               <div class="analytics-card span-7">
                 <div class="chart-header">
                   <div>
-                    <h4>Daily ticket volume</h4>
-                    <p>Line trend of tickets created per day.</p>
+                    <h4>Daily Ticket Volume</h4>
+                    <p>Professional trend view of tickets created per day.</p>
                   </div>
                 </div>
-                <div v-if="ticketTrendSeries.length" class="line-chart">
+                <div v-if="ticketTrendSeries.length" class="line-chart is-volume">
                   <svg class="line-svg" viewBox="0 0 640 220" preserveAspectRatio="none" aria-hidden="true">
                     <defs>
                       <linearGradient id="ticketTrendFill" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stop-color="#0b2c6f" stop-opacity="0.25" />
+                        <stop offset="0%" stop-color="#0b2c6f" stop-opacity="0.22" />
                         <stop offset="100%" stop-color="#0b2c6f" stop-opacity="0" />
                       </linearGradient>
                     </defs>
                     <g class="line-grid">
                       <line v-for="grid in lineGrid" :key="`ticket-grid-${grid}`" :x1="24" :x2="616" :y1="grid" :y2="grid" />
                     </g>
-                    <path class="line-area" :d="ticketTrend.areaPath" fill="url(#ticketTrendFill)" />
-                    <path class="line-path" :d="ticketTrend.linePath" />
+                    <path class="line-area is-volume" :d="ticketTrend.areaPath" fill="url(#ticketTrendFill)" />
+                    <path class="line-path is-volume" :d="ticketTrend.linePath" />
                     <circle
                       v-for="point in ticketTrend.points"
                       :key="`ticket-point-${point.index}`"
-                      class="line-point"
+                      class="line-point is-volume"
                       :cx="point.x"
                       :cy="point.y"
                       r="4"
@@ -410,7 +550,7 @@
               <div class="analytics-card span-5">
                 <div class="chart-header">
                   <div>
-                    <h4>Ticket status mix</h4>
+                    <h4>Ticket Status Mix</h4>
                     <p>Distribution of queue outcomes.</p>
                   </div>
                 </div>
@@ -450,22 +590,30 @@
               <div class="analytics-card span-6">
                 <div class="chart-header">
                   <div>
-                    <h4>Most booked service</h4>
-                    <p>Bar chart of service volume for the selected range.</p>
+                    <h4>Most Booked Service</h4>
+                    <p>Isometric skyline of service demand by rank.</p>
                   </div>
                 </div>
                 <div v-if="serviceVolumeBars.length" class="service-chart">
-                  <div class="service-chart-bars">
-                    <div v-for="service in serviceVolumeBars" :key="service.id" class="service-bar">
-                      <div class="service-bar-track">
-                        <span class="service-bar-fill" :style="{ height: `${service.percent}%` }"></span>
+                  <div class="iso-bar-chart">
+                    <div
+                      v-for="(service, index) in serviceVolumeBars"
+                      :key="service.id"
+                      class="iso-bar"
+                      :style="{
+                        '--bar-height': `${Math.max(service.percent, 8)}%`,
+                        '--bar-hue': `${(index * 55) % 360}`,
+                      }"
+                    >
+                      <div class="iso-bar-stack">
+                        <div class="iso-bar-body"></div>
                       </div>
-                      <span class="service-bar-label">{{ service.shortLabel }}</span>
-                      <span class="service-bar-value">{{ service.count }}</span>
+                      <span class="iso-bar-label">{{ formatServiceName(service.name) }}</span>
+                      <span class="iso-bar-value">{{ service.count }}</span>
                     </div>
                   </div>
                   <div class="service-chart-summary">
-                    <p class="summary-title">{{ analyticsTopServiceLabel }}</p>
+                    <p class="summary-title">{{ analyticsTopServiceTitle }}</p>
                     <p class="summary-subtitle">{{ analyticsTopServiceCountLabel }}</p>
                     <p class="summary-note">{{ analyticsFilterNote }}</p>
                   </div>
@@ -477,7 +625,7 @@
               <div class="analytics-card span-6">
                 <div class="chart-header">
                   <div>
-                    <h4>Service mix</h4>
+                    <h4>Service Mix</h4>
                     <p>Pie view of service shares.</p>
                   </div>
                 </div>
@@ -512,19 +660,34 @@
               <div class="analytics-card span-6">
                 <div class="chart-header">
                   <div>
-                    <h4>Traffic by time</h4>
-                    <p>Ticket volume grouped by 3-hour windows.</p>
+                    <h4>Traffic by Time</h4>
+                    <p>Mountain view of ticket volume by 3-hour window.</p>
                   </div>
                 </div>
-                <div v-if="trafficBuckets.length" class="traffic-chart">
-                  <div class="traffic-bars">
-                    <div v-for="slot in trafficBuckets" :key="slot.label" class="traffic-bar">
-                      <div class="traffic-bar-track">
-                        <span class="traffic-bar-fill" :style="{ height: `${slot.percent}%` }"></span>
-                      </div>
-                      <span class="traffic-bar-label">{{ slot.label }}</span>
-                      <span class="traffic-bar-value">{{ slot.count }}</span>
-                    </div>
+                <div v-if="trafficSeries.length" class="line-chart is-traffic">
+                  <svg class="line-svg" viewBox="0 0 640 220" preserveAspectRatio="none" aria-hidden="true">
+                    <defs>
+                      <linearGradient id="trafficTrendFill" x1="0" x2="0" y1="0" y2="1">
+                        <stop offset="0%" stop-color="#0ea5e9" stop-opacity="0.4" />
+                        <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <g class="line-grid">
+                      <line v-for="grid in lineGrid" :key="`traffic-grid-${grid}`" :x1="24" :x2="616" :y1="grid" :y2="grid" />
+                    </g>
+                    <path class="line-area is-traffic" :d="trafficTrend.areaPath" fill="url(#trafficTrendFill)" />
+                    <path class="line-path is-traffic" :d="trafficTrend.linePath" />
+                    <circle
+                      v-for="point in trafficTrend.points"
+                      :key="`traffic-point-${point.index}`"
+                      class="line-point is-traffic"
+                      :cx="point.x"
+                      :cy="point.y"
+                      r="4"
+                    />
+                  </svg>
+                  <div class="line-axis">
+                    <span v-for="label in trafficAxis" :key="`traffic-axis-${label}`">{{ label }}</span>
                   </div>
                 </div>
                 <p v-else class="empty-state">No traffic data yet. Ticket activity will build this view.</p>
@@ -534,7 +697,7 @@
               <div class="analytics-card span-6">
                 <div class="chart-header">
                   <div>
-                    <h4>Resident registrations</h4>
+                    <h4>Resident Registrations</h4>
                     <p>Daily registration activity.</p>
                   </div>
                 </div>
@@ -592,7 +755,7 @@
             <div class="resident-side">
               <div class="resident-overview">
                 <p class="resident-kicker">Resident operations</p>
-                <h3 class="resident-title">Verification command center</h3>
+                <h3 class="resident-title">Verification Command Center</h3>
                 <p class="resident-subtitle">
                   Track registration flow, manage profiles, and keep the community directory accurate.
                 </p>
@@ -623,10 +786,10 @@
               <div class="resident-filters-card">
                 <div class="resident-filters-header">
                   <div>
-                    <h4>Directory filters</h4>
+                    <h4>Directory Filters</h4>
                     <p>Refine the list before taking action.</p>
                   </div>
-                  <button class="resident-primary" type="button" @click="openCreateResidentModal">New resident</button>
+                  <button class="resident-primary" type="button" @click="openCreateResidentModal">New Resident</button>
                 </div>
                 <div class="resident-filter-grid">
                   <label class="resident-field">
@@ -641,7 +804,7 @@
                   <label class="resident-field">
                     <span>Status</span>
                     <select v-model="statusFilter" class="resident-input">
-                      <option value="">All statuses</option>
+                      <option value="">All Statuses</option>
                       <option value="pending">Pending</option>
                       <option value="approved">Approved</option>
                       <option value="rejected">Rejected</option>
@@ -649,8 +812,8 @@
                   </label>
                 </div>
                 <div class="resident-filter-actions">
-                  <button class="resident-secondary" type="button" @click="refreshResidents">Refresh list</button>
-                  <button class="resident-tertiary" type="button" @click="resetResidentFilters">Clear filters</button>
+                  <button class="resident-secondary" type="button" @click="refreshResidents">Refresh List</button>
+                  <button class="resident-tertiary" type="button" @click="resetResidentFilters">Clear Filters</button>
                 </div>
               </div>
             </div>
@@ -658,7 +821,7 @@
             <div class="resident-table-card">
               <div class="resident-table-header">
                 <div>
-                  <h3>Resident directory</h3>
+                  <h3>Resident Directory</h3>
                   <p>{{ residentRangeLabel }}</p>
                 </div>
                 <div class="resident-table-meta">
@@ -926,7 +1089,7 @@
                     :disabled="isResidentSaving || residentForm.status === 'rejected'"
                     @click="applyResidentStatus('rejected')"
                   >
-                    Reject resident
+                    Reject Resident
                   </button>
                 </div>
 
@@ -945,7 +1108,7 @@
             <div class="modal-card is-danger" role="dialog" aria-modal="true">
               <div class="modal-header">
                 <div>
-                  <h3>Delete resident</h3>
+                  <h3>Delete Resident</h3>
                   <p>This action cannot be undone.</p>
                 </div>
                 <button class="modal-close" type="button" @click="closeDeleteResidentModal">Close</button>
@@ -960,7 +1123,7 @@
                 <div class="modal-actions">
                   <button class="resident-tertiary" type="button" @click="closeDeleteResidentModal">Cancel</button>
                   <button class="resident-danger" type="button" :disabled="isDeletingResident" @click="confirmDeleteResident">
-                    {{ isDeletingResident ? 'Deleting...' : 'Delete resident' }}
+                    {{ isDeletingResident ? 'Deleting...' : 'Delete Resident' }}
                   </button>
                 </div>
               </div>
@@ -989,7 +1152,7 @@
               <div class="service-side">
                 <div class="service-overview">
                   <p class="service-kicker">Service operations</p>
-                  <h3 class="service-title">Catalog control hub</h3>
+                  <h3 class="service-title">Catalog Control Hub</h3>
                   <p class="service-subtitle">
                     Manage offerings, keep codes consistent, and highlight demand leaders at a glance.
                   </p>
@@ -1020,10 +1183,10 @@
                 <div class="service-action-card">
                   <div class="service-action-header">
                     <div>
-                      <h4>Service controls</h4>
+                      <h4>Service Controls</h4>
                       <p>Search and filter before editing.</p>
                     </div>
-                    <button class="resident-primary" type="button" @click="openCreateServiceModal">New service</button>
+                    <button class="resident-primary" type="button" @click="openCreateServiceModal">New Service</button>
                   </div>
                   <div class="service-action-grid">
                     <label class="service-field">
@@ -1039,15 +1202,15 @@
                     <label class="service-field">
                       <span>Status</span>
                       <select v-model="serviceStatusFilter" class="service-input" @change="servicePage = 1">
-                        <option value="all">All statuses</option>
+                        <option value="all">All Statuses</option>
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                       </select>
                     </label>
                   </div>
                   <div class="service-action-footer">
-                    <button class="resident-secondary" type="button" @click="loadServices">Refresh list</button>
-                    <button class="resident-tertiary" type="button" @click="resetServiceFilters">Clear filters</button>
+                    <button class="resident-secondary" type="button" @click="loadServices">Refresh List</button>
+                    <button class="resident-tertiary" type="button" @click="resetServiceFilters">Clear Filters</button>
                   </div>
                 </div>
               </div>
@@ -1055,7 +1218,7 @@
               <div class="service-table-card">
                 <div class="service-table-header">
                   <div>
-                    <h3>Service directory</h3>
+                    <h3>Service Directory</h3>
                     <p>{{ serviceRangeLabel }}</p>
                   </div>
                   <div class="service-table-meta">
@@ -1212,8 +1375,8 @@
                 <div class="queue-serving-card">
                   <div class="queue-serving-header">
                     <div>
-                      <p class="queue-kicker">Call station</p>
-                      <h3 class="queue-title">Now serving</h3>
+                      <p class="queue-kicker">Call Station</p>
+                      <h3 class="queue-title">Now Serving</h3>
                       <p class="queue-subtitle">Always show who is being processed right now.</p>
                     </div>
                     <span
@@ -1251,10 +1414,10 @@
                     </div>
                     <div class="queue-serving-actions">
                       <button class="resident-secondary" type="button" @click="printCallTicket(activeCallTicket)">
-                        Print form
+                        Print Form
                       </button>
                       <button class="resident-primary" type="button" @click="serveTicket(activeCallTicket)">
-                        Mark done
+                        Mark Done
                       </button>
                       <button class="resident-danger" type="button" @click="cancelTicket(activeCallTicket)">
                         Cancel
@@ -1269,11 +1432,11 @@
 
               <div class="queue-side-stack">
                 <div class="queue-next-card is-inline">
-                  <p class="queue-card-label">Next in line</p>
+                  <p class="queue-card-label">Next in Line</p>
                   <label class="queue-field">
-                    <span>Service for next call</span>
+                    <span>Service for Next Call</span>
                     <select v-model="callNextServiceId" class="queue-input">
-                      <option value="auto">Auto (earliest ticket)</option>
+                      <option value="auto">Auto (Earliest Ticket)</option>
                       <option v-for="service in services" :key="service.id" :value="service.id">
                         {{ service.name }} ({{ service.code }})
                       </option>
@@ -1332,7 +1495,7 @@
                     </div>
                   </div>
                   <p class="queue-metric-note">{{ queuePressureNote }}</p>
-                  <button class="resident-tertiary" type="button" @click="loadQueue">Refresh queue</button>
+                  <button class="resident-tertiary" type="button" @click="loadQueue">Refresh Queue</button>
                 </div>
               </div>
             </div>
@@ -1341,7 +1504,7 @@
               <div class="queue-table-card">
                 <div class="queue-table-header">
                   <div>
-                    <h3>Queue board</h3>
+                    <h3>Queue Board</h3>
                     <p>{{ queueRangeLabel }}</p>
                   </div>
                   <div class="queue-table-meta">
@@ -1454,10 +1617,10 @@
               <div class="queue-filter-card">
                 <div class="queue-filter-header">
                   <div>
-                    <h4>Queue filters</h4>
+                    <h4>Queue Filters</h4>
                     <p>Sort and search before actioning tickets.</p>
                   </div>
-                  <button class="resident-secondary" type="button" @click="loadQueue">Refresh list</button>
+                  <button class="resident-secondary" type="button" @click="loadQueue">Refresh List</button>
                 </div>
                 <div class="queue-filter-grid">
                   <label class="queue-field">
@@ -1482,7 +1645,7 @@
                   <label class="queue-field">
                     <span>Status</span>
                     <select v-model="queueStatus" class="queue-input" @change="queuePage = 1">
-                      <option value="">All statuses</option>
+                      <option value="">All Statuses</option>
                       <option value="waiting">Waiting</option>
                       <option value="serving">Serving</option>
                       <option value="done">Done</option>
@@ -1504,7 +1667,7 @@
                   <button class="resident-tertiary" type="button" @click="toggleQueueSortDirection">
                     Sort: {{ queueSortDirection === 'asc' ? 'Ascending' : 'Descending' }}
                   </button>
-                  <button class="resident-tertiary" type="button" @click="resetQueueFilters">Clear filters</button>
+                  <button class="resident-tertiary" type="button" @click="resetQueueFilters">Clear Filters</button>
                 </div>
               </div>
             </div>
@@ -1531,7 +1694,7 @@
             <div class="transaction-side">
               <div class="transaction-overview">
                 <p class="transaction-kicker">Ticket outcomes</p>
-                <h3 class="transaction-title">Service completion tracker</h3>
+                <h3 class="transaction-title">Service Completion Tracker</h3>
                 <p class="transaction-subtitle">
                   Review completed and cancelled requests with clear sorting and audit-ready filters.
                 </p>
@@ -1568,10 +1731,10 @@
               <div class="transaction-filter-card">
                 <div class="transaction-filter-header">
                   <div>
-                    <h4>Transaction filters</h4>
+                    <h4>Transaction Filters</h4>
                     <p>Limit by service, status, or search term.</p>
                   </div>
-                  <button class="resident-secondary" type="button" @click="loadTransactions">Refresh list</button>
+                  <button class="resident-secondary" type="button" @click="loadTransactions">Refresh List</button>
                 </div>
                 <div class="transaction-filter-grid">
                   <label class="transaction-field">
@@ -1604,7 +1767,7 @@
                       class="transaction-input"
                       @change="handleTransactionFilterChange"
                     >
-                      <option value="">All statuses</option>
+                      <option value="">All Statuses</option>
                       <option value="done">Done</option>
                       <option value="cancelled">Cancelled</option>
                     </select>
@@ -1623,7 +1786,7 @@
                   <button class="resident-tertiary" type="button" @click="toggleTransactionSortDirection">
                     Sort: {{ transactionSortDirection === 'asc' ? 'Ascending' : 'Descending' }}
                   </button>
-                  <button class="resident-tertiary" type="button" @click="resetTransactionFilters">Clear filters</button>
+                  <button class="resident-tertiary" type="button" @click="resetTransactionFilters">Clear Filters</button>
                 </div>
               </div>
             </div>
@@ -1631,7 +1794,7 @@
             <div class="transaction-table-card">
               <div class="transaction-table-header">
                 <div>
-                  <h3>Transaction ledger</h3>
+                  <h3>Transaction Ledger</h3>
                   <p>{{ transactionRangeLabel }}</p>
                 </div>
                 <div class="transaction-table-meta">
@@ -1735,7 +1898,7 @@
               <div class="kiosk-side">
                 <div class="kiosk-overview">
                   <p class="kiosk-kicker">Device readiness</p>
-                  <h3 class="kiosk-title">Kiosk availability dashboard</h3>
+                  <h3 class="kiosk-title">Kiosk Availability Dashboard</h3>
                   <p class="kiosk-subtitle">
                     Track devices in real time and onboard new kiosks with consistent metadata.
                   </p>
@@ -1766,10 +1929,10 @@
                 <div class="kiosk-action-card">
                   <div class="kiosk-action-header">
                     <div>
-                      <h4>Register a kiosk</h4>
+                      <h4>Register a Kiosk</h4>
                       <p>Assign a device ID and friendly name.</p>
                     </div>
-                    <button class="resident-secondary" type="button" @click="loadKiosks">Refresh list</button>
+                    <button class="resident-secondary" type="button" @click="loadKiosks">Refresh List</button>
                   </div>
                   <div class="kiosk-action-grid">
                     <label class="kiosk-field">
@@ -1783,7 +1946,7 @@
                   </div>
                   <div class="kiosk-action-footer">
                     <button class="resident-primary" type="button" @click="createKiosk">Add kiosk</button>
-                    <button class="resident-tertiary" type="button" @click="resetKioskFilters">Clear filters</button>
+                    <button class="resident-tertiary" type="button" @click="resetKioskFilters">Clear Filters</button>
                   </div>
                 </div>
               </div>
@@ -1791,7 +1954,7 @@
               <div class="kiosk-table-card">
                 <div class="kiosk-table-header">
                   <div>
-                    <h3>Kiosk directory</h3>
+                    <h3>Kiosk Directory</h3>
                     <p>{{ kioskRangeLabel }}</p>
                   </div>
                   <div class="kiosk-table-meta">
@@ -1813,7 +1976,7 @@
                   <label class="kiosk-field">
                     <span>Status</span>
                     <select v-model="kioskStatusFilter" class="kiosk-input" @change="kioskPage = 1">
-                      <option value="all">All statuses</option>
+                      <option value="all">All Statuses</option>
                       <option value="online">Online</option>
                       <option value="offline">Offline</option>
                     </select>
@@ -1930,7 +2093,7 @@
               <div class="audit-side">
                 <div class="audit-overview">
                   <p class="audit-kicker">System trail</p>
-                  <h3 class="audit-title">Operational audit stream</h3>
+                  <h3 class="audit-title">Operational Audit Stream</h3>
                   <p class="audit-subtitle">
                     Track every action across admins, kiosks, and residents with searchable history.
                   </p>
@@ -1961,7 +2124,7 @@
                 <div class="audit-filter-card">
                   <div class="audit-filter-header">
                     <div>
-                      <h4>Log filters</h4>
+                      <h4>Log Filters</h4>
                       <p>Search by action, actor, or ID.</p>
                     </div>
                     <button class="resident-secondary" type="button" @click="loadAuditLogs">Refresh logs</button>
@@ -1998,7 +2161,7 @@
                     <button class="resident-tertiary" type="button" @click="toggleAuditSortDirection">
                       Sort: {{ auditSortDirection === 'asc' ? 'Ascending' : 'Descending' }}
                     </button>
-                    <button class="resident-tertiary" type="button" @click="resetAuditFilters">Clear filters</button>
+                    <button class="resident-tertiary" type="button" @click="resetAuditFilters">Clear Filters</button>
                   </div>
                 </div>
               </div>
@@ -2006,7 +2169,7 @@
               <div class="audit-table-card">
                 <div class="audit-table-header">
                   <div>
-                    <h3>Audit logbook</h3>
+                    <h3>Audit Logbook</h3>
                     <p>{{ auditRangeLabel }}</p>
                   </div>
                   <div class="audit-table-meta">
@@ -2104,7 +2267,7 @@
             <div class="admin-users-side">
               <div class="admin-users-overview">
                 <p class="admin-users-kicker">Access control</p>
-                <h3 class="admin-users-title">Admin roster</h3>
+                <h3 class="admin-users-title">Admin Roster</h3>
                 <p class="admin-users-subtitle">
                   Maintain leadership access and keep staff roles aligned with service assignments.
                 </p>
@@ -2135,10 +2298,10 @@
               <div class="admin-users-form-card">
                 <div class="admin-users-form-header">
                   <div>
-                    <h4>Create admin</h4>
+                    <h4>Create Admin</h4>
                     <p>Invite a new admin to manage services.</p>
                   </div>
-                  <button class="resident-secondary" type="button" @click="loadAdmins">Refresh list</button>
+                  <button class="resident-secondary" type="button" @click="loadAdmins">Refresh List</button>
                 </div>
                 <div class="admin-users-form-grid">
                   <label class="admin-users-field">
@@ -2170,15 +2333,15 @@
                   </label>
                 </div>
                 <div class="admin-users-form-actions">
-                  <button class="resident-primary" type="button" @click="createAdmin">Add admin</button>
-                  <button class="resident-tertiary" type="button" @click="resetAdminFilters">Clear filters</button>
+                  <button class="resident-primary" type="button" @click="createAdmin">Add Admin</button>
+                  <button class="resident-tertiary" type="button" @click="resetAdminFilters">Clear Filters</button>
                 </div>
               </div>
 
               <div class="admin-users-filter-card">
                 <div class="admin-users-filter-header">
                   <div>
-                    <h4>Roster filters</h4>
+                    <h4>Roster Filters</h4>
                     <p>Search and sort the admin list.</p>
                   </div>
                 </div>
@@ -2220,7 +2383,7 @@
             <div class="admin-users-table-card">
               <div class="admin-users-table-header">
                 <div>
-                  <h3>Admin directory</h3>
+                  <h3>Admin Directory</h3>
                   <p>{{ adminRangeLabel }}</p>
                 </div>
                 <div class="admin-users-table-meta">
@@ -2310,7 +2473,7 @@
             <div class="modal-card" role="dialog" aria-modal="true">
               <div class="modal-header">
                 <div>
-                  <h3>Edit admin</h3>
+                  <h3>Edit Admin</h3>
                   <p>Update admin details or service assignments.</p>
                 </div>
                 <button class="modal-close" type="button" @click="closeAdminModal">Close</button>
@@ -2347,7 +2510,7 @@
                 <div class="modal-actions">
                   <button class="resident-tertiary" type="button" @click="closeAdminModal">Cancel</button>
                   <button class="resident-primary" type="submit" :disabled="isAdminSaving">
-                    {{ isAdminSaving ? 'Saving...' : 'Save changes' }}
+                    {{ isAdminSaving ? 'Saving...' : 'Save Changes' }}
                   </button>
                 </div>
               </form>
@@ -2361,7 +2524,7 @@
       <div class="modal-card is-logout" role="dialog" aria-modal="true">
         <div class="modal-header">
           <div>
-            <h3>Sign out</h3>
+            <h3>Sign Out</h3>
             <p>Confirm you want to end this admin session.</p>
           </div>
           <button class="modal-close" type="button" @click="closeLogoutModal">Close</button>
@@ -2380,13 +2543,13 @@
               </svg>
             </div>
             <div>
-              <p class="logout-modal-title">You’re about to sign out.</p>
+              <p class="logout-modal-title">You’re About to Sign Out.</p>
               <p class="logout-modal-subtitle">Make sure any pending actions are saved before leaving.</p>
             </div>
           </div>
           <div class="modal-actions logout-modal-actions">
             <button class="resident-tertiary" type="button" @click="closeLogoutModal">Stay signed in</button>
-            <button class="resident-danger" type="button" @click="confirmLogout">Sign out now</button>
+            <button class="resident-danger" type="button" @click="confirmLogout">Sign Out Now</button>
           </div>
         </div>
       </div>
@@ -2395,7 +2558,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { baseUrl } from '../api'
 import {
@@ -2417,6 +2580,7 @@ import {
   queueServe,
   queueCancel,
   getAuditLogs,
+  getTimingAnalytics,
 } from '../adminApi'
 
 const router = useRouter()
@@ -2556,24 +2720,27 @@ const analyticsServiceId = ref('')
 const analyticsStatus = ref('all')
 const analyticsStartDate = ref('')
 const analyticsEndDate = ref('')
+const timingAnalytics = ref({})
+const timingLoading = ref(false)
+const timingError = ref('')
 const lastUpdatedAt = ref(new Date())
 const phTimeLabel = ref('')
 const phTimeTimer = ref(null)
 
 const lastUpdatedLabel = computed(() => {
-  if (!lastUpdatedAt.value) return 'just now'
-  return lastUpdatedAt.value.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  if (!lastUpdatedAt.value) return 'Just Now'
+  return lastUpdatedAt.value.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })
 })
 
 const genderOptions = ['Male', 'Female', 'Non-binary', 'Prefer not to say']
 const civilStatusOptions = ['Single', 'Married', 'Separated', 'Widowed']
 
 const residentModalTitle = computed(() =>
-  residentModalMode.value === 'create' ? 'Create resident' : 'Manage resident'
+  residentModalMode.value === 'create' ? 'Create Resident' : 'Manage Resident'
 )
 
 const residentSubmitLabel = computed(() =>
-  residentModalMode.value === 'create' ? 'Create resident' : 'Save details'
+  residentModalMode.value === 'create' ? 'Create Resident' : 'Save Details'
 )
 
 const residentModalSubtitle = computed(() =>
@@ -2590,7 +2757,7 @@ const residentModalName = computed(() => {
 
 const residentModalId = computed(() => {
   const id = residentTarget.value?.id
-  if (!id && id !== 0) return 'ID pending'
+  if (!id && id !== 0) return 'ID Pending'
   return `BSM-RES-${String(id).padStart(6, '0')}`
 })
 
@@ -2600,11 +2767,11 @@ const residentModalPhoto = computed(() => {
 })
 
 const serviceModalTitle = computed(() =>
-  serviceModalMode.value === 'create' ? 'Create service' : 'Update service'
+  serviceModalMode.value === 'create' ? 'Create Service' : 'Update Service'
 )
 
 const serviceSubmitLabel = computed(() =>
-  serviceModalMode.value === 'create' ? 'Create service' : 'Save changes'
+  serviceModalMode.value === 'create' ? 'Create Service' : 'Save Changes'
 )
 
 const residentTotalPages = computed(() =>
@@ -3038,30 +3205,46 @@ const analyticsDateRange = computed(() => {
   return { start, end: endToday }
 })
 
+const formatDateParam = (date) => {
+  if (!date) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const formatDurationLabel = (minutes) => {
+  if (minutes === null || minutes === undefined || Number.isNaN(minutes)) return '--'
+  const totalSeconds = Math.max(0, Math.round(minutes * 60))
+  const mins = Math.floor(totalSeconds / 60)
+  const secs = totalSeconds % 60
+  return `${mins}m ${secs}s`
+}
+
 const analyticsRangeLabel = computed(() => {
-  if (analyticsRange.value === 'all') return 'All time'
+  if (analyticsRange.value === 'all') return 'All Time'
   if (analyticsRange.value === 'today') return 'Today'
-  if (analyticsRange.value === '7d') return 'Last 7 days'
-  if (analyticsRange.value === '30d') return 'Last 30 days'
-  if (analyticsRange.value === '90d') return 'Last 90 days'
+  if (analyticsRange.value === '7d') return 'Last 7 Days'
+  if (analyticsRange.value === '30d') return 'Last 30 Days'
+  if (analyticsRange.value === '90d') return 'Last 90 Days'
   if (analyticsRange.value === 'custom') {
-    if (!analyticsStartDate.value && !analyticsEndDate.value) return 'Custom range'
+    if (!analyticsStartDate.value && !analyticsEndDate.value) return 'Custom Range'
     const startLabel = analyticsStartDate.value || 'Start'
     const endLabel = analyticsEndDate.value || 'Today'
     return `${startLabel} to ${endLabel}`
   }
-  return 'Custom range'
+  return 'Custom Range'
 })
 
 const analyticsFilterNote = computed(() => {
   const statusLabel =
     analyticsStatus.value === 'all'
-      ? 'All statuses'
+      ? 'All Statuses'
       : analyticsStatus.value.charAt(0).toUpperCase() + analyticsStatus.value.slice(1)
   const serviceLabel = analyticsServiceId.value
     ? services.value.find((service) => service.id === parseInt(analyticsServiceId.value, 10))?.name ||
       `Service ${analyticsServiceId.value}`
-    : 'All services'
+    : 'All Services'
   return `${analyticsRangeLabel.value} | ${serviceLabel} | ${statusLabel}`
 })
 
@@ -3082,6 +3265,115 @@ const analyticsTickets = computed(() => {
     }
     return true
   })
+})
+
+const kioskTimingStats = computed(() => timingAnalytics.value?.kiosk || {})
+const ticketCycleStats = computed(() => timingAnalytics.value?.ticket_cycle || {})
+const waitToServeStats = computed(() => timingAnalytics.value?.wait_to_serve || {})
+const serviceDurationStats = computed(() => timingAnalytics.value?.service_duration || {})
+const timingSeries = computed(() => timingAnalytics.value?.series || {})
+
+const experienceTotalMinutes = computed(() => {
+  const kiosk = kioskTimingStats.value.avg_minutes || 0
+  const wait = waitToServeStats.value.avg_minutes || 0
+  const serve = serviceDurationStats.value.avg_minutes || 0
+  const cycle = ticketCycleStats.value.avg_minutes || 0
+  const cycleTotal = cycle || wait + serve
+  if (!kiosk && !cycleTotal) return 0
+  return kiosk + cycleTotal
+})
+
+const experienceHasData = computed(() => experienceTotalMinutes.value > 0)
+
+const experienceTotalLabel = computed(() =>
+  experienceHasData.value ? formatDurationLabel(experienceTotalMinutes.value) : '--'
+)
+
+const experienceSegments = computed(() => {
+  const kiosk = kioskTimingStats.value.avg_minutes || 0
+  const wait = waitToServeStats.value.avg_minutes || 0
+  const serve = serviceDurationStats.value.avg_minutes || 0
+  const total = kiosk + wait + serve
+  if (!total) {
+    return { kiosk: 0, wait: 0, serve: 0 }
+  }
+  const kioskPercent = Math.round((kiosk / total) * 100)
+  const waitPercent = Math.round((wait / total) * 100)
+  const servePercent = Math.max(0, 100 - kioskPercent - waitPercent)
+  return { kiosk: kioskPercent, wait: waitPercent, serve: servePercent }
+})
+
+const mapTimingSeries = (items = []) =>
+  items.map((entry) => {
+    const date = new Date(`${entry.date}T00:00:00`)
+    const label = Number.isNaN(date.getTime())
+      ? entry.date
+      : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    return {
+      label,
+      value: Number(entry.avg_minutes || 0),
+    }
+  })
+
+const kioskTimingSeries = computed(() => mapTimingSeries(timingSeries.value.kiosk_completion || []))
+const ticketCycleSeries = computed(() => mapTimingSeries(timingSeries.value.ticket_cycle || []))
+
+const kioskTimingTrend = computed(() => buildLineMetrics(kioskTimingSeries.value))
+const kioskTimingAxis = computed(() => buildAxisLabels(kioskTimingSeries.value))
+const ticketCycleTrend = computed(() => buildLineMetrics(ticketCycleSeries.value))
+const ticketCycleAxis = computed(() => buildAxisLabels(ticketCycleSeries.value))
+
+const kioskAvgLabel = computed(() => formatDurationLabel(kioskTimingStats.value.avg_minutes))
+const kioskMedianLabel = computed(() => formatDurationLabel(kioskTimingStats.value.median_minutes))
+const kioskP90Label = computed(() => formatDurationLabel(kioskTimingStats.value.p90_minutes))
+
+const ticketCycleAvgLabel = computed(() => formatDurationLabel(ticketCycleStats.value.avg_minutes))
+const ticketCycleMedianLabel = computed(() => formatDurationLabel(ticketCycleStats.value.median_minutes))
+const ticketCycleP90Label = computed(() => formatDurationLabel(ticketCycleStats.value.p90_minutes))
+
+const waitToServeLabel = computed(() => formatDurationLabel(waitToServeStats.value.avg_minutes))
+const serviceDurationLabel = computed(() => formatDurationLabel(serviceDurationStats.value.avg_minutes))
+
+const maxTimingSegment = computed(() =>
+  Math.max(waitToServeStats.value.avg_minutes || 0, serviceDurationStats.value.avg_minutes || 0, 1)
+)
+const waitToServePercent = computed(() =>
+  Math.round(((waitToServeStats.value.avg_minutes || 0) / maxTimingSegment.value) * 100)
+)
+const serviceDurationPercent = computed(() =>
+  Math.round(((serviceDurationStats.value.avg_minutes || 0) / maxTimingSegment.value) * 100)
+)
+
+const timingScopeNote = computed(() => {
+  if (analyticsStatus.value && !['all', 'done'].includes(analyticsStatus.value)) {
+    return 'Completion metrics are tracked for finished tickets only. Switch status to Done or All to see full timing.'
+  }
+  return ''
+})
+
+const kioskTimingInsight = computed(() => {
+  const count = kioskTimingStats.value.count || 0
+  if (!count) return 'No kiosk completion sessions in this range yet.'
+  return `Based on ${count} kiosk session${count === 1 ? '' : 's'}, average completion is ${kioskAvgLabel.value}.`
+})
+
+const ticketTimingInsight = computed(() => {
+  const count = ticketCycleStats.value.count || 0
+  if (!count) return 'No completed tickets in this range yet.'
+  return `Average ticket cycle time is ${ticketCycleAvgLabel.value} from issuance to completion.`
+})
+
+const queueBreakdownInsight = computed(() => {
+  const wait = waitToServeStats.value.avg_minutes
+  const serve = serviceDurationStats.value.avg_minutes
+  if (!wait && !serve) return 'Queue breakdown metrics will appear once tickets are served and completed.'
+  if (wait && serve && wait > serve) {
+    return `Residents wait longer (${waitToServeLabel.value}) than service time (${serviceDurationLabel.value}).`
+  }
+  if (wait && serve) {
+    return `Service time (${serviceDurationLabel.value}) is longer than the waiting phase (${waitToServeLabel.value}).`
+  }
+  return 'Queue timing split is building. Check back after more completions.'
 })
 
 const analyticsResidents = computed(() => {
@@ -3285,7 +3577,7 @@ const todayAverageWaitMinutes = computed(() => {
 
 const todayAverageWaitLabel = computed(() => {
   if (todayAverageWaitMinutes.value === null || todayAverageWaitMinutes.value === undefined) return '--'
-  return `${todayAverageWaitMinutes.value} min`
+  return formatDurationLabel(todayAverageWaitMinutes.value)
 })
 
 const todayQueuePressurePercent = computed(() => {
@@ -3298,7 +3590,7 @@ const todayQueuePressureNote = computed(() => {
   const active = todayActiveQueueCount.value
   if (!active) return 'Queue is clear today. Counters can focus on walk-ins.'
   if (todayAverageWaitMinutes.value !== null && todayAverageWaitMinutes.value >= 30) {
-    return `Average wait is ${todayAverageWaitMinutes.value} min today. Consider opening another counter.`
+    return `Average wait is ${formatDurationLabel(todayAverageWaitMinutes.value)} today. Consider opening another counter.`
   }
   if (active >= 12) return 'High demand today. Activate extra counters if available.'
   if (active >= 6) return 'Moderate load today. Keep a steady serving pace.'
@@ -3323,6 +3615,7 @@ const serviceDemand = computed(() => {
         id,
         count,
         name: service?.name || `Service #${id}`,
+        code: service?.code || '',
       }
     })
     .sort((a, b) => b.count - a.count)
@@ -3333,16 +3626,6 @@ const serviceDemand = computed(() => {
     percent: Math.round((item.count / maxCount) * 100),
   }))
 })
-
-const shortServiceLabel = (name = '') => {
-  const words = name.split(' ').filter(Boolean)
-  if (!words.length) return 'SVC'
-  if (words.length === 1) return words[0].slice(0, 4).toUpperCase()
-  return words
-    .slice(0, 2)
-    .map((word) => word[0].toUpperCase())
-    .join('')
-}
 
 const serviceVolumeBars = computed(() => {
   const counts = new Map()
@@ -3367,30 +3650,231 @@ const serviceVolumeBars = computed(() => {
   return items.map((item) => ({
     ...item,
     percent: Math.round((item.count / maxCount) * 100),
-    shortLabel: shortServiceLabel(item.name),
   }))
 })
 
 const analyticsTopService = computed(() => serviceVolumeBars.value[0] || null)
 
 const analyticsTopServiceLabel = computed(() => {
-  if (!analyticsTopService.value) return 'No demand yet'
+  if (!analyticsTopService.value) return 'No Demand Yet'
   return analyticsTopService.value.name
 })
 
+const analyticsTopServiceTitle = computed(() => formatServiceName(analyticsTopServiceLabel.value))
+
 const analyticsTopServiceCountLabel = computed(() => {
-  if (!analyticsTopService.value) return 'Waiting for tickets'
+  if (!analyticsTopService.value) return 'Waiting for Tickets'
   return `${analyticsTopService.value.count} tickets`
 })
 
+const analyticsReportFilename = (extension) => {
+  const stamp = new Date()
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d+Z$/, '')
+  return `admin-analytics-report-${stamp}.${extension}`
+}
+
+const csvEscape = (value) => {
+  const text = value === null || value === undefined ? '' : String(value)
+  if (text.includes('"') || text.includes(',') || text.includes('\n')) {
+    return `"${text.replace(/"/g, '""')}"`
+  }
+  return text
+}
+
+const buildCsvSection = (rows) => rows.map((row) => row.map(csvEscape).join(',')).join('\n')
+
+const downloadAnalyticsCsv = () => {
+  const generatedAt = formatReportTimestamp(new Date())
+  const rows = []
+  rows.push(['Report', 'Admin Analytics Dashboard'])
+  rows.push(['Generated At', generatedAt])
+  rows.push(['Filters', analyticsFilterNote.value])
+  rows.push([])
+  rows.push(['Timing Summary'])
+  rows.push(['Metric', 'Average', 'Median', 'P90', 'Min', 'Max', 'Count'])
+  rows.push([
+    'Kiosk Completion',
+    kioskTimingStats.value.avg_minutes ?? '',
+    kioskTimingStats.value.median_minutes ?? '',
+    kioskTimingStats.value.p90_minutes ?? '',
+    kioskTimingStats.value.min_minutes ?? '',
+    kioskTimingStats.value.max_minutes ?? '',
+    kioskTimingStats.value.count ?? '',
+  ])
+  rows.push([
+    'Ticket Cycle',
+    ticketCycleStats.value.avg_minutes ?? '',
+    ticketCycleStats.value.median_minutes ?? '',
+    ticketCycleStats.value.p90_minutes ?? '',
+    ticketCycleStats.value.min_minutes ?? '',
+    ticketCycleStats.value.max_minutes ?? '',
+    ticketCycleStats.value.count ?? '',
+  ])
+  rows.push([
+    'Wait To Serve',
+    waitToServeStats.value.avg_minutes ?? '',
+    waitToServeStats.value.median_minutes ?? '',
+    waitToServeStats.value.p90_minutes ?? '',
+    waitToServeStats.value.min_minutes ?? '',
+    waitToServeStats.value.max_minutes ?? '',
+    waitToServeStats.value.count ?? '',
+  ])
+  rows.push([
+    'Service Duration',
+    serviceDurationStats.value.avg_minutes ?? '',
+    serviceDurationStats.value.median_minutes ?? '',
+    serviceDurationStats.value.p90_minutes ?? '',
+    serviceDurationStats.value.min_minutes ?? '',
+    serviceDurationStats.value.max_minutes ?? '',
+    serviceDurationStats.value.count ?? '',
+  ])
+  rows.push([])
+  rows.push(['Daily Ticket Volume'])
+  rows.push(['Date', 'Tickets'])
+  ticketTrendSeries.value.forEach((entry) => rows.push([entry.label, entry.value]))
+  rows.push([])
+  rows.push(['Ticket Status Mix'])
+  rows.push(['Status', 'Count', 'Percent'])
+  ticketStatusMix.value.forEach((entry) => rows.push([entry.label, entry.count, entry.percent]))
+  rows.push([])
+  rows.push(['Most Booked Service'])
+  rows.push(['Service', 'Count', 'Percent'])
+  serviceVolumeBars.value.forEach((entry) => rows.push([formatServiceName(entry.name), entry.count, entry.percent]))
+  rows.push([])
+  rows.push(['Service Mix'])
+  rows.push(['Service', 'Count', 'Percent'])
+  serviceMix.value.forEach((entry) => rows.push([formatServiceName(entry.label), entry.count, entry.percent]))
+  rows.push([])
+  rows.push(['Traffic By Time'])
+  rows.push(['Window', 'Tickets'])
+  trafficBuckets.value.forEach((entry) => rows.push([entry.label, entry.count]))
+  rows.push([])
+  rows.push(['Resident Registrations'])
+  rows.push(['Date', 'Registrations'])
+  residentTrendSeries.value.forEach((entry) => rows.push([entry.label, entry.value]))
+
+  const csv = buildCsvSection(rows)
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = analyticsReportFilename('csv')
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(link.href)
+}
+
+const buildPdfRow = (label, value) => `
+  <tr>
+    <td>${escapeHtml(label)}</td>
+    <td>${escapeHtml(value)}</td>
+  </tr>
+`
+
+const buildPdfTable = (title, headers, rows) => `
+  <div class="section">
+    <h2>${escapeHtml(title)}</h2>
+    <table>
+      <thead>
+        <tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('')}</tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  </div>
+`
+
+const downloadAnalyticsPdf = () => {
+  const reportWindow = window.open('', 'analytics-report')
+  if (!reportWindow) {
+    timingError.value = 'Unable to open the report window.'
+    return
+  }
+  const generatedAt = formatReportTimestamp(new Date())
+  const summaryRows = [
+    buildPdfRow('Generated At', generatedAt),
+    buildPdfRow('Filters', analyticsFilterNote.value),
+  ].join('')
+
+  const timingRows = [
+    ['Kiosk Completion', kioskAvgLabel.value, kioskMedianLabel.value, kioskP90Label.value, kioskTimingStats.value.count || 0],
+    ['Ticket Cycle', ticketCycleAvgLabel.value, ticketCycleMedianLabel.value, ticketCycleP90Label.value, ticketCycleStats.value.count || 0],
+    ['Wait To Serve', waitToServeLabel.value, '—', '—', waitToServeStats.value.count || 0],
+    ['Service Duration', serviceDurationLabel.value, '—', '—', serviceDurationStats.value.count || 0],
+  ]
+    .map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`)
+    .join('')
+
+  const ticketRows = ticketTrendSeries.value
+    .map((entry) => `<tr><td>${escapeHtml(entry.label)}</td><td>${escapeHtml(entry.value)}</td></tr>`)
+    .join('')
+
+  const statusRows = ticketStatusMix.value
+    .map((entry) => `<tr><td>${escapeHtml(entry.label)}</td><td>${escapeHtml(entry.count)}</td><td>${escapeHtml(entry.percent)}%</td></tr>`)
+    .join('')
+
+  const serviceRows = serviceVolumeBars.value
+    .map((entry) => `<tr><td>${escapeHtml(formatServiceName(entry.name))}</td><td>${escapeHtml(entry.count)}</td><td>${escapeHtml(entry.percent)}%</td></tr>`)
+    .join('')
+
+  const serviceMixRows = serviceMix.value
+    .map((entry) => `<tr><td>${escapeHtml(formatServiceName(entry.label))}</td><td>${escapeHtml(entry.count)}</td><td>${escapeHtml(entry.percent)}%</td></tr>`)
+    .join('')
+
+  const trafficRows = trafficBuckets.value
+    .map((entry) => `<tr><td>${escapeHtml(entry.label)}</td><td>${escapeHtml(entry.count)}</td></tr>`)
+    .join('')
+
+  const residentRows = residentTrendSeries.value
+    .map((entry) => `<tr><td>${escapeHtml(entry.label)}</td><td>${escapeHtml(entry.value)}</td></tr>`)
+    .join('')
+
+  reportWindow.document.write(`<!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Admin Analytics Report</title>
+        <style>
+          * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+          body { margin: 24px; color: #0f172a; }
+          h1 { margin: 0 0 8px; font-size: 24px; color: #0b2c6f; }
+          .meta { margin-bottom: 16px; font-size: 12px; color: #475569; }
+          .section { margin-top: 18px; }
+          h2 { font-size: 16px; color: #0b2c6f; margin: 0 0 8px; }
+          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
+          th { background: #f8fafc; text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; }
+        </style>
+      </head>
+      <body>
+        <h1>Admin Analytics Dashboard Report</h1>
+        <div class="meta">Generated ${escapeHtml(generatedAt)}</div>
+        ${buildPdfTable('Report Summary', ['Item', 'Value'], summaryRows)}
+        ${buildPdfTable('Timing Summary', ['Metric', 'Average', 'Median', 'P90', 'Count'], timingRows)}
+        ${buildPdfTable('Daily Ticket Volume', ['Date', 'Tickets'], ticketRows)}
+        ${buildPdfTable('Ticket Status Mix', ['Status', 'Count', 'Percent'], statusRows)}
+        ${buildPdfTable('Most Booked Service', ['Service', 'Count', 'Percent'], serviceRows)}
+        ${buildPdfTable('Service Mix', ['Service', 'Count', 'Percent'], serviceMixRows)}
+        ${buildPdfTable('Traffic By Time', ['Window', 'Tickets'], trafficRows)}
+        ${buildPdfTable('Resident Registrations', ['Date', 'Registrations'], residentRows)}
+      </body>
+    </html>`)
+  reportWindow.document.close()
+  reportWindow.focus()
+  reportWindow.print()
+}
+
 const topServiceLabel = computed(() => {
   const top = serviceDemand.value[0]
-  return top ? top.name : 'No demand yet'
+  return top ? top.name : 'No Demand Yet'
 })
 
 const topServiceCountLabel = computed(() => {
   const top = serviceDemand.value[0]
-  return top ? `${top.count} tickets` : 'Waiting for tickets'
+  return top ? `${top.count} tickets` : 'Waiting for Tickets'
 })
 
 const kioskStatusList = computed(() => {
@@ -3499,6 +3983,16 @@ const trafficBuckets = computed(() => {
     label: formatTimeRange(slot.index * 3),
   }))
 })
+
+const trafficSeries = computed(() =>
+  trafficBuckets.value.map((slot) => ({
+    label: slot.label,
+    value: slot.count,
+  }))
+)
+
+const trafficTrend = computed(() => buildLineMetrics(trafficSeries.value))
+const trafficAxis = computed(() => buildAxisLabels(trafficSeries.value))
 
 const busiestTrafficSlot = computed(() => {
   if (!trafficBuckets.value.length) return null
@@ -3741,7 +4235,7 @@ const serviceMix = computed(() => {
     ...item,
     share: item.count / total,
     percent: Math.round((item.count / total) * 100),
-    color: item.label === 'Other' ? '#9ca3af' : palette[index % palette.length],
+    color: item.label === 'Other' ? '#cbd5e1' : palette[index % palette.length],
   }))
 })
 
@@ -3761,7 +4255,6 @@ const serviceMixInsight = computed(() => {
   return `${top.label} leads the service mix with ${top.percent}% of bookings.`
 })
 
-const recentLogs = computed(() => auditLogs.value.slice(0, 5))
 
 const queueInsight = computed(() => {
   if (!queueStatusCounts.value.total) return 'No tickets yet. The queue board is ready for the first visitors.'
@@ -4504,7 +4997,7 @@ const printCallTicket = (ticket) => {
         </div>
 
         <div class="section">
-          <h2>Resident details</h2>
+          <h2>Resident Details</h2>
           <div class="grid">
             <div class="field">
               <div class="label">Resident Name</div>
@@ -4542,7 +5035,7 @@ const printCallTicket = (ticket) => {
         </div>
 
         <div class="section">
-          <h2>Requested service</h2>
+          <h2>Requested Service</h2>
           <p>Please attach the official template for ${escapeHtml(serviceLabel)} once available.</p>
         </div>
 
@@ -4572,6 +5065,25 @@ const loadAuditLogs = async () => {
     auditError.value = err.message
   } finally {
     isLoadingLogs.value = false
+  }
+}
+
+const loadTimingAnalytics = async () => {
+  timingError.value = ''
+  timingLoading.value = true
+  try {
+    const { start, end } = analyticsDateRange.value
+    const data = await getTimingAnalytics({
+      start: start ? formatDateParam(start) : '',
+      end: end ? formatDateParam(end) : '',
+      service_id: analyticsServiceId.value,
+    })
+    timingAnalytics.value = data || {}
+  } catch (err) {
+    timingError.value = err.message
+    timingAnalytics.value = {}
+  } finally {
+    timingLoading.value = false
   }
 }
 
@@ -4621,6 +5133,7 @@ const refreshAll = async () => {
     loadAllQueueTickets(),
     loadTransactions(),
     loadAuditLogs(),
+    loadTimingAnalytics(),
   ]
   if (isSuperAdmin.value) {
     tasks.push(loadAdmins())
@@ -4658,16 +5171,43 @@ const statusClass = (status) => `is-${statusTone(status)}`
 
 const rowClass = (status) => [`table-row`, `row-status-${statusTone(status)}`]
 
+const formatServiceName = (value) => {
+  if (!value) return ''
+  const smallWords = new Set(['of', 'and', 'the', 'in', 'on', 'for'])
+  return String(value)
+    .split(' ')
+    .map((word) => {
+      const lower = word.toLowerCase()
+      if (smallWords.has(lower)) return lower
+      return lower.charAt(0).toUpperCase() + lower.slice(1)
+    })
+    .join(' ')
+}
+
 const formatDate = (value) => {
   if (!value) return '-'
   const date = new Date(value)
   return date.toLocaleDateString()
 }
 
+const formatReportTimestamp = (value = new Date()) => {
+  if (!value) return ''
+  return value
+    .toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+    .replace(',', '')
+}
+
 const formatTime = (value) => {
   if (!value) return '--'
   const date = new Date(value)
-  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
 const formatAction = (value = '') => {
@@ -4712,15 +5252,15 @@ const getAdminInitials = (admin) => {
 
 const formatHourLabel = (hour) => {
   const normalized = ((hour % 24) + 24) % 24
-  const period = normalized >= 12 ? 'p' : 'a'
+  const period = normalized >= 12 ? 'PM' : 'AM'
   const display = normalized % 12 || 12
-  return `${display}${period}`
+  return `${display} ${period}`
 }
 
 const formatTimeRange = (startHour) => {
   const startLabel = formatHourLabel(startHour)
   const endLabel = formatHourLabel(startHour + 3)
-  return `${startLabel}-${endLabel}`
+  return `${startLabel} - ${endLabel}`
 }
 
 onMounted(() => {
@@ -4762,6 +5302,13 @@ onMounted(() => {
 
   refreshAll()
 })
+
+watch(
+  [analyticsRange, analyticsStartDate, analyticsEndDate, analyticsServiceId],
+  () => {
+    loadTimingAnalytics()
+  }
+)
 
 onBeforeUnmount(() => {
   if (dockObserver) {
@@ -8384,49 +8931,115 @@ onBeforeUnmount(() => {
   margin-top: 1.2rem;
   display: grid;
   gap: 1.4rem;
+  min-height: var(--chart-height);
 }
 
-.service-chart-bars {
+.iso-bar-chart {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 1.2rem;
   align-items: end;
-  min-height: 180px;
+  min-height: 200px;
+  padding-top: 0.5rem;
 }
 
-.service-bar {
+.iso-bar {
   display: grid;
   gap: 0.5rem;
   justify-items: center;
+  text-align: center;
+  grid-template-rows: 150px 2.6em auto;
 }
 
-.service-bar-track {
-  width: 42px;
-  height: 120px;
-  border-radius: 999px;
-  background: #f3f4f6;
+.iso-bar-stack {
+  position: relative;
+  width: 70px;
+  height: 150px;
   display: flex;
   align-items: flex-end;
-  padding: 6px;
+  justify-content: center;
 }
 
-.service-bar-fill {
-  width: 100%;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #0b2c6f, #f2c300);
-  transition: height 0.4s ease;
+.iso-bar-body {
+  position: relative;
+  width: 44px;
+  height: var(--bar-height);
+  border-radius: 6px;
+  background: linear-gradient(
+    180deg,
+    hsl(var(--bar-hue) 70% 35%) 0%,
+    hsl(var(--bar-hue) 80% 50%) 55%,
+    hsl(var(--bar-hue) 90% 62%) 100%
+  );
+  box-shadow: 0 16px 22px rgba(15, 23, 42, 0.16);
 }
 
-.service-bar-label {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
+.iso-bar-body::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 0;
+  width: 44px;
+  height: 10px;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--bar-hue) 90% 70%),
+    hsl(var(--bar-hue) 80% 60%)
+  );
+  transform: skewX(-45deg);
+  transform-origin: left bottom;
+  border-radius: 6px 6px 2px 2px;
+}
+
+.iso-bar-body::after {
+  content: '';
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 10px;
+  height: calc(var(--bar-height) + 10px);
+  background: linear-gradient(
+    180deg,
+    hsl(var(--bar-hue) 70% 28%),
+    hsl(var(--bar-hue) 80% 40%)
+  );
+  transform: skewY(-45deg);
+  transform-origin: top left;
+  border-radius: 0 6px 6px 0;
+}
+
+.iso-bar-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
   color: #6b7280;
+  max-width: 130px;
+  line-height: 1.2;
+  min-height: 2.6em;
+  max-height: 2.6em;
+  overflow: hidden;
+  word-break: break-word;
+  text-wrap: balance;
 }
 
-.service-bar-value {
+.iso-bar-value {
   font-weight: 700;
   color: #111827;
+  min-height: 1.1em;
+}
+
+.line-chart.is-volume .line-path {
+  stroke: #0b2c6f;
+  stroke-width: 3.2;
+}
+
+.line-chart.is-volume .line-area {
+  opacity: 0.85;
+}
+
+.line-chart.is-volume .line-point {
+  fill: #0b2c6f;
+  stroke: #ffffff;
+  stroke-width: 2;
 }
 
 .service-chart-summary {
@@ -8453,58 +9066,19 @@ onBeforeUnmount(() => {
   color: #6b7280;
 }
 
-.traffic-chart {
-  margin-top: 1.2rem;
-  display: grid;
-  gap: 1rem;
+.line-chart.is-traffic .line-path {
+  stroke: #0ea5e9;
+  stroke-width: 3.2;
 }
 
-.traffic-bars {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
-  gap: 0.75rem;
-  align-items: end;
-  min-height: 160px;
+.line-chart.is-traffic .line-area {
+  opacity: 0.75;
 }
 
-.traffic-bar {
-  display: grid;
-  gap: 0.4rem;
-  justify-items: center;
-}
-
-.traffic-bar-track {
-  width: 28px;
-  height: 110px;
-  border-radius: 999px;
-  background: #f3f4f6;
-  display: flex;
-  align-items: flex-end;
-  padding: 5px;
-}
-
-.traffic-bar-fill {
-  width: 100%;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #f2c300, rgba(11, 44, 111, 0.85));
-  transition: height 0.4s ease;
-}
-
-.traffic-bar-label {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.2em;
-  color: #6b7280;
-}
-
-.traffic-bar-value {
-  font-weight: 600;
-  color: #111827;
-}
-
-.traffic-note {
-  font-size: 0.9rem;
-  color: #6b7280;
+.line-chart.is-traffic .line-point {
+  fill: #0ea5e9;
+  stroke: #ffffff;
+  stroke-width: 2;
 }
 
 .analytics-zone {
@@ -8522,6 +9096,41 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 1.5rem;
+}
+
+.analytics-controls {
+  display: grid;
+  gap: 0.8rem;
+  min-width: min(420px, 100%);
+}
+
+.analytics-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: flex-end;
+}
+
+.analytics-export {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.55rem 0.9rem;
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.analytics-export:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+}
+
+.analytics-export.is-pdf {
+  background: #0b2c6f;
+  color: #ffffff;
+  border-color: transparent;
 }
 
 .analytics-kicker {
@@ -8610,6 +9219,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
   display: grid;
   gap: 1rem;
+  --chart-height: 240px;
 }
 
 .analytics-card.span-7 {
@@ -8620,8 +9230,227 @@ onBeforeUnmount(() => {
   grid-column: span 5;
 }
 
+.analytics-card.span-12 {
+  grid-column: span 12;
+}
+
 .analytics-card.span-6 {
   grid-column: span 6;
+}
+
+.timing-card {
+  background: linear-gradient(135deg, rgba(11, 44, 111, 0.08), rgba(255, 255, 255, 0.95));
+  border: 1px solid rgba(11, 44, 111, 0.15);
+}
+
+.timing-badge {
+  align-self: flex-start;
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  background: rgba(11, 44, 111, 0.12);
+  color: #0b2c6f;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.timing-definition {
+  margin: 0.4rem 0 0;
+  font-size: 0.9rem;
+  color: #4b5563;
+  max-width: 780px;
+}
+
+.timing-filter-note {
+  margin: 0.4rem 0 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.timing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.timing-chart-grid {
+  margin-top: 1.4rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.timing-chart {
+  border-radius: 18px;
+  padding: 1.1rem 1.2rem;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  display: grid;
+  gap: 0.8rem;
+  min-height: 250px;
+}
+
+.timing-chart-header h5 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: #0b2c6f;
+}
+
+.timing-chart-header p {
+  margin-top: 0.3rem;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.mini-line-chart {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.mini-line-svg {
+  width: 100%;
+  height: 150px;
+}
+
+.timing-journey {
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(226, 232, 240, 0.9));
+}
+
+.journey-body {
+  display: grid;
+  gap: 1rem;
+}
+
+.journey-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.journey-segment {
+  height: 100%;
+}
+
+.journey-segment.is-kiosk {
+  background: linear-gradient(90deg, #0b2c6f, #3b82f6);
+}
+
+.journey-segment.is-wait {
+  background: linear-gradient(90deg, #f2c300, #f59e0b);
+}
+
+.journey-segment.is-serve {
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+
+.journey-legend {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.journey-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.journey-item strong {
+  margin-left: auto;
+  color: #0f172a;
+}
+
+.journey-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.journey-swatch.is-kiosk {
+  background: #1d4ed8;
+}
+
+.journey-swatch.is-wait {
+  background: #f59e0b;
+}
+
+.journey-swatch.is-serve {
+  background: #22c55e;
+}
+
+.timing-scope-note {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #6b7280;
+}
+
+.timing-tile {
+  border-radius: 18px;
+  padding: 1.2rem 1.3rem;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  display: grid;
+  gap: 0.6rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+.timing-tile.timing-total {
+  border-color: rgba(59, 130, 246, 0.35);
+  background: linear-gradient(135deg, rgba(226, 232, 240, 0.7), rgba(255, 255, 255, 0.95));
+}
+
+.timing-tile.is-gold {
+  border-color: rgba(242, 195, 0, 0.4);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 244, 219, 0.9));
+}
+
+.timing-tile.is-slate {
+  border-color: rgba(15, 23, 42, 0.15);
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.98), rgba(226, 232, 240, 0.7));
+}
+
+.timing-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.timing-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #0b2c6f;
+}
+
+.timing-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.timing-note {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin: 0;
+}
+
+.timing-error {
+  color: #b91c1c;
+  font-size: 0.95rem;
+}
+
+.timing-loading {
+  color: #64748b;
+  font-size: 0.95rem;
 }
 
 .chart-header {
@@ -8650,7 +9479,7 @@ onBeforeUnmount(() => {
 }
 
 .analysis-note::before {
-  content: 'AI insight: ';
+  content: 'AI Insight: ';
   font-weight: 700;
   color: #0b2c6f;
 }
@@ -8658,11 +9487,12 @@ onBeforeUnmount(() => {
 .line-chart {
   display: grid;
   gap: 0.7rem;
+  min-height: var(--chart-height);
 }
 
 .line-svg {
   width: 100%;
-  height: auto;
+  height: 200px;
 }
 
 .line-grid line {
@@ -8714,6 +9544,7 @@ onBeforeUnmount(() => {
 .pie-chart {
   display: grid;
   gap: 1rem;
+  min-height: var(--chart-height);
 }
 
 .donut-figure,
@@ -8725,8 +9556,8 @@ onBeforeUnmount(() => {
 
 .donut-svg,
 .pie-svg {
-  width: 160px;
-  height: 160px;
+  width: 170px;
+  height: 170px;
 }
 
 .donut-bg {
@@ -8862,37 +9693,6 @@ onBeforeUnmount(() => {
   border: 1px solid #e5e7eb;
 }
 
-.activity-list {
-  margin-top: 1.2rem;
-  display: grid;
-  gap: 0.85rem;
-}
-
-.activity-row {
-  display: grid;
-  grid-template-columns: 90px minmax(0, 1fr);
-  gap: 1rem;
-  padding: 0.8rem 1rem;
-  border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e5e7eb;
-}
-
-.activity-time {
-  font-weight: 700;
-  color: #0b2c6f;
-}
-
-.activity-action {
-  font-weight: 600;
-  color: #111827;
-}
-
-.activity-actor {
-  margin-top: 0.2rem;
-  font-size: 0.85rem;
-  color: #6b7280;
-}
 
 .empty-state {
   margin-top: 1.2rem;
@@ -8953,7 +9753,8 @@ onBeforeUnmount(() => {
   .analytics-card,
   .analytics-card.span-7,
   .analytics-card.span-5,
-  .analytics-card.span-6 {
+  .analytics-card.span-6,
+  .analytics-card.span-12 {
     grid-column: span 1;
   }
 
@@ -9015,12 +9816,12 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
-  .activity-row {
+  .analytics-filters {
     grid-template-columns: 1fr;
   }
 
-  .analytics-filters {
-    grid-template-columns: 1fr;
+  .analytics-actions {
+    justify-content: flex-start;
   }
 
   .resident-metric-grid {

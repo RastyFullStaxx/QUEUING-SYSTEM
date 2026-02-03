@@ -216,10 +216,90 @@ VALUES
 INSERT INTO audit_logs (actor_type, actor_id, action, meta_json, created_at)
 VALUES
   ('admin', 1, 'resident.approved', '{"resident_email": "rasty@example.com"}', NOW() - INTERVAL 2 HOUR),
-  ('admin', 1, 'queue.issued', '{"ticket_no": "A-1001", "service": "CLR"}', NOW() - INTERVAL 30 MINUTE),
-  ('admin', 1, 'queue.serving', '{"ticket_no": "A-1002", "service": "BUS"}', NOW() - INTERVAL 20 MINUTE),
-  ('admin', 1, 'queue.completed', '{"ticket_no": "B-2001", "service": "RES"}', NOW() - INTERVAL 1 DAY),
   ('admin', 1, 'queue.cancelled', '{"ticket_no": "B-2002", "service": "IND"}', NOW() - INTERVAL 2 DAY),
-  ('admin', 1, 'queue.completed', '{"ticket_no": "B-2005", "service": "BUS"}', NOW() - INTERVAL 2 HOUR),
-  ('admin', 1, 'queue.completed', '{"ticket_no": "B-2006", "service": "RES"}', NOW() - INTERVAL 90 MINUTE),
-  ('admin', 1, 'queue.completed', '{"ticket_no": "B-2007", "service": "IND"}', NOW() - INTERVAL 60 MINUTE);
+  ('kiosk', (SELECT id FROM kiosk_devices WHERE device_id = 'KIOSK-001'), 'kiosk.session.start',
+    JSON_OBJECT(
+      'session_id', 'seed-session-1',
+      'resident_id', (SELECT id FROM residents WHERE email = 'rasty@example.com'),
+      'kiosk_device_id', (SELECT id FROM kiosk_devices WHERE device_id = 'KIOSK-001'),
+      'approved', true
+    ),
+    DATE_SUB(NOW(), INTERVAL 22 MINUTE)
+  ),
+  ('kiosk', (SELECT id FROM kiosk_devices WHERE device_id = 'KIOSK-001'), 'kiosk.ticket.issued',
+    JSON_OBJECT(
+      'session_id', 'seed-session-1',
+      'ticket_id', (SELECT id FROM queue_tickets WHERE ticket_no = 'A-1001'),
+      'service_id', (SELECT id FROM services WHERE code = 'SPECIAL_PERMIT'),
+      'resident_id', (SELECT id FROM residents WHERE email = 'rasty@example.com'),
+      'kiosk_device_id', (SELECT id FROM kiosk_devices WHERE device_id = 'KIOSK-001')
+    ),
+    DATE_SUB(NOW(), INTERVAL 20 MINUTE)
+  ),
+  ('kiosk', (SELECT id FROM kiosk_devices WHERE device_id = 'KIOSK-002'), 'kiosk.session.start',
+    JSON_OBJECT(
+      'session_id', 'seed-session-2',
+      'resident_id', (SELECT id FROM residents WHERE email = 'alyssa.cruz@example.com'),
+      'kiosk_device_id', (SELECT id FROM kiosk_devices WHERE device_id = 'KIOSK-002'),
+      'approved', true
+    ),
+    DATE_SUB(NOW(), INTERVAL 92 MINUTE)
+  ),
+  ('kiosk', (SELECT id FROM kiosk_devices WHERE device_id = 'KIOSK-002'), 'kiosk.ticket.issued',
+    JSON_OBJECT(
+      'session_id', 'seed-session-2',
+      'ticket_id', (SELECT id FROM queue_tickets WHERE ticket_no = 'B-2007'),
+      'service_id', (SELECT id FROM services WHERE code = 'INDIGENCY'),
+      'resident_id', (SELECT id FROM residents WHERE email = 'alyssa.cruz@example.com'),
+      'kiosk_device_id', (SELECT id FROM kiosk_devices WHERE device_id = 'KIOSK-002')
+    ),
+    DATE_SUB(NOW(), INTERVAL 90 MINUTE)
+  ),
+  ('admin', 1, 'queue.serving',
+    JSON_OBJECT('ticket_id', (SELECT id FROM queue_tickets WHERE ticket_no = 'B-2001')),
+    DATE_ADD(NOW() - INTERVAL 1 DAY, INTERVAL 6 MINUTE)
+  ),
+  ('admin', 1, 'queue.updated',
+    JSON_OBJECT('ticket_id', (SELECT id FROM queue_tickets WHERE ticket_no = 'B-2001'), 'status', 'done'),
+    DATE_ADD(NOW() - INTERVAL 1 DAY, INTERVAL 22 MINUTE)
+  ),
+  ('admin', 1, 'queue.completed',
+    JSON_OBJECT('ticket_no', 'B-2001'),
+    DATE_ADD(NOW() - INTERVAL 1 DAY, INTERVAL 22 MINUTE)
+  ),
+  ('admin', 1, 'queue.serving',
+    JSON_OBJECT('ticket_id', (SELECT id FROM queue_tickets WHERE ticket_no = 'B-2005')),
+    DATE_ADD(NOW() - INTERVAL 3 HOUR, INTERVAL 7 MINUTE)
+  ),
+  ('admin', 1, 'queue.updated',
+    JSON_OBJECT('ticket_id', (SELECT id FROM queue_tickets WHERE ticket_no = 'B-2005'), 'status', 'done'),
+    DATE_ADD(NOW() - INTERVAL 3 HOUR, INTERVAL 24 MINUTE)
+  ),
+  ('admin', 1, 'queue.completed',
+    JSON_OBJECT('ticket_no', 'B-2005'),
+    DATE_ADD(NOW() - INTERVAL 3 HOUR, INTERVAL 24 MINUTE)
+  ),
+  ('admin', 1, 'queue.serving',
+    JSON_OBJECT('ticket_id', (SELECT id FROM queue_tickets WHERE ticket_no = 'B-2006')),
+    DATE_ADD(NOW() - INTERVAL 2 HOUR, INTERVAL 5 MINUTE)
+  ),
+  ('admin', 1, 'queue.updated',
+    JSON_OBJECT('ticket_id', (SELECT id FROM queue_tickets WHERE ticket_no = 'B-2006'), 'status', 'done'),
+    DATE_ADD(NOW() - INTERVAL 2 HOUR, INTERVAL 19 MINUTE)
+  ),
+  ('admin', 1, 'queue.completed',
+    JSON_OBJECT('ticket_no', 'B-2006'),
+    DATE_ADD(NOW() - INTERVAL 2 HOUR, INTERVAL 19 MINUTE)
+  ),
+  ('admin', 1, 'queue.serving',
+    JSON_OBJECT('ticket_id', (SELECT id FROM queue_tickets WHERE ticket_no = 'B-2007')),
+    DATE_ADD(NOW() - INTERVAL 90 MINUTE, INTERVAL 4 MINUTE)
+  ),
+  ('admin', 1, 'queue.updated',
+    JSON_OBJECT('ticket_id', (SELECT id FROM queue_tickets WHERE ticket_no = 'B-2007'), 'status', 'done'),
+    DATE_ADD(NOW() - INTERVAL 90 MINUTE, INTERVAL 17 MINUTE)
+  ),
+  ('admin', 1, 'queue.completed',
+    JSON_OBJECT('ticket_no', 'B-2007'),
+    DATE_ADD(NOW() - INTERVAL 90 MINUTE, INTERVAL 17 MINUTE)
+  );

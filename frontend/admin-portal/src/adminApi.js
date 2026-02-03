@@ -146,6 +146,15 @@ function getAuditLogs(limit = 100) {
   return request(`/api/admin/audit-logs?limit=${limit}`, { headers: authHeaders() })
 }
 
+function getTimingAnalytics({ start = '', end = '', service_id = '' } = {}) {
+  const params = new URLSearchParams()
+  if (start) params.set('start', start)
+  if (end) params.set('end', end)
+  if (service_id) params.set('service_id', service_id)
+  const query = params.toString() ? `?${params.toString()}` : ''
+  return request(`/api/admin/analytics/timings${query}`, { headers: authHeaders() })
+}
+
 export {
   getResidents,
   updateResidentStatus,
@@ -167,4 +176,5 @@ export {
   queueServe,
   queueCancel,
   getAuditLogs,
+  getTimingAnalytics,
 }

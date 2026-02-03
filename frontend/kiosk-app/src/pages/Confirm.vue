@@ -43,6 +43,7 @@ const router = useRouter()
 const error = ref('')
 const resident = JSON.parse(localStorage.getItem('kiosk_resident') || 'null')
 const service = JSON.parse(localStorage.getItem('kiosk_service') || 'null')
+const sessionId = localStorage.getItem('kiosk_session_id') || ''
 
 const residentName = computed(() => {
   if (!resident) return 'Unknown'
@@ -65,6 +66,7 @@ const createTicket = async () => {
         service_id: service.id,
         kiosk_device_id: 1,
         idempotency_key: idempotencyKey,
+        session_id: sessionId,
       }),
     })
     localStorage.setItem('kiosk_ticket', JSON.stringify(data.ticket))
