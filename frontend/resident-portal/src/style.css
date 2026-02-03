@@ -2272,6 +2272,7 @@ body {
 
 .id-card-panel {
   background: linear-gradient(140deg, rgba(255, 255, 255, 0.96), rgba(240, 244, 255, 0.92));
+  padding: 2.5rem;
 }
 
 .id-actions {
