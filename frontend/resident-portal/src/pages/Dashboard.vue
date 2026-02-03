@@ -188,8 +188,9 @@
             <ul v-if="transactions.length" class="transaction-list">
               <li v-for="(item, index) in transactions" :key="item.id || index" class="transaction-item">
                 <div>
-                  <p class="transaction-title">{{ item.title || item.service || 'Service request' }}</p>
+                  <p class="transaction-title">{{ item.title || item.serviceTitle || item.service || 'Service request' }}</p>
                   <p class="transaction-meta">{{ item.date || item.issued_at || 'Date not available' }}</p>
+                  <p v-if="item.serviceDetail" class="transaction-sub">{{ item.serviceDetail }}</p>
                 </div>
                 <span class="transaction-status" :class="`status-${item.status}`">
                   {{ item.status || 'pending' }}
@@ -397,6 +398,42 @@ const totalPages = computed(() => {
   return Math.max(1, Math.ceil(totalTransactions.value / transactionsPageSize))
 })
 
+const formatServiceName = (value) => {
+  if (!value) return ''
+  const smallWords = new Set(['of', 'and', 'the', 'in', 'on', 'for'])
+  return String(value)
+    .replace(/[_-]+/g, ' ')
+    .split(' ')
+    .map((word) => {
+      const lower = word.toLowerCase()
+      if (smallWords.has(lower)) return lower
+      return lower.charAt(0).toUpperCase() + lower.slice(1)
+    })
+    .join(' ')
+}
+
+const buildServiceSummary = (item) => {
+  const services = Array.isArray(item?.services) ? item.services.filter(Boolean) : []
+  if (services.length) {
+    const names = services.map((service) =>
+      formatServiceName(service.name || service.code || `Service ${service.id || ''}`.trim())
+    )
+    const primary = names[0] || 'Service request'
+    if (names.length === 1) {
+      return { title: primary, detail: '' }
+    }
+    return {
+      title: `${primary} + ${names.length - 1} more`,
+      detail: names.join(', '),
+    }
+  }
+  const fallback = item?.service_name || item?.service_code || item?.service_id
+  return {
+    title: formatServiceName(fallback || 'Service request'),
+    detail: '',
+  }
+}
+
 const hydrateFromCache = () => {
   const cached = localStorage.getItem('resident_profile')
   if (!cached) return
@@ -426,6 +463,7 @@ const loadTransactions = async (page = 1) => {
     totalTransactions.value = Number(data.total || items.length || 0)
     transactionsPage.value = page
     transactions.value = items.map((item) => {
+      const serviceSummary = buildServiceSummary(item)
       const issued = item.issued_at ? new Date(item.issued_at) : null
       const dateLabel = issued
         ? issued.toLocaleString('en-PH', {
@@ -442,6 +480,8 @@ const loadTransactions = async (page = 1) => {
         issued_at: item.issued_at,
         date: dateLabel,
         service: item.service_name || item.service_code || item.service_id || 'Service request',
+        serviceTitle: serviceSummary.title,
+        serviceDetail: serviceSummary.detail,
         ticket_no: item.ticket_no,
       }
     })

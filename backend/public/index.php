@@ -167,6 +167,218 @@ function compute_time_stats(array $values): array
     ];
 }
 
+function replace_docx_placeholders(string $xml, array $replacements): string
+{
+    $dom = new DOMDocument('1.0', 'UTF-8');
+    $dom->preserveWhiteSpace = false;
+    $dom->formatOutput = false;
+    $dom->loadXML($xml);
+    $xpath = new DOMXPath($dom);
+    $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+    $nodes = $xpath->query('//w:t');
+
+    $startNode = null;
+    $buffer = '';
+    $prefix = '';
+
+    foreach ($nodes as $node) {
+        $text = $node->nodeValue ?? '';
+        if ($startNode === null) {
+            foreach ($replacements as $token => $value) {
+                if (strpos($text, $token) !== false) {
+                    $text = str_replace($token, $value, $text);
+                }
+            }
+            $node->nodeValue = $text;
+            $startPos = strpos($text, '${');
+            if ($startPos !== false) {
+                $startNode = $node;
+                $prefix = substr($text, 0, $startPos);
+                $buffer = substr($text, $startPos);
+                $node->nodeValue = $prefix;
+            } else {
+                continue;
+            }
+        } else {
+            $buffer .= $text;
+            $node->nodeValue = '';
+        }
+
+        if ($startNode !== null && strpos($buffer, '}') !== false) {
+            $endPos = strpos($buffer, '}');
+            $token = substr($buffer, 0, $endPos + 1);
+            $after = substr($buffer, $endPos + 1);
+            $replacement = $replacements[$token] ?? $token;
+            $startNode->nodeValue = $prefix . $replacement . $after;
+            $startNode = null;
+            $buffer = '';
+            $prefix = '';
+        }
+    }
+
+    return $dom->saveXML();
+}
+
+function render_docx_template(string $templatePath, array $replacements): ?string
+{
+    if (!file_exists($templatePath)) {
+        return null;
+    }
+
+    $tmpPath = tempnam(sys_get_temp_dir(), 'docx_');
+    if ($tmpPath === false) {
+        return null;
+    }
+
+    if (!copy($templatePath, $tmpPath)) {
+        return null;
+    }
+
+    $zip = new ZipArchive();
+    if ($zip->open($tmpPath) !== true) {
+        return null;
+    }
+
+    $documentXml = $zip->getFromName('word/document.xml');
+    if ($documentXml === false) {
+        $zip->close();
+        return null;
+    }
+
+    $updatedXml = replace_docx_placeholders($documentXml, $replacements);
+    $zip->addFromString('word/document.xml', $updatedXml);
+    $zip->close();
+
+    return $tmpPath;
+}
+
+function normalize_service_ids($serviceIds): array
+{
+    if (!is_array($serviceIds)) {
+        return [];
+    }
+    $unique = [];
+    foreach ($serviceIds as $serviceId) {
+        $id = (int) $serviceId;
+        if ($id > 0) {
+            $unique[$id] = $id;
+        }
+    }
+    return array_values($unique);
+}
+
+function fetch_services_by_ids(PDO $pdo, array $serviceIds): array
+{
+    $serviceIds = array_values(array_filter(array_map('intval', $serviceIds)));
+    if (!$serviceIds) {
+        return [];
+    }
+    $placeholders = implode(',', array_fill(0, count($serviceIds), '?'));
+    $stmt = $pdo->prepare('SELECT id, name, code FROM services WHERE id IN (' . $placeholders . ')');
+    $stmt->execute($serviceIds);
+    $rows = $stmt->fetchAll();
+    $map = [];
+    foreach ($rows as $row) {
+        $map[(int) $row['id']] = [
+            'id' => (int) $row['id'],
+            'name' => $row['name'],
+            'code' => $row['code'],
+        ];
+    }
+    return $map;
+}
+
+function fetch_ticket_services(PDO $pdo, array $ticketIds): array
+{
+    $ticketIds = array_values(array_filter(array_map('intval', $ticketIds)));
+    if (!$ticketIds) {
+        return [];
+    }
+    $placeholders = implode(',', array_fill(0, count($ticketIds), '?'));
+    $stmt = $pdo->prepare(
+        'SELECT qts.ticket_id, s.id, s.name, s.code
+         FROM queue_ticket_services qts
+         JOIN services s ON s.id = qts.service_id
+         WHERE qts.ticket_id IN (' . $placeholders . ')
+         ORDER BY qts.id ASC'
+    );
+    $stmt->execute($ticketIds);
+    $rows = $stmt->fetchAll();
+    $map = [];
+    foreach ($rows as $row) {
+        $ticketId = (int) $row['ticket_id'];
+        $map[$ticketId][] = [
+            'id' => (int) $row['id'],
+            'name' => $row['name'],
+            'code' => $row['code'],
+        ];
+    }
+    return $map;
+}
+
+function attach_services_to_ticket(PDO $pdo, array $ticket): array
+{
+    $ticketId = (int) ($ticket['id'] ?? 0);
+    $serviceMap = $ticketId ? fetch_ticket_services($pdo, [$ticketId]) : [];
+    $services = $serviceMap[$ticketId] ?? [];
+    if (!$services) {
+        $serviceId = (int) ($ticket['service_id'] ?? 0);
+        if ($serviceId) {
+            $serviceLookup = fetch_services_by_ids($pdo, [$serviceId]);
+            $services[] = $serviceLookup[$serviceId] ?? ['id' => $serviceId, 'name' => '', 'code' => ''];
+        }
+    }
+    $ticket['services'] = $services;
+    $ticket['service_ids'] = array_values(array_unique(array_filter(array_map(static function ($item) {
+        return (int) ($item['id'] ?? 0);
+    }, $services))));
+    return $ticket;
+}
+
+function attach_services_to_tickets(PDO $pdo, array $tickets): array
+{
+    if (!$tickets) {
+        return $tickets;
+    }
+    $ticketIds = [];
+    foreach ($tickets as $ticket) {
+        $ticketId = (int) ($ticket['id'] ?? 0);
+        if ($ticketId) {
+            $ticketIds[] = $ticketId;
+        }
+    }
+    $serviceMap = $ticketIds ? fetch_ticket_services($pdo, $ticketIds) : [];
+    $fallbackServiceIds = [];
+    foreach ($tickets as $ticket) {
+        $ticketId = (int) ($ticket['id'] ?? 0);
+        if (!isset($serviceMap[$ticketId])) {
+            $fallbackId = (int) ($ticket['service_id'] ?? 0);
+            if ($fallbackId) {
+                $fallbackServiceIds[$fallbackId] = $fallbackId;
+            }
+        }
+    }
+    $serviceLookup = fetch_services_by_ids($pdo, array_values($fallbackServiceIds));
+
+    foreach ($tickets as &$ticket) {
+        $ticketId = (int) ($ticket['id'] ?? 0);
+        $services = $serviceMap[$ticketId] ?? [];
+        if (!$services) {
+            $serviceId = (int) ($ticket['service_id'] ?? 0);
+            if ($serviceId) {
+                $services[] = $serviceLookup[$serviceId] ?? ['id' => $serviceId, 'name' => '', 'code' => ''];
+            }
+        }
+        $ticket['services'] = $services;
+        $ticket['service_ids'] = array_values(array_unique(array_filter(array_map(static function ($item) {
+            return (int) ($item['id'] ?? 0);
+        }, $services))));
+    }
+    unset($ticket);
+
+    return $tickets;
+}
+
 function fetch_queue_ticket(PDO $pdo, int $ticketId): ?array
 {
     $stmt = $pdo->prepare(
@@ -187,7 +399,10 @@ function fetch_queue_ticket(PDO $pdo, int $ticketId): ?array
     );
     $stmt->execute([$ticketId]);
     $ticket = $stmt->fetch();
-    return $ticket ?: null;
+    if (!$ticket) {
+        return null;
+    }
+    return attach_services_to_ticket($pdo, $ticket);
 }
 
 if ($path === '/api/health' && $method === 'GET') {
@@ -482,6 +697,7 @@ if ($path === '/api/resident/transactions' && $method === 'GET') {
     );
     $stmt->execute([$residentId]);
     $transactions = $stmt->fetchAll();
+    $transactions = attach_services_to_tickets($pdo, $transactions);
 
     json_response([
         'transactions' => $transactions,
@@ -1472,7 +1688,7 @@ if ($path === '/api/admin/queue' && $method === 'GET') {
 
     $serviceId = (int) ($_GET['service_id'] ?? 0);
     $status = $_GET['status'] ?? null;
-    $query = 'SELECT q.id, q.ticket_no, q.resident_id, q.service_id, q.status, q.issued_at,
+    $query = 'SELECT DISTINCT q.id, q.ticket_no, q.resident_id, q.service_id, q.status, q.issued_at,
                      r.username AS resident_username,
                      r.first_name AS resident_first_name,
                      r.middle_name AS resident_middle_name,
@@ -1489,7 +1705,9 @@ if ($path === '/api/admin/queue' && $method === 'GET') {
     $params = [];
 
     if ($serviceId) {
-        $conditions[] = 'q.service_id = ?';
+        $query .= ' LEFT JOIN queue_ticket_services qts ON qts.ticket_id = q.id';
+        $conditions[] = '(qts.service_id = ? OR q.service_id = ?)';
+        $params[] = $serviceId;
         $params[] = $serviceId;
     }
     if ($status) {
@@ -1503,7 +1721,9 @@ if ($path === '/api/admin/queue' && $method === 'GET') {
 
     $stmt = $pdo->prepare($query);
     $stmt->execute($params);
-    json_response(['tickets' => $stmt->fetchAll()]);
+    $tickets = $stmt->fetchAll();
+    $tickets = attach_services_to_tickets($pdo, $tickets);
+    json_response(['tickets' => $tickets]);
     exit;
 }
 
@@ -1516,8 +1736,15 @@ if ($path === '/api/admin/queue/next' && $method === 'POST') {
     $body = read_json_body();
     $serviceId = isset($body['service_id']) ? (int) $body['service_id'] : 0;
     if ($serviceId) {
-        $stmt = $pdo->prepare('SELECT id FROM queue_tickets WHERE service_id = ? AND status = ? ORDER BY issued_at ASC LIMIT 1');
-        $stmt->execute([$serviceId, 'waiting']);
+        $stmt = $pdo->prepare(
+            'SELECT q.id
+             FROM queue_tickets q
+             LEFT JOIN queue_ticket_services qts ON qts.ticket_id = q.id
+             WHERE (qts.service_id = ? OR q.service_id = ?) AND q.status = ?
+             ORDER BY q.issued_at ASC
+             LIMIT 1'
+        );
+        $stmt->execute([$serviceId, $serviceId, 'waiting']);
     } else {
         $stmt = $pdo->prepare('SELECT id FROM queue_tickets WHERE status = ? ORDER BY issued_at ASC LIMIT 1');
         $stmt->execute(['waiting']);
@@ -1606,6 +1833,140 @@ if (preg_match('#^/api/admin/queue/(\\d+)/(serve|cancel)$#', $path, $matches) &&
     }
 
     json_response(['ticket' => $ticket]);
+    exit;
+}
+
+if (preg_match('#^/api/admin/queue/(\\d+)/print$#', $path, $matches) && $method === 'GET') {
+    $payload = require_auth('admin', $appKey);
+    if (!$payload) {
+        exit;
+    }
+
+    $ticketId = (int) $matches[1];
+    $ticket = fetch_queue_ticket($pdo, $ticketId);
+    if (!$ticket) {
+        json_response(['error' => 'Ticket not found'], 404);
+        exit;
+    }
+
+    $serviceIds = [];
+    foreach (($ticket['services'] ?? []) as $serviceItem) {
+        $serviceId = (int) ($serviceItem['id'] ?? 0);
+        if ($serviceId) {
+            $serviceIds[] = $serviceId;
+        }
+    }
+    if (!$serviceIds && !empty($ticket['service_id'])) {
+        $serviceIds[] = (int) $ticket['service_id'];
+    }
+    $serviceIds = array_values(array_unique($serviceIds));
+    $serviceLookup = fetch_services_by_ids($pdo, $serviceIds);
+    $services = [];
+    foreach ($serviceIds as $serviceId) {
+        if (isset($serviceLookup[$serviceId])) {
+            $services[] = $serviceLookup[$serviceId];
+        }
+    }
+    if (!$services) {
+        json_response(['error' => 'Service not found'], 404);
+        exit;
+    }
+
+    $templateMap = [
+        'PROOF_RESIDENCY' => 'template_residency.docx',
+        'INDIGENCY' => 'template_indigency.docx',
+        'INCOME_LOAN' => 'template_low_income.docx',
+        'SOLO_PARENT' => 'template_solo_parent.docx',
+        'SPECIAL_PERMIT' => 'template_special_permit.docx',
+        'BUILDING_PERMIT' => 'template_building_permit.docx',
+    ];
+    $fullNameParts = [
+        $ticket['resident_first_name'] ?? '',
+        $ticket['resident_middle_name'] ?? '',
+        $ticket['resident_last_name'] ?? '',
+    ];
+    $fullName = trim(preg_replace('/\\s+/', ' ', implode(' ', array_filter($fullNameParts))));
+    $fullName = ucwords(strtolower($fullName));
+    $lastName = isset($ticket['resident_last_name']) ? ucwords(strtolower($ticket['resident_last_name'])) : '';
+    $address = trim($ticket['resident_address'] ?? '');
+    $now = new DateTime('now');
+    $month = $now->format('F');
+    $day = $now->format('j');
+    $dateLabel = $now->format('F j, Y');
+
+    $age = '';
+    if (!empty($ticket['resident_date_of_birth'])) {
+        try {
+            $dob = new DateTime($ticket['resident_date_of_birth']);
+            $age = (string) $dob->diff($now)->y;
+        } catch (Exception $e) {
+            $age = '';
+        }
+    }
+
+    $replacements = [
+        '${FULL_NAME}' => $fullName,
+        '${LAST_NAME}' => $lastName,
+        '${ADDRESS}' => $address,
+        '${AGE}' => $age,
+        '${MONTH}' => $month,
+        '${DAY}' => $day,
+        '${DATE}' => $dateLabel,
+    ];
+
+    $safeTicket = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($ticket['ticket_no'] ?? $ticketId));
+    $renderedFiles = [];
+    foreach ($services as $service) {
+        $templateFile = $templateMap[$service['code']] ?? null;
+        if (!$templateFile) {
+            json_response(['error' => 'Template not configured for this service'], 404);
+            exit;
+        }
+        $templatePath = __DIR__ . '/../templates/' . $templateFile;
+        $renderedPath = render_docx_template($templatePath, $replacements);
+        if (!$renderedPath) {
+            json_response(['error' => 'Unable to render template'], 500);
+            exit;
+        }
+        $filename = sprintf('%s-%s.docx', strtolower($service['code']), $safeTicket ?: $ticketId);
+        $renderedFiles[] = ['path' => $renderedPath, 'filename' => $filename];
+    }
+
+    if (count($renderedFiles) === 1) {
+        $renderedPath = $renderedFiles[0]['path'];
+        $filename = $renderedFiles[0]['filename'];
+        header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . filesize($renderedPath));
+        readfile($renderedPath);
+        unlink($renderedPath);
+        exit;
+    }
+
+    $zipPath = tempnam(sys_get_temp_dir(), 'ticket_forms_');
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath, ZipArchive::OVERWRITE) !== true) {
+        foreach ($renderedFiles as $file) {
+            @unlink($file['path']);
+        }
+        json_response(['error' => 'Unable to prepare templates'], 500);
+        exit;
+    }
+    foreach ($renderedFiles as $file) {
+        $zip->addFile($file['path'], $file['filename']);
+    }
+    $zip->close();
+
+    $zipName = sprintf('ticket-%s-forms.zip', $safeTicket ?: $ticketId);
+    header('Content-Type: application/zip');
+    header('Content-Disposition: attachment; filename="' . $zipName . '"');
+    header('Content-Length: ' . filesize($zipPath));
+    readfile($zipPath);
+
+    foreach ($renderedFiles as $file) {
+        @unlink($file['path']);
+    }
+    @unlink($zipPath);
     exit;
 }
 
@@ -1959,9 +2320,17 @@ if ($path === '/api/kiosk/tickets' && $method === 'POST') {
     $body = read_json_body();
     $residentId = (int) ($body['resident_id'] ?? 0);
     $serviceId = (int) ($body['service_id'] ?? 0);
+    $serviceIds = normalize_service_ids($body['service_ids'] ?? []);
     $kioskDeviceId = (int) ($body['kiosk_device_id'] ?? 0);
     $idempotencyKey = trim($body['idempotency_key'] ?? '');
     $sessionId = trim($body['session_id'] ?? '');
+
+    if (!$serviceId && $serviceIds) {
+        $serviceId = (int) $serviceIds[0];
+    }
+    if (!$serviceIds && $serviceId) {
+        $serviceIds = [$serviceId];
+    }
 
     if (!$residentId || !$serviceId || !$idempotencyKey) {
         json_response(['error' => 'resident_id, service_id, and idempotency_key are required'], 422);
@@ -1986,6 +2355,15 @@ if ($path === '/api/kiosk/tickets' && $method === 'POST') {
     $stmt->execute([$ticketNo, $residentId, $serviceId, 'waiting', $issuedDate, $kioskDeviceId ?: null, $idempotencyKey]);
     $ticketId = (int) $pdo->lastInsertId();
 
+    if ($serviceIds) {
+        $insertService = $pdo->prepare(
+            'INSERT IGNORE INTO queue_ticket_services (ticket_id, service_id, created_at) VALUES (?, ?, NOW())'
+        );
+        foreach ($serviceIds as $serviceItemId) {
+            $insertService->execute([$ticketId, (int) $serviceItemId]);
+        }
+    }
+
     $stmt = $pdo->prepare('SELECT * FROM queue_tickets WHERE id = ?');
     $stmt->execute([$ticketId]);
     $ticket = $stmt->fetch();
@@ -1995,6 +2373,7 @@ if ($path === '/api/kiosk/tickets' && $method === 'POST') {
             'session_id' => $sessionId,
             'ticket_id' => $ticketId,
             'service_id' => $serviceId,
+            'service_ids' => $serviceIds,
             'resident_id' => $residentId,
             'kiosk_device_id' => $kioskDeviceId ?: null,
         ]);

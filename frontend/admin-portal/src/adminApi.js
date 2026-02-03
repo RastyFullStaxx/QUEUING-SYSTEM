@@ -1,4 +1,4 @@
-import { request } from './api'
+import { baseUrl, request } from './api'
 
 function authHeaders() {
   const token = localStorage.getItem('admin_token')
@@ -155,6 +155,25 @@ function getTimingAnalytics({ start = '', end = '', service_id = '' } = {}) {
   return request(`/api/admin/analytics/timings${query}`, { headers: authHeaders() })
 }
 
+async function downloadQueueTemplate(ticketId) {
+  const response = await fetch(`${baseUrl}/api/admin/queue/${ticketId}/print`, {
+    headers: {
+      ...authHeaders(),
+    },
+  })
+  if (!response.ok) {
+    let message = 'Unable to download template'
+    try {
+      const data = await response.json()
+      message = data?.error || message
+    } catch (err) {
+      // ignore json parse error
+    }
+    throw new Error(message)
+  }
+  return response.blob()
+}
+
 export {
   getResidents,
   updateResidentStatus,
@@ -177,4 +196,5 @@ export {
   queueCancel,
   getAuditLogs,
   getTimingAnalytics,
+  downloadQueueTemplate,
 }

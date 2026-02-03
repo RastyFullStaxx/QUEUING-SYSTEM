@@ -814,6 +814,7 @@ const confirmProceed = async () => {
       body: JSON.stringify({
         resident_id: resident.id,
         service_id: service.id,
+        service_ids: selectedServices.value.map((item) => item.id),
         kiosk_device_id: 1,
         idempotency_key: idempotencyKey,
         session_id: sessionId,

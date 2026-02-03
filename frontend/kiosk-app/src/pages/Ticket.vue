@@ -96,7 +96,7 @@
           <span>Main menu</span>
         </button>
         <button class="kiosk-arrow-button kiosk-arrow-button--proceed kiosk-action" type="button" @click="downloadTicket">
-          <span>Download</span>
+          <span>Preview PDF</span>
         </button>
       </div>
     </div>
@@ -368,17 +368,92 @@ const downloadTicket = () => {
   ctx.fillStyle = '#6b7da3'
   ctx.fillText('ISSUED BY KIOSK', rightPanelX + rightPanelW - 16, reqY + reqH - 16)
 
-  canvas.toBlob((blob) => {
-    if (!blob) return
-    const url = URL.createObjectURL(blob)
+  const dataUrl = canvas.toDataURL('image/png')
+  const fallbackName = `kiosk-ticket-${ticket?.ticket_no || 'queue'}`
+  const previewWindow = window.open('', 'kiosk-ticket-preview')
+
+  if (!previewWindow) {
     const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = `kiosk-ticket-${ticket?.ticket_no || 'queue'}.png`
+    anchor.href = dataUrl
+    anchor.download = `${fallbackName}.png`
     document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()
-    URL.revokeObjectURL(url)
-  }, 'image/png')
+    return
+  }
+
+  previewWindow.document.write(`<!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <title>${fallbackName}</title>
+        <style>
+          @page { size: A4 landscape; margin: 14mm; }
+          * { box-sizing: border-box; }
+          body { margin: 0; font-family: "Sora", sans-serif; background: #eef2ff; color: #0b2c6f; }
+          .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 18px;
+            background: #ffffff;
+            border-bottom: 1px solid rgba(11, 44, 111, 0.12);
+            position: sticky;
+            top: 0;
+            z-index: 2;
+          }
+          .toolbar-title { font-weight: 700; font-size: 14px; letter-spacing: 0.04em; }
+          .toolbar-actions { display: flex; gap: 10px; }
+          .toolbar button {
+            border: 0;
+            background: #0b2c6f;
+            color: #ffffff;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+          }
+          .toolbar button.secondary {
+            background: #f2c300;
+            color: #0b1f3a;
+          }
+          .preview {
+            display: grid;
+            place-items: center;
+            padding: 24px;
+          }
+          .preview img {
+            width: min(100%, 980px);
+            height: auto;
+            border-radius: 18px;
+            box-shadow: 0 20px 60px -40px rgba(15, 23, 42, 0.5);
+            background: #ffffff;
+          }
+          @media print {
+            body { background: #ffffff; }
+            .toolbar { display: none; }
+            .preview { padding: 0; }
+            .preview img { width: 100%; border-radius: 0; box-shadow: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="toolbar">
+          <div class="toolbar-title">Kiosk Ticket PDF Preview</div>
+          <div class="toolbar-actions">
+            <button class="secondary" onclick="window.print()">Save As PDF</button>
+            <button onclick="window.close()">Close</button>
+          </div>
+        </div>
+        <div class="preview">
+          <img src="${dataUrl}" alt="Kiosk ticket preview" />
+        </div>
+      </body>
+    </html>`)
+  previewWindow.document.close()
+  previewWindow.focus()
 }
 
 const handleMainMenu = () => {

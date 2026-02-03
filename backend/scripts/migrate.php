@@ -37,7 +37,21 @@ foreach ($files as $file) {
     $sql = file_get_contents($file);
     $statements = array_filter(array_map('trim', explode(';', $sql)));
     foreach ($statements as $statement) {
-        $pdo->exec($statement);
+        if (!$statement) {
+            continue;
+        }
+        try {
+            $pdo->exec($statement);
+        } catch (PDOException $e) {
+            $message = $e->getMessage();
+            $ignorable =
+                strpos($message, 'Duplicate column name') !== false ||
+                strpos($message, 'Duplicate key name') !== false ||
+                strpos($message, 'already exists') !== false;
+            if (!$ignorable) {
+                throw $e;
+            }
+        }
     }
 
     $stmt = $pdo->prepare('INSERT INTO migrations (filename, executed_at) VALUES (?, NOW())');

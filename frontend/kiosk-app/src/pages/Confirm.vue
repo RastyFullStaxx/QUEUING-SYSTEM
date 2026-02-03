@@ -21,7 +21,7 @@
       </div>
       <div class="mt-8 bg-[#F3F4F6] border border-[#E5E7EB] rounded-2xl p-6 text-lg space-y-3">
         <p><span class="font-semibold">Resident:</span> {{ residentName }}</p>
-        <p><span class="font-semibold">Service:</span> {{ service?.name }}</p>
+        <p><span class="font-semibold">Service:</span> {{ serviceLabel }}</p>
       </div>
       <button
         class="mt-8 w-full bg-[#F2C300] text-black text-2xl py-4 rounded-2xl font-semibold"
@@ -43,27 +43,41 @@ const router = useRouter()
 const error = ref('')
 const resident = JSON.parse(localStorage.getItem('kiosk_resident') || 'null')
 const service = JSON.parse(localStorage.getItem('kiosk_service') || 'null')
+const storedServices = JSON.parse(localStorage.getItem('kiosk_services') || 'null')
 const sessionId = localStorage.getItem('kiosk_session_id') || ''
+const selectedServices = Array.isArray(storedServices) && storedServices.length
+  ? storedServices
+  : service
+    ? [service]
+    : []
 
 const residentName = computed(() => {
   if (!resident) return 'Unknown'
   return `${resident.first_name} ${resident.last_name}`.trim()
 })
 
+const serviceLabel = computed(() => {
+  if (!selectedServices.length) return '—'
+  if (selectedServices.length === 1) return selectedServices[0]?.name || 'Service'
+  return `${selectedServices.length} services selected`
+})
+
 const createTicket = async () => {
   error.value = ''
-  if (!resident || !service) {
+  if (!resident || !selectedServices.length) {
     error.value = 'Missing resident or service information.'
     return
   }
 
   try {
-    const idempotencyKey = crypto.randomUUID?.() || `${Date.now()}-${resident.id}-${service.id}`
+    const primaryService = service || selectedServices[0]
+    const idempotencyKey = crypto.randomUUID?.() || `${Date.now()}-${resident.id}-${primaryService.id}`
     const data = await request('/api/kiosk/tickets', {
       method: 'POST',
       body: JSON.stringify({
         resident_id: resident.id,
-        service_id: service.id,
+        service_id: primaryService.id,
+        service_ids: selectedServices.map((item) => item.id),
         kiosk_device_id: 1,
         idempotency_key: idempotencyKey,
         session_id: sessionId,

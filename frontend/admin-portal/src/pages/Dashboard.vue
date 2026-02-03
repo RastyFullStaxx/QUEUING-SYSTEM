@@ -1392,7 +1392,10 @@
                     <div class="queue-serving-main">
                       <p class="queue-serving-ticket">{{ activeCallTicket.ticket_no }}</p>
                       <p class="queue-serving-resident">{{ formatTicketResident(activeCallTicket) }}</p>
-                      <p class="queue-serving-service">{{ serviceName(activeCallTicket.service_id) }}</p>
+                      <p class="queue-serving-service">{{ ticketServiceLabel(activeCallTicket) }}</p>
+                      <p v-if="ticketHasMultipleServices(activeCallTicket)" class="queue-serving-service-list">
+                        {{ ticketServiceList(activeCallTicket) }}
+                      </p>
                     </div>
                     <div class="queue-serving-grid">
                       <div class="queue-serving-detail">
@@ -1414,7 +1417,7 @@
                     </div>
                     <div class="queue-serving-actions">
                       <button class="resident-secondary" type="button" @click="printCallTicket(activeCallTicket)">
-                        Print Form
+                        Preview PDF
                       </button>
                       <button class="resident-primary" type="button" @click="serveTicket(activeCallTicket)">
                         Mark Done
@@ -1550,9 +1553,9 @@
                         <td class="py-3">
                           <div class="queue-service">
                             <span class="queue-service-name">
-                              {{ serviceName(ticket.service_id) }}
+                              {{ ticketServiceLabel(ticket) }}
                             </span>
-                            <small>{{ serviceCode(ticket.service_id) }}</small>
+                            <small>{{ ticketServiceCodeLabel(ticket) }}</small>
                           </div>
                         </td>
                         <td class="py-3">
@@ -2581,6 +2584,7 @@ import {
   queueCancel,
   getAuditLogs,
   getTimingAnalytics,
+  downloadQueueTemplate,
 } from '../adminApi'
 
 const router = useRouter()
@@ -2830,7 +2834,8 @@ const queueFilteredTickets = computed(() => {
   return queueTickets.value.filter((ticket) => {
     if (queueServiceId.value) {
       const serviceId = parseInt(queueServiceId.value, 10)
-      if (ticket.service_id !== serviceId) return false
+      const serviceMatch = resolveTicketServices(ticket).some((service) => service.id === serviceId)
+      if (!serviceMatch) return false
     }
     if (queueStatus.value && ticket.status !== queueStatus.value) return false
     if (!term) return true
@@ -2839,14 +2844,23 @@ const queueFilteredTickets = computed(() => {
     const residentName = formatTicketResident(ticket).toLowerCase()
     const residentEmail = String(ticket.resident_email || '').toLowerCase()
     const residentUsername = String(ticket.resident_username || '').toLowerCase()
-    const serviceLabel = serviceName(ticket.service_id).toLowerCase()
+    const serviceEntries = resolveTicketServices(ticket)
+    const serviceLabel = serviceEntries
+      .map((service) => service.name || serviceName(service.id))
+      .join(' ')
+      .toLowerCase()
+    const serviceCodes = serviceEntries
+      .map((service) => service.code || serviceCode(service.id))
+      .join(' ')
+      .toLowerCase()
     return (
       ticketNo.includes(term) ||
       residentId.includes(term) ||
       residentName.includes(term) ||
       residentEmail.includes(term) ||
       residentUsername.includes(term) ||
-      serviceLabel.includes(term)
+      serviceLabel.includes(term) ||
+      serviceCodes.includes(term)
     )
   })
 })
@@ -2875,7 +2889,7 @@ const queueSortedTickets = computed(() => {
       if (statusDiff !== 0) return statusDiff * direction
     }
     if (queueSortKey.value === 'service_id') {
-      const serviceDiff = compareValues(a.service_id || 0, b.service_id || 0)
+      const serviceDiff = compareValues(ticketPrimaryServiceId(a), ticketPrimaryServiceId(b))
       if (serviceDiff !== 0) return serviceDiff * direction
     }
     if (queueSortKey.value === 'ticket_no') {
@@ -3121,6 +3135,59 @@ function serviceCode(serviceId) {
   return services.value.find((service) => service.id === serviceId)?.code || ''
 }
 
+function resolveTicketServices(ticket) {
+  if (!ticket) return []
+  const list = Array.isArray(ticket.services) ? ticket.services.filter(Boolean) : []
+  if (list.length) return list
+  if (ticket.service_id) {
+    return [
+      {
+        id: ticket.service_id,
+        name: serviceName(ticket.service_id),
+        code: serviceCode(ticket.service_id),
+      },
+    ]
+  }
+  return []
+}
+
+function ticketPrimaryServiceId(ticket) {
+  const services = resolveTicketServices(ticket)
+  if (services.length) return services[0]?.id || ticket.service_id || 0
+  return ticket?.service_id || 0
+}
+
+function ticketServiceLabel(ticket) {
+  const services = resolveTicketServices(ticket)
+  if (!services.length) return 'Service unavailable'
+  const primaryName = services[0]?.name || serviceName(services[0]?.id || ticket?.service_id)
+  if (services.length === 1) {
+    return formatServiceName(primaryName)
+  }
+  return `${formatServiceName(primaryName)} + ${services.length - 1} more`
+}
+
+function ticketServiceCodeLabel(ticket) {
+  const services = resolveTicketServices(ticket)
+  if (!services.length) return ''
+  if (services.length === 1) {
+    return services[0]?.code || serviceCode(services[0]?.id || ticket?.service_id)
+  }
+  return `${services.length} services`
+}
+
+function ticketHasMultipleServices(ticket) {
+  return resolveTicketServices(ticket).length > 1
+}
+
+function ticketServiceList(ticket) {
+  const services = resolveTicketServices(ticket)
+  if (!services.length) return ''
+  return services
+    .map((service) => formatServiceName(service.name || serviceName(service.id)))
+    .join(', ')
+}
+
 function formatTicketResident(ticket) {
   if (!ticket) return 'Resident'
   const name = [ticket.resident_first_name, ticket.resident_middle_name, ticket.resident_last_name]
@@ -3138,7 +3205,7 @@ const queueWaitingList = computed(() => {
     .filter((ticket) => {
       if (!scope || scope === 'auto') return true
       const serviceId = parseInt(scope, 10)
-      return ticket.service_id === serviceId
+      return resolveTicketServices(ticket).some((service) => service.id === serviceId)
     })
     .sort((a, b) => new Date(a.issued_at || 0).getTime() - new Date(b.issued_at || 0).getTime())
 })
@@ -3794,9 +3861,40 @@ const downloadAnalyticsPdf = () => {
     return
   }
   const generatedAt = formatReportTimestamp(new Date())
+  const systemName = 'Automated Kiosk for Application Queuing System'
+  const systemLocation = 'Barangay San Miguel, Pasig City'
+  const preparedBy = profile?.name || 'Admin User'
+  const preparedEmail = profile?.email || 'admin@barangay.local'
+  const totalTickets = analyticsTickets.value.length
+  const doneTickets = ticketStatusMix.value.find((item) => item.label === 'Done')?.count || 0
+  const cancelledTickets = ticketStatusMix.value.find((item) => item.label === 'Cancelled')?.count || 0
+  const topServiceName = analyticsTopServiceTitle.value || '—'
+  const topServiceCount = analyticsTopService.value?.count || 0
+  const serviceLabel = analyticsServiceId.value
+    ? services.value.find((service) => service.id === parseInt(analyticsServiceId.value, 10))?.name ||
+      `Service ${analyticsServiceId.value}`
+    : 'All Services'
+  const statusLabel =
+    analyticsStatus.value === 'all'
+      ? 'All Statuses'
+      : analyticsStatus.value.charAt(0).toUpperCase() + analyticsStatus.value.slice(1)
+
   const summaryRows = [
+    buildPdfRow('System', systemName),
+    buildPdfRow('Location', systemLocation),
+    buildPdfRow('Prepared By', `${preparedBy} (${preparedEmail})`),
     buildPdfRow('Generated At', generatedAt),
-    buildPdfRow('Filters', analyticsFilterNote.value),
+    buildPdfRow('Range', analyticsRangeLabel.value),
+    buildPdfRow('Service Filter', serviceLabel),
+    buildPdfRow('Status Filter', statusLabel),
+  ].join('')
+
+  const highlightRows = [
+    buildPdfRow('Total Tickets', totalTickets),
+    buildPdfRow('Completed Tickets', doneTickets),
+    buildPdfRow('Cancelled Tickets', cancelledTickets),
+    buildPdfRow('Top Service', topServiceName),
+    buildPdfRow('Top Service Tickets', topServiceCount),
   ].join('')
 
   const timingRows = [
@@ -3838,28 +3936,131 @@ const downloadAnalyticsPdf = () => {
         <meta charset="UTF-8" />
         <title>Admin Analytics Report</title>
         <style>
+          @page { size: A4; margin: 18mm; }
           * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
-          body { margin: 24px; color: #0f172a; }
-          h1 { margin: 0 0 8px; font-size: 24px; color: #0b2c6f; }
-          .meta { margin-bottom: 16px; font-size: 12px; color: #475569; }
+          body { margin: 0; color: #0f172a; }
+          .cover { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; }
+          .cover-logo { width: 120px; height: 120px; object-fit: contain; margin-bottom: 10px; }
+          .cover-title { font-size: 22px; font-weight: 700; color: #0b2c6f; }
+          .cover-subtitle { font-size: 14px; color: #475569; }
+          .cover-report { margin-top: 12px; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: #0f172a; }
+          .cover-meta { margin-top: 16px; font-size: 12px; color: #475569; display: grid; gap: 4px; }
+          .page { page-break-before: always; padding: 0; position: relative; }
+          .watermark {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            pointer-events: none;
+            z-index: 0;
+          }
+          .watermark span {
+            font-size: 60px;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            color: rgba(15, 23, 42, 0.08);
+            transform: rotate(-24deg);
+          }
+          .page-content { position: relative; z-index: 1; }
+          .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0b2c6f; padding-bottom: 12px; gap: 12px; }
+          .brand { display: grid; gap: 4px; }
+          .brand-row { display: flex; gap: 10px; align-items: center; }
+          .report-logo { width: 36px; height: 36px; object-fit: contain; }
+          .brand h1 { margin: 0; font-size: 18px; color: #0b2c6f; }
+          .brand p { margin: 0; font-size: 12px; color: #475569; }
+          .report-meta { text-align: right; font-size: 11px; color: #475569; }
           .section { margin-top: 18px; }
-          h2 { font-size: 16px; color: #0b2c6f; margin: 0 0 8px; }
-          table { width: 100%; border-collapse: collapse; font-size: 12px; }
+          h2 { font-size: 14px; color: #0b2c6f; margin: 0 0 8px; break-after: avoid; page-break-after: avoid; }
+          .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+          .summary-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; background: #f8fafc; }
+          .summary-card h3 { margin: 0 0 6px; font-size: 12px; color: #0b2c6f; text-transform: uppercase; letter-spacing: 0.08em; }
+          .summary-card p { margin: 0; font-size: 12px; color: #0f172a; }
+          table { width: 100%; border-collapse: collapse; font-size: 11px; page-break-inside: auto; }
           th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
-          th { background: #f8fafc; text-transform: uppercase; letter-spacing: 0.08em; font-size: 10px; }
+          th { background: #f8fafc; text-transform: uppercase; letter-spacing: 0.08em; font-size: 9.5px; }
+          tbody tr:nth-child(even) { background: #fbfdff; }
+          thead { display: table-header-group; }
+          tfoot { display: table-footer-group; }
+          tr { page-break-inside: avoid; break-inside: avoid; }
+          .footer { margin-top: 24px; font-size: 10px; color: #64748b; text-align: center; display: grid; gap: 6px; }
+          .footer .line { width: 100%; height: 1px; background: #e2e8f0; }
+          .footer .meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
         </style>
       </head>
       <body>
-        <h1>Admin Analytics Dashboard Report</h1>
-        <div class="meta">Generated ${escapeHtml(generatedAt)}</div>
-        ${buildPdfTable('Report Summary', ['Item', 'Value'], summaryRows)}
-        ${buildPdfTable('Timing Summary', ['Metric', 'Average', 'Median', 'P90', 'Count'], timingRows)}
-        ${buildPdfTable('Daily Ticket Volume', ['Date', 'Tickets'], ticketRows)}
-        ${buildPdfTable('Ticket Status Mix', ['Status', 'Count', 'Percent'], statusRows)}
-        ${buildPdfTable('Most Booked Service', ['Service', 'Count', 'Percent'], serviceRows)}
-        ${buildPdfTable('Service Mix', ['Service', 'Count', 'Percent'], serviceMixRows)}
-        ${buildPdfTable('Traffic By Time', ['Window', 'Tickets'], trafficRows)}
-        ${buildPdfTable('Resident Registrations', ['Date', 'Registrations'], residentRows)}
+        <div class="cover">
+          <img class="cover-logo" src="/logo.png" alt="Barangay San Miguel" />
+          <div class="cover-title">${escapeHtml(systemName)}</div>
+          <div class="cover-subtitle">${escapeHtml(systemLocation)}</div>
+          <div class="cover-report">Admin Analytics Dashboard Report</div>
+          <div class="cover-meta">
+            <div>Prepared By: ${escapeHtml(preparedBy)}</div>
+            <div>${escapeHtml(preparedEmail)}</div>
+            <div>Generated: ${escapeHtml(generatedAt)}</div>
+          </div>
+        </div>
+
+        <div class="page">
+          <div class="watermark"><span>CONFIDENTIAL</span></div>
+          <div class="page-content">
+          <div class="header">
+            <div class="brand">
+              <div class="brand-row">
+                <img class="report-logo" src="/logo.png" alt="Barangay San Miguel" />
+                <div>
+                  <h1>${escapeHtml(systemName)}</h1>
+                  <p>${escapeHtml(systemLocation)}</p>
+                  <p>Admin Analytics Dashboard Report</p>
+                </div>
+              </div>
+            </div>
+            <div class="report-meta">
+              <div>Generated: ${escapeHtml(generatedAt)}</div>
+              <div>Prepared By: ${escapeHtml(preparedBy)}</div>
+              <div>${escapeHtml(preparedEmail)}</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="summary-grid">
+              <div class="summary-card">
+                <h3>Filters</h3>
+                <p>Range: ${escapeHtml(analyticsRangeLabel.value)}</p>
+                <p>Service: ${escapeHtml(serviceLabel)}</p>
+                <p>Status: ${escapeHtml(statusLabel)}</p>
+              </div>
+              <div class="summary-card">
+                <h3>Highlights</h3>
+                <p>Total Tickets: ${escapeHtml(totalTickets)}</p>
+                <p>Completed: ${escapeHtml(doneTickets)}</p>
+                <p>Cancelled: ${escapeHtml(cancelledTickets)}</p>
+                <p>Top Service: ${escapeHtml(topServiceName)}</p>
+              </div>
+            </div>
+          </div>
+
+          ${buildPdfTable('Report Summary', ['Item', 'Value'], summaryRows)}
+          ${buildPdfTable('Key Highlights', ['Metric', 'Value'], highlightRows)}
+          ${buildPdfTable('Timing Summary', ['Metric', 'Average', 'Median', 'P90', 'Count'], timingRows)}
+          ${buildPdfTable('Daily Ticket Volume', ['Date', 'Tickets'], ticketRows)}
+          ${buildPdfTable('Ticket Status Mix', ['Status', 'Count', 'Percent'], statusRows)}
+          ${buildPdfTable('Most Booked Service', ['Service', 'Count', 'Percent'], serviceRows)}
+          ${buildPdfTable('Service Mix', ['Service', 'Count', 'Percent'], serviceMixRows)}
+          ${buildPdfTable('Traffic By Time', ['Window', 'Tickets'], trafficRows)}
+          ${buildPdfTable('Resident Registrations', ['Date', 'Registrations'], residentRows)}
+
+          <div class="footer">
+            <div class="line"></div>
+            <div>Certified accurate as of ${escapeHtml(generatedAt)}.</div>
+            <div class="meta">
+              <span>${escapeHtml(systemName)}</span>
+              <span>${escapeHtml(systemLocation)}</span>
+              <span>Prepared by ${escapeHtml(preparedBy)}</span>
+            </div>
+            <div>Confidential — For internal operations only.</div>
+          </div>
+          </div>
+        </div>
       </body>
     </html>`)
   reportWindow.document.close()
@@ -4936,120 +5137,286 @@ const escapeHtml = (value) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
-const printCallTicket = (ticket) => {
-  if (!ticket) return
-  const serviceLabel = serviceName(ticket.service_id)
-  const now = new Date()
-  const formTitle = `${serviceLabel} Request Form`
-  const printWindow = window.open('', 'print')
-  if (!printWindow) {
-    queueError.value = 'Unable to open the print preview.'
-    return
-  }
-
+const buildQueuePrintPreviewHtml = (ticket) => {
+  const services = resolveTicketServices(ticket)
+  const systemName = 'Automated Kiosk for Application Queuing System'
+  const systemLocation = 'Barangay San Miguel, Pasig City'
+  const preparedBy = profile?.name || 'Admin User'
+  const preparedEmail = profile?.email || 'admin@barangay.local'
   const residentName = formatTicketResident(ticket)
-  const residentId = ticket.resident_id ? `BSM-RES-${String(ticket.resident_id).padStart(6, '0')}` : '--'
-  const payload = {
-    ticket_no: ticket.ticket_no || '--',
-    resident_name: residentName,
-    resident_id: residentId,
-    username: ticket.resident_username || '--',
-    email: ticket.resident_email || '--',
-    mobile: ticket.resident_mobile_number || '--',
-    address: ticket.resident_address || '--',
-    date_of_birth: ticket.resident_date_of_birth || '--',
-    gender: ticket.resident_gender || '--',
-    civil_status: ticket.resident_civil_status || '--',
-  }
+  const residentId = ticket?.resident_id ? `BSM-RES-${String(ticket.resident_id).padStart(6, '0')}` : '—'
+  const issuedAt = ticket?.issued_at ? formatReportTimestamp(new Date(ticket.issued_at)) : '—'
+  const ticketNo = ticket?.ticket_no || `Ticket #${ticket?.id || '--'}`
+  const address = ticket?.resident_address || '—'
+  const gender = ticket?.resident_gender || '—'
+  const civilStatus = ticket?.resident_civil_status || '—'
+  const mobile = ticket?.resident_mobile_number || '—'
+  const email = ticket?.resident_email || '—'
+  const age = (() => {
+    if (!ticket?.resident_date_of_birth) return ''
+    const dob = new Date(ticket.resident_date_of_birth)
+    if (Number.isNaN(dob.getTime())) return ''
+    const today = new Date()
+    let years = today.getFullYear() - dob.getFullYear()
+    const monthDelta = today.getMonth() - dob.getMonth()
+    if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < dob.getDate())) {
+      years -= 1
+    }
+    return years > 0 ? String(years) : ''
+  })()
 
-  printWindow.document.write(`<!DOCTYPE html>
+  const pages = services.length ? services : []
+  const pageHtml = pages
+    .map((service, index) => {
+      const title = formatServiceName(service.name || serviceName(service.id))
+      const code = service.code || serviceCode(service.id) || '—'
+      const position = `${index + 1}`.padStart(2, '0')
+      return `
+        <section class="page">
+          <div class="page-watermark">Barangay San Miguel</div>
+          <header class="page-header">
+            <div class="brand">
+              <img src="/logo.png" alt="Barangay San Miguel" />
+              <div>
+                <h1>${escapeHtml(systemName)}</h1>
+                <p>${escapeHtml(systemLocation)}</p>
+              </div>
+            </div>
+            <div class="header-meta">
+              <span>Ticket: ${escapeHtml(ticketNo)}</span>
+              <span>Issued: ${escapeHtml(issuedAt)}</span>
+              <span>Prepared: ${escapeHtml(preparedBy)}</span>
+            </div>
+          </header>
+          <div class="page-title">
+            <div>
+              <h2>${escapeHtml(title)}</h2>
+              <p>Service Code: ${escapeHtml(code)}</p>
+            </div>
+            <div class="page-badge">Form ${escapeHtml(position)} of ${escapeHtml(String(pages.length))}</div>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-card">
+              <h3>Resident Information</h3>
+              <div class="info-row"><span>Name</span><strong>${escapeHtml(residentName)}</strong></div>
+              <div class="info-row"><span>Resident ID</span><strong>${escapeHtml(residentId)}</strong></div>
+              <div class="info-row"><span>Age</span><strong>${escapeHtml(age || '—')}</strong></div>
+              <div class="info-row"><span>Gender</span><strong>${escapeHtml(gender)}</strong></div>
+              <div class="info-row"><span>Civil Status</span><strong>${escapeHtml(civilStatus)}</strong></div>
+            </div>
+            <div class="info-card">
+              <h3>Contact Details</h3>
+              <div class="info-row"><span>Address</span><strong>${escapeHtml(address)}</strong></div>
+              <div class="info-row"><span>Email</span><strong>${escapeHtml(email)}</strong></div>
+              <div class="info-row"><span>Mobile</span><strong>${escapeHtml(mobile)}</strong></div>
+            </div>
+          </div>
+
+          <div class="statement">
+            <h3>Statement</h3>
+            <p>
+              This document certifies that the resident listed above has requested the ${escapeHtml(title)} service
+              through the Automated Kiosk for Application Queuing System. The information captured here reflects the
+              details on record at the time of issuance (${escapeHtml(issuedAt)}).
+            </p>
+          </div>
+
+          <div class="signatures">
+            <div class="signature-block">
+              <span>Prepared By</span>
+              <strong>${escapeHtml(preparedBy)}</strong>
+              <small>${escapeHtml(preparedEmail)}</small>
+            </div>
+            <div class="signature-block">
+              <span>Resident Signature</span>
+              <strong>_______________________</strong>
+              <small>${escapeHtml(residentName)}</small>
+            </div>
+          </div>
+        </section>
+      `
+    })
+    .join('')
+
+  return `<!DOCTYPE html>
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
-        <title>${escapeHtml(formTitle)}</title>
+        <title>${escapeHtml(ticketNo)} - Service Forms</title>
         <style>
-          * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
-          body { margin: 0; padding: 32px; color: #0f172a; }
-          .header { display: flex; justify-content: space-between; align-items: flex-start; }
-          .header h1 { margin: 0; font-size: 24px; }
-          .meta { text-align: right; font-size: 12px; color: #475569; }
-          .section { margin-top: 24px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; }
-          .section h2 { margin: 0 0 12px; font-size: 16px; color: #0b2c6f; }
-          .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-          .field { font-size: 13px; }
-          .label { text-transform: uppercase; letter-spacing: 0.12em; font-size: 10px; color: #64748b; }
-          .value { margin-top: 4px; font-weight: 600; color: #0f172a; }
-          .note { margin-top: 24px; font-size: 12px; color: #475569; }
-          .signature { margin-top: 28px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
-          .line { border-top: 1px solid #94a3b8; margin-top: 24px; padding-top: 6px; font-size: 12px; color: #64748b; text-align: center; }
+          @page { size: A4; margin: 16mm; }
+          * { box-sizing: border-box; font-family: "Segoe UI", Tahoma, sans-serif; }
+          body { margin: 0; color: #0f172a; background: #eef2ff; }
+          .toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 20px;
+            background: #ffffff;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.1);
+          }
+          .toolbar-title { font-size: 14px; font-weight: 700; color: #0b2c6f; }
+          .toolbar-actions { display: flex; gap: 10px; }
+          .toolbar button {
+            border: 0;
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-weight: 600;
+            font-size: 12px;
+            cursor: pointer;
+            background: #0b2c6f;
+            color: #ffffff;
+          }
+          .toolbar button.secondary {
+            background: #f2c300;
+            color: #0b1f3a;
+          }
+          .pages { padding: 24px; display: grid; gap: 24px; }
+          .page {
+            position: relative;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 22px 40px -32px rgba(15, 23, 42, 0.35);
+            page-break-after: always;
+            break-after: page;
+          }
+          .page:last-child { page-break-after: auto; break-after: auto; }
+          .page-watermark {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            font-size: 56px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: rgba(15, 23, 42, 0.04);
+            transform: rotate(-20deg);
+            pointer-events: none;
+          }
+          .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+            border-bottom: 2px solid #0b2c6f;
+            padding-bottom: 12px;
+            position: relative;
+            z-index: 1;
+          }
+          .brand { display: flex; gap: 12px; align-items: center; }
+          .brand img { width: 48px; height: 48px; object-fit: contain; }
+          .brand h1 { margin: 0; font-size: 16px; color: #0b2c6f; }
+          .brand p { margin: 2px 0 0; font-size: 11px; color: #475569; }
+          .header-meta { text-align: right; font-size: 11px; color: #475569; display: grid; gap: 2px; }
+          .page-title {
+            margin-top: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            position: relative;
+            z-index: 1;
+          }
+          .page-title h2 { margin: 0; font-size: 18px; color: #0f172a; }
+          .page-title p { margin: 4px 0 0; font-size: 12px; color: #64748b; }
+          .page-badge {
+            background: #0b2c6f;
+            color: #ffffff;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+          }
+          .info-grid { margin-top: 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+          .info-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 14px;
+            background: #f8fafc;
+            position: relative;
+            z-index: 1;
+          }
+          .info-card h3 { margin: 0 0 10px; font-size: 12px; color: #0b2c6f; text-transform: uppercase; letter-spacing: 0.08em; }
+          .info-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: #475569; padding: 4px 0; }
+          .info-row strong { color: #0f172a; font-weight: 600; }
+          .statement {
+            margin-top: 18px;
+            padding: 14px;
+            border-radius: 12px;
+            background: #f1f5f9;
+            position: relative;
+            z-index: 1;
+          }
+          .statement h3 { margin: 0 0 8px; font-size: 12px; color: #0b2c6f; text-transform: uppercase; letter-spacing: 0.08em; }
+          .statement p { margin: 0; font-size: 12px; color: #334155; line-height: 1.6; }
+          .signatures {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            position: relative;
+            z-index: 1;
+          }
+          .signature-block { flex: 1; border-top: 1px solid #cbd5f5; padding-top: 10px; font-size: 11px; color: #475569; }
+          .signature-block strong { display: block; font-size: 12px; color: #0f172a; margin-top: 4px; }
+          .signature-block small { display: block; margin-top: 2px; color: #94a3b8; }
+
+          @media print {
+            body { background: #ffffff; }
+            .toolbar { display: none; }
+            .pages { padding: 0; gap: 0; }
+            .page { box-shadow: none; border-radius: 0; padding: 0; }
+          }
         </style>
       </head>
       <body>
-        <div class="header">
-          <div>
-            <h1>${escapeHtml(formTitle)}</h1>
-            <p>Ticket No: <strong>${escapeHtml(payload.ticket_no)}</strong></p>
-          </div>
-          <div class="meta">
-            <div>Date: ${escapeHtml(now.toLocaleDateString())}</div>
-            <div>Time: ${escapeHtml(now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }))}</div>
+        <div class="toolbar">
+          <div class="toolbar-title">Service Form Preview</div>
+          <div class="toolbar-actions">
+            <button class="secondary" onclick="window.print()">Save As PDF</button>
+            <button onclick="window.close()">Close</button>
           </div>
         </div>
-
-        <div class="section">
-          <h2>Resident Details</h2>
-          <div class="grid">
-            <div class="field">
-              <div class="label">Resident Name</div>
-              <div class="value">${escapeHtml(payload.resident_name)}</div>
-            </div>
-            <div class="field">
-              <div class="label">Resident ID</div>
-              <div class="value">${escapeHtml(payload.resident_id)}</div>
-            </div>
-            <div class="field">
-              <div class="label">Username</div>
-              <div class="value">${escapeHtml(payload.username)}</div>
-            </div>
-            <div class="field">
-              <div class="label">Email</div>
-              <div class="value">${escapeHtml(payload.email)}</div>
-            </div>
-            <div class="field">
-              <div class="label">Mobile</div>
-              <div class="value">${escapeHtml(payload.mobile)}</div>
-            </div>
-            <div class="field">
-              <div class="label">Address</div>
-              <div class="value">${escapeHtml(payload.address)}</div>
-            </div>
-            <div class="field">
-              <div class="label">Date of Birth</div>
-              <div class="value">${escapeHtml(payload.date_of_birth)}</div>
-            </div>
-            <div class="field">
-              <div class="label">Gender / Civil Status</div>
-              <div class="value">${escapeHtml(payload.gender)} / ${escapeHtml(payload.civil_status)}</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="section">
-          <h2>Requested Service</h2>
-          <p>Please attach the official template for ${escapeHtml(serviceLabel)} once available.</p>
-        </div>
-
-        <p class="note">This is a placeholder print layout until the official templates are provided.</p>
-
-        <div class="signature">
-          <div class="line">Resident signature</div>
-          <div class="line">Receiving officer</div>
+        <div class="pages">
+          ${pageHtml}
         </div>
       </body>
-    </html>`)
-  printWindow.document.close()
-  printWindow.focus()
-  printWindow.print()
+    </html>`
+}
+
+const printCallTicket = async (ticket) => {
+  if (!ticket?.id) return
+  queueError.value = ''
+  try {
+    const previewWindow = window.open('', 'queue-print-preview')
+    if (!previewWindow) {
+      const blob = await downloadQueueTemplate(ticket.id)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      const fallbackName = ticket.ticket_no ? `${ticket.ticket_no}` : `ticket-${ticket.id}`
+      const serviceCount = resolveTicketServices(ticket).length
+      const extension = serviceCount > 1 ? 'zip' : 'docx'
+      link.href = url
+      link.download = `${fallbackName}.${extension}`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      return
+    }
+    previewWindow.document.write(buildQueuePrintPreviewHtml(ticket))
+    previewWindow.document.close()
+    previewWindow.focus()
+  } catch (err) {
+    queueError.value = err.message
+  }
 }
 
 const loadAuditLogs = async () => {
@@ -6611,6 +6978,13 @@ onBeforeUnmount(() => {
 .queue-serving-service {
   font-size: 1.3rem;
   color: rgba(226, 232, 240, 0.85);
+}
+
+.queue-serving-service-list {
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.7);
+  text-align: center;
+  max-width: 560px;
 }
 
 .queue-serving-grid {
@@ -9860,6 +10234,10 @@ onBeforeUnmount(() => {
 
   .queue-serving-service {
     font-size: 1.1rem;
+  }
+
+  .queue-serving-service-list {
+    font-size: 0.85rem;
   }
 
   .queue-serving-grid {
