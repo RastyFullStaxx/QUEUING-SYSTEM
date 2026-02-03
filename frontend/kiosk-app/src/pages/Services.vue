@@ -5,62 +5,44 @@
     </div>
     <div v-if="showStageReveal" class="kiosk-stage-reveal" aria-hidden="true"></div>
     <div
-      class="relative z-10 min-h-screen flex items-stretch justify-center px-6 py-8 kiosk-service-body"
+      class="relative z-10 min-h-screen flex items-stretch justify-center kiosk-service-body"
       :class="{ 'kiosk-dim': showConfirm || showReminder || showStepFlash }"
     >
       <div v-if="!showStepFlash" class="kiosk-step-shell kiosk-service-shell">
-        <div class="kiosk-service-hero kiosk-fade">
-          <div class="kiosk-step-header">
-            <div class="kiosk-pill">
-              <span class="scan-dot"></span>
-              {{ labels.stepBadge }}
+        <div class="kiosk-service-screen">
+          <header class="kiosk-service-header">
+            <div class="kiosk-step-header">
+              <div class="kiosk-pill">
+                <span class="scan-dot"></span>
+                {{ labels.stepBadge }}
+              </div>
             </div>
-          </div>
-          <div class="kiosk-service-hero-slot">
-            <transition name="kiosk-panel" mode="out-in">
-              <div v-if="selectedServices.length" class="kiosk-service-hero-cta" :style="ctaStyle">
-                <p class="kiosk-service-hero-kicker">{{ labels.selectedLabel }}</p>
-                <h1 class="kiosk-service-hero-title">{{ selectedTitle }}</h1>
-                <p class="kiosk-service-hero-note">{{ labels.selectedNote }}</p>
-                <div class="kiosk-service-hero-list">
-                  <span
-                    v-for="service in selectedServices"
-                    :key="service.id"
-                    class="kiosk-service-hero-chip"
-                  >
-                    {{ service.name }}
-                  </span>
-                </div>
+            <div class="kiosk-service-header-row">
+              <div>
+                <h1 class="kiosk-service-title">{{ labels.title }}</h1>
+                <p class="kiosk-service-subtitle">{{ labels.subtitle }}</p>
               </div>
-              <div v-else class="kiosk-service-hero-default">
-                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold text-[#0B2C6F] font-hero">
-                  {{ labels.title }}
-                </h1>
-                <p class="kiosk-service-subtitle">
-                  <span>{{ labels.subtitle }}</span>
-                </p>
+              <div class="kiosk-service-count">
+                <span>{{ selectedServices.length }}</span>
+                <small>{{ labels.selectedCountLabel }}</small>
               </div>
-            </transition>
-          </div>
-        </div>
+            </div>
+            <div class="kiosk-service-selected-slot">
+              <div v-if="selectedServices.length" class="kiosk-service-selected-list">
+                <span v-for="service in selectedServices" :key="service.id" class="kiosk-service-selected-chip">
+                  {{ service.name }}
+                </span>
+              </div>
+            </div>
+          </header>
 
-        <div class="kiosk-service-ribbon" aria-hidden="true">
-          <span class="kiosk-service-ribbon-line"></span>
-          <span class="kiosk-service-ribbon-dots">
-            <span class="kiosk-service-ribbon-dot"></span>
-            <span class="kiosk-service-ribbon-dot"></span>
-            <span class="kiosk-service-ribbon-dot"></span>
-          </span>
-        </div>
-
-        <div v-if="services.length" class="kiosk-service-grid-wrap kiosk-fade kiosk-fade-delay-1">
-          <div class="kiosk-service-grid">
+          <div v-if="services.length" class="kiosk-service-grid-new">
             <button
               v-for="(service, index) in services"
               :key="service.id"
               type="button"
-              class="kiosk-service-card"
-              :class="{ 'is-expanded': isExpanded(service.id), 'is-selected': isSelected(service.id) }"
+              class="kiosk-service-tile"
+              :class="{ 'is-selected': isSelected(service.id) }"
               :style="cardStyle(service, index)"
               :data-service-id="service.id"
               :ref="(el) => setCardRef(el, service.id)"
@@ -72,37 +54,34 @@
               @click="selectService(service, $event)"
               :aria-pressed="isSelected(service.id)"
             >
-            <span class="kiosk-service-accent" aria-hidden="true"></span>
-            <span class="kiosk-service-highlight" aria-hidden="true"></span>
-            <span class="kiosk-card-sheen" aria-hidden="true"></span>
-            <div class="kiosk-service-top">
-                <div class="kiosk-service-icon">
+              <div class="kiosk-service-tile-top">
+                <div class="kiosk-service-tile-icon">
                   <span class="kiosk-service-pulse" aria-hidden="true"></span>
-                  <svg v-if="getServiceMeta(service).icon === 'shield'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg v-if="getServiceMeta(service).icon === 'shield'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4z" />
                   </svg>
-                  <svg v-else-if="getServiceMeta(service).icon === 'briefcase'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg v-else-if="getServiceMeta(service).icon === 'briefcase'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M8 6V4h8v2" />
                     <rect x="3" y="6" width="18" height="14" rx="2" />
                     <path d="M3 12h18" />
                   </svg>
-                  <svg v-else-if="getServiceMeta(service).icon === 'home'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg v-else-if="getServiceMeta(service).icon === 'home'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M3 11l9-7 9 7" />
                     <path d="M5 10v10h14V10" />
                   </svg>
-                  <svg v-else-if="getServiceMeta(service).icon === 'heart'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg v-else-if="getServiceMeta(service).icon === 'heart'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M20.8 7.8a4.5 4.5 0 0 0-6.4 0L12 10.2l-2.4-2.4a4.5 4.5 0 1 0-6.4 6.4l2.4 2.4L12 22l6.4-5.4 2.4-2.4a4.5 4.5 0 0 0 0-6.4z" />
                   </svg>
-                  <svg v-else-if="getServiceMeta(service).icon === 'banknote'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg v-else-if="getServiceMeta(service).icon === 'banknote'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="6" width="18" height="12" rx="2" />
                     <circle cx="12" cy="12" r="3" />
                     <path d="M6 10h1" />
                     <path d="M17 14h1" />
                   </svg>
-                  <svg v-else-if="getServiceMeta(service).icon === 'badge'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg v-else-if="getServiceMeta(service).icon === 'badge'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M12 2l2.2 4.5L19 7.2l-3.5 3.4.8 4.9L12 13.8l-4.3 1.7.8-4.9L5 7.2l4.8-.7L12 2z" />
                   </svg>
-                  <svg v-else-if="getServiceMeta(service).icon === 'building'" class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg v-else-if="getServiceMeta(service).icon === 'building'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="4" width="8" height="16" rx="1" />
                     <rect x="13" y="8" width="8" height="12" rx="1" />
                     <path d="M7 8h0.01" />
@@ -111,99 +90,59 @@
                     <path d="M17 12h0.01" />
                     <path d="M17 16h0.01" />
                   </svg>
-                  <svg v-else class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
                     <path d="M14 3v5h5" />
                   </svg>
                 </div>
-                <div class="kiosk-service-copy">
-                  <div class="kiosk-service-title-row">
-                    <transition name="kiosk-chip">
-                      <div v-if="isSelected(service.id)" class="kiosk-service-selected">
-                        <span>{{ labels.selected }}</span>
-                      </div>
-                    </transition>
-                    <p class="kiosk-service-name">{{ service.name }}</p>
+                <div class="kiosk-service-tile-text">
+                  <div class="kiosk-service-tile-title">
+                    <span>{{ service.name }}</span>
+                    <span v-if="isSelected(service.id)" class="kiosk-service-tile-selected">{{ labels.selected }}</span>
                   </div>
-                  <p class="kiosk-service-snippet">{{ text(getServiceMeta(service).summary) }}</p>
+                  <p class="kiosk-service-tile-summary">{{ text(getServiceMeta(service).summary) }}</p>
                 </div>
               </div>
-
-                <div class="kiosk-service-tagline">
-                  <span>{{ text(getServiceMeta(service).tagline) }}</span>
-                </div>
-                <div class="kiosk-service-card-hint" :class="{ 'is-hidden': isExpanded(service.id) }">
-                  <span>{{ labels.cardHint }}</span>
-                  <svg class="kiosk-service-hint-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M7 10l5 5 5-5" />
-                  </svg>
-                </div>
-
-                <div class="kiosk-service-details">
-                  <div class="kiosk-service-stats">
-                    <div v-for="stat in getServiceMeta(service).stats" :key="stat.label.en" class="kiosk-service-stat">
-                      <div class="kiosk-service-stat-label">
-                        <span>{{ text(stat.label) }}</span>
-                      </div>
-                      <div class="kiosk-service-stat-value">{{ stat.value }}</div>
-                    </div>
-                  </div>
-                  <div class="kiosk-service-requirements">
-                    <div class="kiosk-service-requirements-title">
-                      <span>{{ labels.requirements }}</span>
-                    </div>
-                    <div class="kiosk-service-requirements-list">
-                      <div
-                        v-for="item in getServiceMeta(service).requirements"
-                        :key="item.en"
-                        class="kiosk-service-requirements-item"
-                      >
-                        <span class="kiosk-service-check">
-                          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M5 12l4 4 10-10" />
-                          </svg>
-                        </span>
-                        <div>
-                          <p class="kiosk-service-req-text">{{ text(item) }}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <span class="kiosk-service-ripple" aria-hidden="true"></span>
-                <span class="kiosk-service-blob" aria-hidden="true"></span>
-
+              <div class="kiosk-service-tile-meta">
+                <span
+                  v-for="item in getServiceMeta(service).requirements.slice(0, 2)"
+                  :key="item.en"
+                  class="kiosk-service-tile-chip"
+                >
+                  {{ text(item) }}
+                </span>
+              </div>
             </button>
           </div>
-        </div>
 
         <div v-else class="kiosk-service-empty kiosk-fade kiosk-fade-delay-1">
           <h2 class="text-2xl font-semibold text-slate-800">{{ labels.emptyTitle }}</h2>
           <p class="text-slate-500 mt-2">{{ labels.emptyBody }}</p>
         </div>
-
-        <p v-if="error" class="kiosk-service-error">{{ error }}</p>
-
-        <div class="kiosk-step-actions">
-          <button
-            class="kiosk-arrow-button kiosk-arrow-button--back kiosk-action"
-            type="button"
-            @click="handleBack"
-          >
-            <span>{{ labels.back }}</span>
-          </button>
-          <button
-            class="kiosk-arrow-button kiosk-arrow-button--proceed kiosk-action"
-            :class="{ 'is-disabled': !selectedServices.length }"
-            type="button"
-            :disabled="!selectedServices.length"
-            :aria-disabled="!selectedServices.length"
-            @click="handleProceed"
-          >
-            <span>{{ labels.proceed }}</span>
-          </button>
-        </div>
       </div>
+
+      <p v-if="error" class="kiosk-service-error">{{ error }}</p>
+
+      <div class="kiosk-step-actions">
+        <button
+          class="kiosk-arrow-button kiosk-arrow-button--back kiosk-action"
+          type="button"
+          @click="handleBack"
+        >
+          <span>{{ labels.back }}</span>
+        </button>
+        <button
+          class="kiosk-arrow-button kiosk-arrow-button--proceed kiosk-action"
+          :class="{ 'is-disabled': !selectedServices.length }"
+          type="button"
+          :disabled="!selectedServices.length"
+          :aria-disabled="!selectedServices.length"
+          @click="handleProceed"
+        >
+          <span>{{ labels.proceed }}</span>
+        </button>
+      </div>
+    </div>
     </div>
 
     <transition name="kiosk-modal">
@@ -297,7 +236,7 @@ const copy = {
     stepBadge: 'Kiosk Scan - Step 2 of 3',
     stepFlash: 'STEP 2',
     title: 'Select Services',
-    subtitle: 'Tap a panel to expand and select one or more services.',
+    subtitle: 'Tap a service card to select one or more services.',
     selected: 'Selected',
     selectedLabel: 'Selected services',
     selectedNote: 'Review your selections before proceeding.',
@@ -324,7 +263,7 @@ const copy = {
     stepBadge: 'Kiosk Scan - Hakbang 2 sa 3',
     stepFlash: 'HAKBANG 2',
     title: 'Piliin ang mga Serbisyo',
-    subtitle: 'I-tap ang panel para buksan at pumili ng isa o higit pang serbisyo.',
+    subtitle: 'I-tap ang service card para pumili ng isa o higit pang serbisyo.',
     selected: 'Napili',
     selectedLabel: 'Napiling mga serbisyo',
     selectedNote: 'Suriin ang mga napili bago magpatuloy.',
@@ -664,8 +603,8 @@ const clearSelection = () => {
 
 const handleStageClick = (event) => {
   const target = event.target
-  if (target.closest('.kiosk-service-card')) return
-  if (target.closest('.kiosk-service-cta')) return
+  if (target.closest('.kiosk-service-screen')) return
+  if (target.closest('.kiosk-service-tile')) return
   if (target.closest('.kiosk-proceed-floating')) return
   if (target.closest('.kiosk-arrow-button')) return
   if (target.closest('.kiosk-modal')) return
@@ -775,6 +714,7 @@ const loadServices = async () => {
 }
 
 const selectService = (service, event) => {
+  event?.stopPropagation()
   triggerRipple(event)
   const positions = capturePositions()
   const next = new Set(selectedServiceIds.value)
@@ -898,9 +838,11 @@ const confirmProceed = async () => {
 onMounted(() => {
   triggerStepFlash()
   loadServices()
+  document.body.classList.add('kiosk-hide-brand')
 })
 
 onBeforeUnmount(() => {
+  document.body.classList.remove('kiosk-hide-brand')
   resizeObserver?.disconnect()
   if (stepFlashTimer.value) {
     clearTimeout(stepFlashTimer.value)

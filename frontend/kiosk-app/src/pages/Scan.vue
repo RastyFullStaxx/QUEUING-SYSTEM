@@ -65,7 +65,7 @@
                   <span class="scan-corner corner-br" aria-hidden="true"></span>
                   <div class="scan-grid" aria-hidden="true"></div>
                   <div class="scan-beam" :class="{ 'is-locked': hasQr }"></div>
-                  <div class="scan-center">
+                <div class="scan-center" :class="{ 'is-locked': hasQr }">
                     <div class="scan-state-icon" :class="{ 'is-locked': hasQr }">
                       <svg v-if="hasQr" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M5 12l4 4 10-10" />
@@ -136,7 +136,7 @@
     </div>
     <transition name="kiosk-modal">
       <div v-if="showLanguagePrompt" class="kiosk-modal">
-        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card">
+        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card language-modal-card">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
           <div class="kiosk-modal-header">
@@ -221,36 +221,47 @@
     </transition>
     <transition name="kiosk-modal">
       <div v-if="showManualEntry" class="kiosk-modal">
-        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card">
+        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card manual-entry-modal">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
           <span class="modal-orb orb-two" aria-hidden="true"></span>
-          <div class="kiosk-modal-header">
-            <p class="kiosk-modal-kicker">{{ labels.manualKicker }}</p>
-            <h2 class="kiosk-modal-title">{{ labels.manualEntry }}</h2>
-            <p class="kiosk-modal-subtitle">{{ labels.manualHelper }}</p>
+          <div class="kiosk-modal-header manual-entry-header">
+            <div class="manual-entry-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M7 4h10a2 2 0 0 1 2 2v12l-4-2-4 2-4-2-4 2V6a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6" />
+                <path d="M9 9h6M9 13h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+              </svg>
+            </div>
+            <div>
+              <p class="kiosk-modal-kicker">{{ labels.manualKicker }}</p>
+              <h2 class="kiosk-modal-title">{{ labels.manualEntry }}</h2>
+              <p class="kiosk-modal-subtitle">{{ labels.manualHelper }}</p>
+            </div>
           </div>
-          <div class="kiosk-modal-body">
-            <input
-              ref="manualInputRef"
-              v-model="qrCode"
-              class="kiosk-input"
-              :placeholder="labels.manualPlaceholder"
-              @keyup.enter="onSubmit"
-            />
-            <p class="kiosk-modal-note">{{ labels.validateHint }}</p>
+          <div class="kiosk-modal-body manual-entry-body">
+            <label class="manual-entry-field">
+              <span>{{ labels.manualPlaceholder }}</span>
+              <input
+                ref="manualInputRef"
+                v-model="qrCode"
+                class="kiosk-input manual-entry-input"
+                :placeholder="labels.manualPlaceholder"
+                @keyup.enter="onSubmit"
+              />
+            </label>
+            <p class="kiosk-modal-note manual-entry-note">{{ labels.validateHint }}</p>
             <div
               v-if="error"
-              class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 text-sm"
+              class="manual-entry-error"
               role="alert"
             >
               {{ error }}
             </div>
           </div>
-          <div class="kiosk-modal-actions">
-            <button class="w-full text-lg py-3 rounded-2xl font-semibold kiosk-button kiosk-action" @click="onSubmit">
+          <div class="kiosk-modal-actions manual-entry-actions">
+            <button class="kiosk-button text-lg py-3 rounded-2xl kiosk-action" @click="onSubmit">
               {{ labels.validateButton }}
             </button>
-            <button class="w-full text-lg py-3 rounded-2xl kiosk-secondary-button" @click="closeManualEntry">
+            <button class="kiosk-secondary-button text-lg py-3 rounded-2xl" @click="closeManualEntry">
               {{ labels.backToScan }}
             </button>
           </div>
