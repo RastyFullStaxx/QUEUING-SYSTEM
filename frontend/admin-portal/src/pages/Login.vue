@@ -443,7 +443,7 @@ const submitRegister = async () => {
   filter: blur(16px);
   opacity: 0.85;
   z-index: 0;
-  animation: glowFlow 10s linear infinite;
+  animation: glowFlow 10s ease-in-out infinite;
   transition: opacity 0.35s ease;
   pointer-events: none;
 }
@@ -466,15 +466,15 @@ const submitRegister = async () => {
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   z-index: 0;
-  animation: glowFlow 12s linear infinite;
+  animation: glowFlow 12s ease-in-out infinite;
   transition: opacity 0.35s ease;
   pointer-events: none;
 }
 
 .pop-shell--static::before,
 .pop-shell--static::after {
-  opacity: 0;
-  animation: none;
+  opacity: 0.6;
+  animation: glowFlow 14s ease-in-out infinite;
 }
 
 .pop-card--static {
@@ -574,8 +574,9 @@ const submitRegister = async () => {
 }
 
 @keyframes glowFlow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  0% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+  100% { transform: rotate(-6deg); }
 }
 
 .auth-shell {

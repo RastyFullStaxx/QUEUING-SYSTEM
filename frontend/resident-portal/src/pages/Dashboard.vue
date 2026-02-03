@@ -199,6 +199,27 @@
             <div v-else class="empty-state">
               No transactions yet. Your completed kiosk requests will show here.
             </div>
+            <div v-if="totalPages > 1" class="transaction-pagination">
+              <button
+                class="pagination-btn"
+                type="button"
+                :disabled="transactionsPage === 1"
+                @click="goToPage(transactionsPage - 1)"
+              >
+                Prev
+              </button>
+              <div class="pagination-info">
+                Page {{ transactionsPage }} of {{ totalPages }}
+              </div>
+              <button
+                class="pagination-btn"
+                type="button"
+                :disabled="transactionsPage === totalPages"
+                @click="goToPage(transactionsPage + 1)"
+              >
+                Next
+              </button>
+            </div>
           </section>
 
           <section class="dashboard-card">
@@ -290,10 +311,10 @@ const statusDetail = computed(() => {
   return 'We will notify you once a decision is made.'
 })
 
-const transactions = computed(() => {
-  const items = resident.value?.transactions
-  return Array.isArray(items) ? items : []
-})
+const transactions = ref([])
+const transactionsPage = ref(1)
+const transactionsPageSize = 5
+const totalTransactions = ref(0)
 
 const residentIdPadded = computed(() => {
   const id = resident.value?.id
@@ -367,6 +388,11 @@ const onLogout = () => {
   router.push('/')
 }
 
+const totalPages = computed(() => {
+  if (!totalTransactions.value) return 1
+  return Math.max(1, Math.ceil(totalTransactions.value / transactionsPageSize))
+})
+
 const hydrateFromCache = () => {
   const cached = localStorage.getItem('resident_profile')
   if (!cached) return
@@ -375,10 +401,59 @@ const hydrateFromCache = () => {
     if (data) {
       resident.value = { ...resident.value, ...data }
       status.value = data.status || status.value || 'pending'
+      if (Array.isArray(data.transactions)) {
+        transactions.value = data.transactions
+      }
     }
   } catch (err) {
     return
   }
+}
+
+const loadTransactions = async (page = 1) => {
+  const token = localStorage.getItem('resident_token')
+  if (!token) return
+  try {
+    const offset = Math.max(0, (page - 1) * transactionsPageSize)
+    const data = await request(`/api/resident/transactions?limit=${transactionsPageSize}&offset=${offset}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    const items = Array.isArray(data.transactions) ? data.transactions : []
+    totalTransactions.value = Number(data.total || items.length || 0)
+    transactionsPage.value = page
+    transactions.value = items.map((item) => {
+      const issued = item.issued_at ? new Date(item.issued_at) : null
+      const dateLabel = issued
+        ? issued.toLocaleString('en-PH', {
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })
+        : 'Date not available'
+      return {
+        id: item.id,
+        status: item.status || 'pending',
+        issued_at: item.issued_at,
+        date: dateLabel,
+        service: item.service_name || item.service_code || item.service_id || 'Service request',
+        ticket_no: item.ticket_no,
+      }
+    })
+    localStorage.setItem(
+      'resident_profile',
+      JSON.stringify({ ...(resident.value || {}), transactions: transactions.value })
+    )
+  } catch (err) {
+    return
+  }
+}
+
+const goToPage = (page) => {
+  const next = Math.min(Math.max(page, 1), totalPages.value)
+  if (next === transactionsPage.value) return
+  loadTransactions(next)
 }
 
 const refreshStatus = async () => {
@@ -396,6 +471,7 @@ const refreshStatus = async () => {
     resident.value = { ...resident.value, ...data.resident }
     status.value = data.resident?.status || status.value || 'pending'
     localStorage.setItem('resident_profile', JSON.stringify(resident.value))
+    await loadTransactions(1)
   } catch (err) {
     errorMessage.value = err?.message || 'Unable to refresh your status.'
   }
@@ -637,6 +713,7 @@ const downloadResidentId = () => {
 onMounted(() => {
   hydrateFromCache()
   refreshStatus()
+  loadTransactions(1)
   window.addEventListener('click', closeProfileMenu)
 })
 

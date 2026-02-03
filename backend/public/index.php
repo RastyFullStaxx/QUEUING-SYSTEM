@@ -388,6 +388,43 @@ if ($path === '/api/resident/me' && $method === 'GET') {
     exit;
 }
 
+if ($path === '/api/resident/transactions' && $method === 'GET') {
+    $payload = require_auth('resident', $appKey);
+    if (!$payload) {
+        exit;
+    }
+
+    $residentId = (int) $payload['id'];
+    $limit = (int) ($_GET['limit'] ?? 50);
+    $limit = max(1, min($limit, 200));
+    $offset = (int) ($_GET['offset'] ?? 0);
+    $offset = max(0, $offset);
+
+    $countStmt = $pdo->prepare('SELECT COUNT(*) AS total FROM queue_tickets WHERE resident_id = ?');
+    $countStmt->execute([$residentId]);
+    $total = (int) ($countStmt->fetch()['total'] ?? 0);
+
+    $stmt = $pdo->prepare(
+        'SELECT q.id, q.ticket_no, q.status, q.issued_at, q.service_id,
+                s.name AS service_name, s.code AS service_code
+         FROM queue_tickets q
+         LEFT JOIN services s ON s.id = q.service_id
+         WHERE q.resident_id = ?
+         ORDER BY q.issued_at DESC
+         LIMIT ' . $limit . ' OFFSET ' . $offset
+    );
+    $stmt->execute([$residentId]);
+    $transactions = $stmt->fetchAll();
+
+    json_response([
+        'transactions' => $transactions,
+        'total' => $total,
+        'limit' => $limit,
+        'offset' => $offset,
+    ]);
+    exit;
+}
+
 if ($path === '/api/resident/profile' && $method === 'POST') {
     $payload = require_auth('resident', $appKey);
     if (!$payload) {

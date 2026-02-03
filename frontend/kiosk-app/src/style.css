@@ -4074,6 +4074,16 @@ body.kiosk-hide-brand .kiosk-brand {
   color: #5b6b82;
 }
 
+.invalid-code-modal {
+  width: min(620px, 92vw);
+  padding: 2.5rem 2.7rem;
+  text-align: center;
+}
+
+.invalid-code-modal .kiosk-modal-title {
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+}
+
 .service-reminder-card {
   text-align: center;
   width: min(680px, 92vw);

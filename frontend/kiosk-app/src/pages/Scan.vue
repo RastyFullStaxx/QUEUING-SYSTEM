@@ -269,6 +269,24 @@
       </div>
     </transition>
     <transition name="kiosk-modal">
+      <div v-if="showInvalidDialog" class="kiosk-modal" @click.self="closeInvalidDialog">
+        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card invalid-code-modal">
+          <span class="modal-orb orb-one" aria-hidden="true"></span>
+          <span class="modal-orb orb-two" aria-hidden="true"></span>
+          <div class="kiosk-modal-header">
+            <p class="kiosk-modal-kicker">{{ labels.invalidKicker }}</p>
+            <h2 class="kiosk-modal-title">{{ labels.invalidTitle }}</h2>
+            <p class="kiosk-modal-subtitle">{{ invalidMessage || labels.invalidBody }}</p>
+          </div>
+          <div class="kiosk-modal-actions">
+            <button class="kiosk-button text-lg py-3 rounded-2xl kiosk-action" type="button" @click="closeInvalidDialog">
+              {{ labels.invalidAction }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+    <transition name="kiosk-modal">
       <div v-if="showBackConfirm" class="kiosk-modal" @click.self="closeBackConfirm">
         <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
@@ -307,6 +325,8 @@ const manualInputRef = ref(null)
 const language = ref('')
 const instructionsAccepted = ref(false)
 const showManualEntry = ref(false)
+const showInvalidDialog = ref(false)
+const invalidMessage = ref('')
 const languageDialogOpen = ref(false)
 const showStepFlash = ref(false)
 const showBackConfirm = ref(false)
@@ -353,6 +373,10 @@ const copy = {
     manualKicker: 'Manual entry',
     manualHelper: 'Type the QR code to continue.',
     backToScan: 'Back to scanner',
+    invalidKicker: 'Invalid code',
+    invalidTitle: 'We could not verify that code',
+    invalidBody: 'Please check the QR code and try again.',
+    invalidAction: 'Try again',
     statusReady: 'Ready',
     statusLocked: 'Locked',
     statusLooking: 'Searching for QR',
@@ -410,6 +434,10 @@ const copy = {
     manualKicker: 'Manwal na pagpasok',
     manualHelper: 'I-type ang QR code para magpatuloy.',
     backToScan: 'Bumalik sa scanner',
+    invalidKicker: 'Di-wastong code',
+    invalidTitle: 'Hindi ma-verify ang code',
+    invalidBody: 'Pakisuri ang QR code at subukang muli.',
+    invalidAction: 'Subukan muli',
     statusReady: 'Handa',
     statusLocked: 'Nakabasa',
     statusLooking: 'Naghahanap ng QR',
@@ -490,6 +518,11 @@ const closeManualEntry = () => {
   setTimeout(() => inputRef.value?.focus(), 50)
 }
 
+const closeInvalidDialog = () => {
+  showInvalidDialog.value = false
+  setTimeout(() => manualInputRef.value?.focus(), 50)
+}
+
 const openBackConfirm = () => {
   showBackConfirm.value = true
 }
@@ -526,7 +559,9 @@ const onSubmit = async () => {
 
     router.push('/services')
   } catch (err) {
-    error.value = err.message
+    error.value = ''
+    invalidMessage.value = err?.message || labels.value.invalidBody
+    showInvalidDialog.value = true
   }
 }
 
