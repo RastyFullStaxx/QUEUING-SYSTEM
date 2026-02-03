@@ -4084,6 +4084,20 @@ body.kiosk-hide-brand .kiosk-brand {
   font-size: clamp(1.7rem, 3vw, 2.3rem);
 }
 
+.unverified-code-modal {
+  width: min(620px, 92vw);
+  padding: 2.5rem 2.7rem;
+  text-align: center;
+}
+
+.unverified-code-modal .kiosk-modal-title {
+  font-size: clamp(1.7rem, 3vw, 2.3rem);
+}
+
+.unverified-code-modal .kiosk-modal-kicker {
+  color: #b45309;
+}
+
 .service-reminder-card {
   text-align: center;
   width: min(680px, 92vw);

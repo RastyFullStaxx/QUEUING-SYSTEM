@@ -1641,6 +1641,7 @@ body {
   position: relative;
   overflow: hidden;
   z-index: 2;
+  min-width: 0;
 }
 
 .profile-card::before,
@@ -1830,8 +1831,14 @@ body {
 
 .profile-grid-fields {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1rem;
+  width: 100%;
+  align-items: start;
+}
+
+.profile-grid-fields .field {
+  min-width: 0;
 }
 
 .profile-summary {
@@ -1876,6 +1883,8 @@ body {
 
 .profile-input {
   width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   border-radius: 18px;
   border: 1px solid rgba(148, 163, 184, 0.4);
   padding: 0.85rem 1rem;
@@ -1919,6 +1928,64 @@ body {
 .profile-section-subtitle {
   margin: 0;
   color: #64748b;
+}
+
+.profile-confirm-card {
+  width: min(560px, 94vw);
+}
+
+.profile-confirm-icon {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+
+.profile-change-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.profile-change-item {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(248, 250, 252, 0.9);
+  padding: 0.75rem 0.9rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.change-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.change-values {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+  color: #0f172a;
+  word-break: break-word;
+}
+
+.change-from {
+  color: #64748b;
+}
+
+.change-arrow {
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.change-to {
+  color: #0b2c6f;
+  font-weight: 600;
 }
 
 .upload-box {
@@ -2128,6 +2195,16 @@ body {
 
   .status-pill {
     justify-self: start;
+  }
+}
+
+@media (max-width: 520px) {
+  .change-values {
+    grid-template-columns: 1fr;
+  }
+
+  .change-arrow {
+    display: none;
   }
 }
 

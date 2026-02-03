@@ -388,6 +388,39 @@ if ($path === '/api/resident/me' && $method === 'GET') {
     exit;
 }
 
+if ($path === '/api/resident/profile-photo' && $method === 'GET') {
+    $payload = require_auth('resident', $appKey);
+    if (!$payload) {
+        exit;
+    }
+
+    $stmt = $pdo->prepare('SELECT profile_photo_url FROM residents WHERE id = ?');
+    $stmt->execute([(int) $payload['id']]);
+    $resident = $stmt->fetch();
+    if (!$resident || !$resident['profile_photo_url']) {
+        json_response(['data_url' => null]);
+        exit;
+    }
+
+    $relativePath = $resident['profile_photo_url'];
+    $filePath = __DIR__ . $relativePath;
+    if (!is_file($filePath)) {
+        json_response(['data_url' => null]);
+        exit;
+    }
+
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mimeType = $finfo->file($filePath) ?: 'image/jpeg';
+    $contents = file_get_contents($filePath);
+    if ($contents === false) {
+        json_response(['data_url' => null]);
+        exit;
+    }
+    $dataUrl = 'data:' . $mimeType . ';base64,' . base64_encode($contents);
+    json_response(['data_url' => $dataUrl]);
+    exit;
+}
+
 if ($path === '/api/resident/transactions' && $method === 'GET') {
     $payload = require_auth('resident', $appKey);
     if (!$payload) {

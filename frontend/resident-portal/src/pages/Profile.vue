@@ -16,7 +16,7 @@
           <button v-if="!isEditing" class="primary-button" type="button" @click="enableEdit">
             Edit profile
           </button>
-          <button v-if="isEditing" class="accent-button" type="button" :disabled="isSaving" @click="saveProfile">
+          <button v-if="isEditing" class="accent-button" type="button" :disabled="isSaving" @click="openSaveConfirm">
             {{ isSaving ? 'Saving...' : 'Save changes' }}
           </button>
           <button v-if="isEditing" class="ghost-button" type="button" @click="cancelEdit">
@@ -67,11 +67,11 @@
                   <input
                     class="profile-photo-input"
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/webp"
                     :disabled="!isEditing"
                     @change="onProfilePhotoChange"
                   />
-                  <p class="profile-photo-note">PNG or JPG up to 5MB.</p>
+                  <p class="profile-photo-note">PNG, JPG, or WEBP up to 5MB.</p>
                 </div>
               </div>
             </section>
@@ -185,6 +185,40 @@
           <p class="upload-note">If your details change, upload a new ID for re-verification.</p>
         </section>
       </div>
+      <div v-if="showSaveConfirm" class="auth-modal-overlay" @click.self="closeSaveConfirm">
+        <div class="auth-modal-card profile-confirm-card">
+          <div class="auth-modal-icon profile-confirm-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round" />
+              <path
+                d="M12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9-9 4.03-9 9 4.03 9 9 9z"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+          <div>
+            <h2 class="auth-modal-title">Confirm profile updates</h2>
+            <p class="auth-modal-text">Review the changes below before saving.</p>
+          </div>
+          <ul class="profile-change-list">
+            <li v-for="(change, index) in pendingChanges" :key="index" class="profile-change-item">
+              <span class="change-label">{{ change.label }}</span>
+              <span class="change-values">
+                <span class="change-from">{{ change.from }}</span>
+                <span class="change-arrow">→</span>
+                <span class="change-to">{{ change.to }}</span>
+              </span>
+            </li>
+          </ul>
+          <div class="auth-modal-actions">
+            <button class="auth-modal-ghost" type="button" @click="closeSaveConfirm">Review more</button>
+            <button class="auth-modal-primary" type="button" :disabled="isSaving" @click="confirmSaveProfile">
+              {{ isSaving ? 'Saving...' : 'Confirm & save' }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -200,6 +234,9 @@ const saveMessage = ref('')
 const errorMessage = ref('')
 const validIdFile = ref(null)
 const profilePhotoFile = ref(null)
+const showSaveConfirm = ref(false)
+const pendingChanges = ref([])
+const originalSnapshot = ref(null)
 const form = ref({
   profile_photo_url: '',
   valid_id_preview: '',
@@ -321,15 +358,90 @@ const enableEdit = () => {
   saveMessage.value = ''
   errorMessage.value = ''
   isEditing.value = true
+  originalSnapshot.value = { ...form.value }
 }
 
 const cancelEdit = () => {
   isEditing.value = false
   validIdFile.value = null
   profilePhotoFile.value = null
+  showSaveConfirm.value = false
   if (resident.value) {
     syncForm(resident.value)
   }
+}
+
+const formatChangeValue = (value) => {
+  if (value === null || value === undefined || value === '') return 'Not set'
+  return String(value)
+}
+
+const collectChanges = () => {
+  const changes = []
+  const baseline = originalSnapshot.value || resident.value || {}
+  const fieldLabels = {
+    username: 'Username',
+    email: 'Email',
+    first_name: 'First name',
+    middle_name: 'Middle name',
+    last_name: 'Last name',
+    date_of_birth: 'Date of birth',
+    gender: 'Gender',
+    civil_status: 'Civil status',
+    mobile_number: 'Mobile number',
+    address: 'Address',
+  }
+
+  Object.keys(fieldLabels).forEach((key) => {
+    const fromValue = (baseline[key] || '').toString().trim()
+    const toValue = (form.value[key] || '').toString().trim()
+    if (fromValue !== toValue) {
+      changes.push({
+        label: fieldLabels[key],
+        from: formatChangeValue(fromValue),
+        to: formatChangeValue(toValue),
+      })
+    }
+  })
+
+  if (profilePhotoFile.value) {
+    changes.push({
+      label: 'Profile photo',
+      from: resident.value?.profile_photo_url ? 'Current photo' : 'No photo',
+      to: profilePhotoFile.value.name,
+    })
+  }
+
+  if (validIdFile.value) {
+    changes.push({
+      label: 'Valid ID file',
+      from: resident.value?.valid_id_url ? 'Current ID' : 'No ID uploaded',
+      to: validIdFile.value.name,
+    })
+  }
+
+  return changes
+}
+
+const openSaveConfirm = () => {
+  if (!isEditing.value || isSaving.value) return
+  errorMessage.value = ''
+  const changes = collectChanges()
+  if (!changes.length) {
+    errorMessage.value = 'No changes detected to save.'
+    return
+  }
+  pendingChanges.value = changes
+  showSaveConfirm.value = true
+}
+
+const closeSaveConfirm = () => {
+  showSaveConfirm.value = false
+}
+
+const confirmSaveProfile = () => {
+  showSaveConfirm.value = false
+  saveProfile()
 }
 
 const readFileAsDataUrl = (file) => new Promise((resolve, reject) => {
@@ -406,6 +518,11 @@ const onValidIdChange = (event) => {
 
 const onProfilePhotoChange = (event) => {
   const file = event.target.files?.[0] || null
+  if (file && !file.type.startsWith('image/')) {
+    errorMessage.value = 'Please upload a PNG, JPG, or WEBP image.'
+    event.target.value = ''
+    return
+  }
   profilePhotoFile.value = file
   if (!file) return
   readFileAsDataUrl(file)

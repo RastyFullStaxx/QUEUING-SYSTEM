@@ -340,12 +340,16 @@ const residentCode = computed(() => {
 
 const qrPayload = computed(() => `BSM|RESIDENT|${residentIdPadded.value}|${qrTokenValue.value}`)
 const qrPngUrl = ref('')
+const profilePhotoDataUrl = ref('')
 const resolveAssetUrl = (url) => {
   if (!url) return ''
   if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) return url
   return `${baseUrl}${url}`
 }
 const profilePhotoSrc = computed(() => {
+  if (profilePhotoDataUrl.value) {
+    return profilePhotoDataUrl.value
+  }
   const url = resident.value?.profile_photo_url
   return resolveAssetUrl(url) || '/favicon.png'
 })
@@ -471,9 +475,30 @@ const refreshStatus = async () => {
     resident.value = { ...resident.value, ...data.resident }
     status.value = data.resident?.status || status.value || 'pending'
     localStorage.setItem('resident_profile', JSON.stringify(resident.value))
+    await loadProfilePhoto()
     await loadTransactions(1)
   } catch (err) {
     errorMessage.value = err?.message || 'Unable to refresh your status.'
+  }
+}
+
+const loadProfilePhoto = async () => {
+  const token = localStorage.getItem('resident_token')
+  if (!token) {
+    profilePhotoDataUrl.value = ''
+    return
+  }
+  if (!resident.value?.profile_photo_url) {
+    profilePhotoDataUrl.value = ''
+    return
+  }
+  try {
+    const data = await request('/api/resident/profile-photo', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    profilePhotoDataUrl.value = data?.data_url || ''
+  } catch (err) {
+    profilePhotoDataUrl.value = ''
   }
 }
 
@@ -712,6 +737,7 @@ const downloadResidentId = () => {
 
 onMounted(() => {
   hydrateFromCache()
+  loadProfilePhoto()
   refreshStatus()
   loadTransactions(1)
   window.addEventListener('click', closeProfileMenu)
@@ -730,4 +756,10 @@ watch(resident, () => {
     buildResidentIdImage()
   }
 }, { deep: true })
+
+watch(profilePhotoDataUrl, () => {
+  if (status.value === 'approved' && qrPngUrl.value) {
+    buildResidentIdImage()
+  }
+})
 </script>

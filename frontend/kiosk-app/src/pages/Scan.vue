@@ -287,6 +287,24 @@
       </div>
     </transition>
     <transition name="kiosk-modal">
+      <div v-if="showUnverifiedDialog" class="kiosk-modal" @click.self="closeUnverifiedDialog">
+        <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card unverified-code-modal">
+          <span class="modal-orb orb-one" aria-hidden="true"></span>
+          <span class="modal-orb orb-two" aria-hidden="true"></span>
+          <div class="kiosk-modal-header">
+            <p class="kiosk-modal-kicker">{{ labels.unverifiedKicker }}</p>
+            <h2 class="kiosk-modal-title">{{ labels.unverifiedTitle }}</h2>
+            <p class="kiosk-modal-subtitle">{{ unverifiedMessage || labels.unverifiedBody }}</p>
+          </div>
+          <div class="kiosk-modal-actions">
+            <button class="kiosk-button text-lg py-3 rounded-2xl kiosk-action" type="button" @click="closeUnverifiedDialog">
+              {{ labels.unverifiedAction }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+    <transition name="kiosk-modal">
       <div v-if="showBackConfirm" class="kiosk-modal" @click.self="closeBackConfirm">
         <div class="kiosk-modal-card kiosk-modal-glow kiosk-portal-card">
           <span class="modal-orb orb-one" aria-hidden="true"></span>
@@ -327,6 +345,8 @@ const instructionsAccepted = ref(false)
 const showManualEntry = ref(false)
 const showInvalidDialog = ref(false)
 const invalidMessage = ref('')
+const showUnverifiedDialog = ref(false)
+const unverifiedMessage = ref('')
 const languageDialogOpen = ref(false)
 const showStepFlash = ref(false)
 const showBackConfirm = ref(false)
@@ -377,6 +397,10 @@ const copy = {
     invalidTitle: 'We could not verify that code',
     invalidBody: 'Please check the QR code and try again.',
     invalidAction: 'Try again',
+    unverifiedKicker: 'Account not verified',
+    unverifiedTitle: 'Resident is still pending verification',
+    unverifiedBody: 'Please wait for approval before requesting services.',
+    unverifiedAction: 'Back to scanner',
     statusReady: 'Ready',
     statusLocked: 'Locked',
     statusLooking: 'Searching for QR',
@@ -438,6 +462,10 @@ const copy = {
     invalidTitle: 'Hindi ma-verify ang code',
     invalidBody: 'Pakisuri ang QR code at subukang muli.',
     invalidAction: 'Subukan muli',
+    unverifiedKicker: 'Hindi pa beripikado',
+    unverifiedTitle: 'Naka-pending pa ang beripikasyon',
+    unverifiedBody: 'Maghintay ng approval bago mag-request ng serbisyo.',
+    unverifiedAction: 'Bumalik sa scanner',
     statusReady: 'Handa',
     statusLocked: 'Nakabasa',
     statusLooking: 'Naghahanap ng QR',
@@ -523,6 +551,11 @@ const closeInvalidDialog = () => {
   setTimeout(() => manualInputRef.value?.focus(), 50)
 }
 
+const closeUnverifiedDialog = () => {
+  showUnverifiedDialog.value = false
+  setTimeout(() => manualInputRef.value?.focus(), 50)
+}
+
 const openBackConfirm = () => {
   showBackConfirm.value = true
 }
@@ -553,7 +586,9 @@ const onSubmit = async () => {
     localStorage.setItem('kiosk_approved', String(data.approved))
 
     if (!data.approved) {
-      error.value = language.value === 'tl' ? 'Hindi pa aprubado ang residente.' : 'Resident is not approved yet.'
+      error.value = ''
+      unverifiedMessage.value = data?.message || labels.value.unverifiedBody
+      showUnverifiedDialog.value = true
       return
     }
 
