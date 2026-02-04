@@ -165,7 +165,19 @@
               <div class="service-confirm-chip">
                 <span>{{ labels.confirmChip }}</span>
               </div>
-              <div class="service-confirm-name">{{ selectedSummary }}</div>
+              <div class="service-confirm-name">{{ selectedTitle }}</div>
+              <div class="service-confirm-list">
+                <div v-for="(service, index) in selectedServices" :key="service.id" class="service-confirm-item">
+                  <div class="service-confirm-index">{{ index + 1 }}</div>
+                  <div class="service-confirm-content">
+                    <div class="service-confirm-service-name">{{ service.name }}</div>
+                    <div class="service-confirm-service-meta">
+                      <span class="service-confirm-service-code">{{ service.code || 'Service' }}</span>
+                      <span class="service-confirm-service-summary">{{ text(getServiceMeta(service).summary) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div class="service-confirm-note">
                 <span>{{ labels.confirmNote }}</span>
               </div>

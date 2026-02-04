@@ -1887,7 +1887,7 @@
                   <thead class="text-left text-[#6B7280]">
                     <tr class="border-b border-[#E5E7EB]">
                       <th class="py-2">Ticket</th>
-                      <th class="py-2">Service</th>
+                      <th class="py-2">Services</th>
                       <th class="py-2">Status</th>
                       <th class="py-2">Issued</th>
                     </tr>
@@ -1919,9 +1919,12 @@
                       <td class="py-3">
                         <div class="transaction-service">
                           <span class="transaction-service-name">
-                            {{ services.find((service) => service.id === ticket.service_id)?.name || `Service #${ticket.service_id}` }}
+                            {{ ticketServiceLabel(ticket) }}
                           </span>
-                          <small>{{ services.find((service) => service.id === ticket.service_id)?.code || '' }}</small>
+                          <small>{{ ticketServiceCodeLabel(ticket) }}</small>
+                          <small v-if="ticketHasMultipleServices(ticket)" class="transaction-service-list">
+                            Includes: {{ ticketServiceList(ticket) }}
+                          </small>
                         </div>
                       </td>
                       <td class="py-3">
@@ -3073,9 +3076,19 @@ const transactionFiltered = computed(() => {
   return transactions.value.filter((ticket) => {
     if (!term) return true
     const ticketNo = String(ticket.ticket_no || '').toLowerCase()
-    const serviceId = String(ticket.service_id || '').toLowerCase()
+    const serviceIds = String(ticketPrimaryServiceId(ticket) || '').toLowerCase()
     const status = String(ticket.status || '').toLowerCase()
-    return ticketNo.includes(term) || serviceId.includes(term) || status.includes(term)
+    const serviceList = ticketServiceList(ticket).toLowerCase()
+    const serviceCodes = resolveTicketServices(ticket)
+      .map((service) => (service.code || '').toLowerCase())
+      .join(' ')
+    return (
+      ticketNo.includes(term) ||
+      serviceIds.includes(term) ||
+      status.includes(term) ||
+      serviceList.includes(term) ||
+      serviceCodes.includes(term)
+    )
   })
 })
 
@@ -3091,7 +3104,7 @@ const transactionSorted = computed(() => {
       if (statusDiff !== 0) return statusDiff * direction
     }
     if (transactionSortKey.value === 'service_id') {
-      const serviceDiff = compareValues(a.service_id || 0, b.service_id || 0)
+      const serviceDiff = compareValues(ticketPrimaryServiceId(a) || 0, ticketPrimaryServiceId(b) || 0)
       if (serviceDiff !== 0) return serviceDiff * direction
     }
     if (transactionSortKey.value === 'ticket_no') {
@@ -7824,6 +7837,10 @@ onBeforeUnmount(() => {
 
 .transaction-service small {
   color: #6b7280;
+}
+
+.transaction-service-list {
+  color: #475569;
 }
 
 .transaction-pagination {
