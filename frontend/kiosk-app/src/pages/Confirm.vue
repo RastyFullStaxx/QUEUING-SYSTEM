@@ -37,7 +37,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { request } from '../api'
+import { kioskPayload, request } from '../api'
 
 const router = useRouter()
 const error = ref('')
@@ -78,7 +78,7 @@ const createTicket = async () => {
         resident_id: resident.id,
         service_id: primaryService.id,
         service_ids: selectedServices.map((item) => item.id),
-        kiosk_device_id: 1,
+        ...kioskPayload(),
         idempotency_key: idempotencyKey,
         session_id: sessionId,
       }),

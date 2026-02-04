@@ -213,7 +213,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { request } from '../api'
+import { kioskPayload, request } from '../api'
 
 const router = useRouter()
 const services = ref([])
@@ -815,7 +815,7 @@ const confirmProceed = async () => {
         resident_id: resident.id,
         service_id: service.id,
         service_ids: selectedServices.value.map((item) => item.id),
-        kiosk_device_id: 1,
+        ...kioskPayload(),
         idempotency_key: idempotencyKey,
         session_id: sessionId,
       }),

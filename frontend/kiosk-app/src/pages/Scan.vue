@@ -333,7 +333,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { request } from '../api'
+import { kioskPayload, request } from '../api'
 
 const router = useRouter()
 const qrCode = ref('')
@@ -579,7 +579,7 @@ const onSubmit = async () => {
   try {
     const data = await request('/api/kiosk/validate-qr', {
       method: 'POST',
-      body: JSON.stringify({ qr_code: qrCode.value, kiosk_device_id: 1 }),
+      body: JSON.stringify({ qr_code: qrCode.value, ...kioskPayload() }),
     })
     localStorage.setItem('kiosk_resident', JSON.stringify(data.resident))
     localStorage.setItem('kiosk_allowed_services', JSON.stringify(data.allowed_services || []))

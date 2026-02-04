@@ -78,6 +78,52 @@ function require_admin_role(PDO $pdo, int $adminId, string $role): bool
     return true;
 }
 
+function kiosk_ip_allowed(): bool
+{
+    $allowed = array_filter(array_map('trim', explode(',', env_value('KIOSK_ALLOWED_IPS', ''))));
+    if (!$allowed) {
+        return true;
+    }
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+    if ($ip === '') {
+        return false;
+    }
+    return in_array($ip, $allowed, true);
+}
+
+function require_kiosk(PDO $pdo, array $body): ?array
+{
+    if (!kiosk_ip_allowed()) {
+        json_response(['error' => 'Kiosk access blocked from this device'], 403);
+        return null;
+    }
+
+    $token = trim((string) ($body['kiosk_token'] ?? ''));
+    $deviceId = (int) ($body['kiosk_device_id'] ?? 0);
+    if ($token === '') {
+        json_response(['error' => 'Kiosk token is required'], 401);
+        return null;
+    }
+
+    if ($deviceId > 0) {
+        $stmt = $pdo->prepare('SELECT id, device_id, name, token FROM kiosk_devices WHERE id = ?');
+        $stmt->execute([$deviceId]);
+    } else {
+        $stmt = $pdo->prepare('SELECT id, device_id, name, token FROM kiosk_devices WHERE token = ?');
+        $stmt->execute([$token]);
+    }
+    $kiosk = $stmt->fetch();
+    if (!$kiosk || !hash_equals((string) $kiosk['token'], $token)) {
+        json_response(['error' => 'Kiosk device unauthorized'], 401);
+        return null;
+    }
+
+    $stmt = $pdo->prepare('UPDATE kiosk_devices SET last_seen_at = NOW() WHERE id = ?');
+    $stmt->execute([(int) $kiosk['id']]);
+
+    return $kiosk;
+}
+
 function generate_resident_qr_token(PDO $pdo): string
 {
     for ($i = 0; $i < 5; $i++) {
@@ -2678,8 +2724,12 @@ if ($path === '/api/services' && $method === 'GET') {
 
 if ($path === '/api/kiosk/validate-qr' && $method === 'POST') {
     $body = read_json_body();
+    $kiosk = require_kiosk($pdo, $body);
+    if (!$kiosk) {
+        exit;
+    }
     $residentId = (int) ($body['resident_id'] ?? 0);
-    $kioskDeviceId = (int) ($body['kiosk_device_id'] ?? 0);
+    $kioskDeviceId = (int) $kiosk['id'];
     $qrToken = null;
     if (!$residentId && !empty($body['qr_code'])) {
         $parsed = parse_resident_qr_code((string) $body['qr_code']);
@@ -2736,10 +2786,14 @@ if ($path === '/api/kiosk/validate-qr' && $method === 'POST') {
 
 if ($path === '/api/kiosk/tickets' && $method === 'POST') {
     $body = read_json_body();
+    $kiosk = require_kiosk($pdo, $body);
+    if (!$kiosk) {
+        exit;
+    }
     $residentId = (int) ($body['resident_id'] ?? 0);
     $serviceId = (int) ($body['service_id'] ?? 0);
     $serviceIds = normalize_service_ids($body['service_ids'] ?? []);
-    $kioskDeviceId = (int) ($body['kiosk_device_id'] ?? 0);
+    $kioskDeviceId = (int) $kiosk['id'];
     $idempotencyKey = trim($body['idempotency_key'] ?? '');
     $sessionId = trim($body['session_id'] ?? '');
 
