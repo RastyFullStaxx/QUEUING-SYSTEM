@@ -1027,6 +1027,14 @@
                     <span>Barangay address</span>
                     <textarea v-model="residentForm.address" rows="3"></textarea>
                   </label>
+                  <label class="modal-field modal-full">
+                    <span>Verification note</span>
+                    <textarea
+                      v-model="residentForm.status_message"
+                      rows="3"
+                      placeholder="Optional message shown to the resident"
+                    ></textarea>
+                  </label>
                   <div class="modal-field modal-full">
                     <span>Valid ID upload</span>
                     <div class="modal-id-card">
@@ -2371,41 +2379,12 @@
                 <div class="admin-users-form-header">
                   <div>
                     <h4>Create Admin</h4>
-                    <p>Invite a new admin to manage services.</p>
+                    <p>Open a dedicated form to add a new admin and assign verification status.</p>
                   </div>
                   <button class="resident-secondary" type="button" @click="loadAdmins">Refresh List</button>
                 </div>
-                <div class="admin-users-form-grid">
-                  <label class="admin-users-field">
-                    <span>Name</span>
-                    <input v-model="newAdmin.name" class="admin-users-input" placeholder="Name" />
-                  </label>
-                  <label class="admin-users-field">
-                    <span>Email</span>
-                    <input v-model="newAdmin.email" class="admin-users-input" placeholder="Email" />
-                  </label>
-                  <label class="admin-users-field">
-                    <span>Password</span>
-                    <input v-model="newAdmin.password" class="admin-users-input" placeholder="Password" />
-                  </label>
-                  <label class="admin-users-field">
-                    <span>Role</span>
-                    <select v-model="newAdmin.role" class="admin-users-input">
-                      <option value="staff_admin">staff_admin</option>
-                      <option value="super_admin">super_admin</option>
-                    </select>
-                  </label>
-                  <label class="admin-users-field admin-users-field-full">
-                    <span>Service IDs</span>
-                    <input
-                      v-model="newAdmin.service_ids"
-                      class="admin-users-input"
-                      placeholder="Comma-separated IDs (staff only)"
-                    />
-                  </label>
-                </div>
                 <div class="admin-users-form-actions">
-                  <button class="resident-primary" type="button" @click="createAdmin">Add Admin</button>
+                  <button class="resident-primary" type="button" @click="openCreateAdminModal">Add Admin</button>
                   <button class="resident-tertiary" type="button" @click="resetAdminFilters">Clear Filters</button>
                 </div>
               </div>
@@ -2471,6 +2450,7 @@
                       <th class="py-2">Admin</th>
                       <th class="py-2">Email</th>
                       <th class="py-2">Role</th>
+                      <th class="py-2">Status</th>
                       <th class="py-2">Services</th>
                       <th class="py-2">Created</th>
                       <th class="py-2 text-right">Action</th>
@@ -2478,7 +2458,7 @@
                   </thead>
                   <tbody>
                     <tr v-if="isLoadingAdmins">
-                      <td colspan="6" class="py-4">
+                      <td colspan="7" class="py-4">
                         <div class="table-state">
                           <span class="table-state-icon"></span>
                           <span>Loading admins...</span>
@@ -2486,7 +2466,7 @@
                       </td>
                     </tr>
                     <tr v-else-if="adminSorted.length === 0">
-                      <td colspan="6" class="py-4">
+                      <td colspan="7" class="py-4">
                         <div class="table-state">
                           <span class="table-state-icon"></span>
                           <span>No admins match the filters.</span>
@@ -2507,6 +2487,11 @@
                       <td class="py-3">
                         <span class="status-pill" :class="admin.role === 'super_admin' ? 'is-info' : 'is-neutral'">
                           {{ admin.role }}
+                        </span>
+                      </td>
+                      <td class="py-3">
+                        <span class="status-pill" :class="statusClass(admin.status || 'approved')">
+                          {{ admin.status || 'approved' }}
                         </span>
                       </td>
                       <td class="py-3 text-base">{{ formatServiceAssignments(admin) }}</td>
@@ -2545,8 +2530,8 @@
             <div class="modal-card" role="dialog" aria-modal="true">
               <div class="modal-header">
                 <div>
-                  <h3>Edit Admin</h3>
-                  <p>Update admin details or service assignments.</p>
+                  <h3>{{ adminModalTitle }}</h3>
+                  <p>{{ adminModalSubtitle }}</p>
                 </div>
                 <button class="modal-close" type="button" @click="closeAdminModal">Close</button>
               </div>
@@ -2568,6 +2553,14 @@
                     </select>
                   </label>
                   <label class="modal-field">
+                    <span>Status</span>
+                    <select v-model="adminForm.status">
+                      <option value="pending">Pending</option>
+                      <option value="approved">Approved</option>
+                      <option value="rejected">Rejected</option>
+                    </select>
+                  </label>
+                  <label class="modal-field">
                     <span>Password</span>
                     <input v-model="adminForm.password" type="password" autocomplete="new-password" />
                     <small>Leave blank to keep the existing password.</small>
@@ -2577,12 +2570,62 @@
                     <input v-model="adminForm.service_ids" type="text" />
                     <small>Comma-separated IDs for staff admins.</small>
                   </label>
+                  <label class="modal-field modal-full">
+                    <span>Verification note</span>
+                    <textarea
+                      v-model="adminForm.status_message"
+                      rows="3"
+                      placeholder="Optional message shown to the admin"
+                    ></textarea>
+                  </label>
+                  <div v-if="adminForm.valid_id_url" class="modal-field modal-full">
+                    <span>Valid ID upload</span>
+                    <div class="modal-id-card">
+                      <div class="modal-id-meta">
+                        <span>Verification file</span>
+                        <a
+                          class="modal-id-link"
+                          :href="resolveIdUrl(adminForm.valid_id_url)"
+                          target="_blank"
+                          rel="noopener"
+                        >
+                          Open file
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div v-if="adminModalMode === 'edit'" class="modal-status-actions">
+                  <button
+                    class="resident-primary"
+                    type="button"
+                    :disabled="isAdminSaving || adminForm.status === 'approved'"
+                    @click="applyAdminStatus('approved')"
+                  >
+                    Approve Admin
+                  </button>
+                  <button
+                    class="resident-secondary"
+                    type="button"
+                    :disabled="isAdminSaving || adminForm.status === 'pending'"
+                    @click="applyAdminStatus('pending')"
+                  >
+                    Mark Pending
+                  </button>
+                  <button
+                    class="resident-danger"
+                    type="button"
+                    :disabled="isAdminSaving || adminForm.status === 'rejected'"
+                    @click="applyAdminStatus('rejected')"
+                  >
+                    Reject Admin
+                  </button>
                 </div>
                 <p v-if="adminFormError" class="modal-error">{{ adminFormError }}</p>
                 <div class="modal-actions">
                   <button class="resident-tertiary" type="button" @click="closeAdminModal">Cancel</button>
                   <button class="resident-primary" type="submit" :disabled="isAdminSaving">
-                    {{ isAdminSaving ? 'Saving...' : 'Save Changes' }}
+                    {{ isAdminSaving ? 'Saving...' : adminSubmitLabel }}
                   </button>
                 </div>
               </form>
@@ -2699,6 +2742,7 @@ const residentForm = ref({
   address: '',
   email: '',
   status: 'pending',
+  status_message: '',
   password: '',
   profile_photo_url: '',
 })
@@ -2774,18 +2818,21 @@ const adminSortDirection = ref('desc')
 const adminPage = ref(1)
 const adminPageSize = 10
 const isAdminModalOpen = ref(false)
+const adminModalMode = ref('edit')
 const isLogoutModalOpen = ref(false)
-const adminForm = ref({ name: '', email: '', role: 'staff_admin', password: '', service_ids: '' })
+const adminForm = ref({
+  name: '',
+  email: '',
+  role: 'staff_admin',
+  status: 'approved',
+  status_message: '',
+  valid_id_url: '',
+  password: '',
+  service_ids: '',
+})
 const adminFormError = ref('')
 const isAdminSaving = ref(false)
 const adminTarget = ref(null)
-const newAdmin = ref({
-  name: '',
-  email: '',
-  password: '',
-  role: 'staff_admin',
-  service_ids: '',
-})
 const allResidents = ref([])
 const allQueueTickets = ref([])
 const analyticsRange = ref('30d')
@@ -2851,6 +2898,20 @@ const serviceModalTitle = computed(() =>
 
 const serviceSubmitLabel = computed(() =>
   serviceModalMode.value === 'create' ? 'Create Service' : 'Save Changes'
+)
+
+const adminModalTitle = computed(() =>
+  adminModalMode.value === 'create' ? 'Add Admin' : 'Edit Admin'
+)
+
+const adminModalSubtitle = computed(() =>
+  adminModalMode.value === 'create'
+    ? 'Create a new admin profile and assign verification status.'
+    : 'Update admin details, verification status, and service assignments.'
+)
+
+const adminSubmitLabel = computed(() =>
+  adminModalMode.value === 'create' ? 'Create Admin' : 'Save Changes'
 )
 
 const residentTotalPages = computed(() =>
@@ -4643,6 +4704,7 @@ const openCreateResidentModal = () => {
     address: '',
     email: '',
     status: 'pending',
+    status_message: '',
     password: '',
     profile_photo_url: '',
   }
@@ -4667,6 +4729,7 @@ const openEditResidentModal = (resident) => {
     address: resident.address || '',
     email: resident.email || '',
     status: resident.status || 'pending',
+    status_message: resident.status_message || '',
     password: '',
     profile_photo_url: resident.profile_photo_url || '',
   }
@@ -4798,12 +4861,34 @@ const toggleAdminSortDirection = () => {
   adminPage.value = 1
 }
 
+const openCreateAdminModal = () => {
+  adminModalMode.value = 'create'
+  adminTarget.value = null
+  adminForm.value = {
+    name: '',
+    email: '',
+    role: 'staff_admin',
+    status: 'approved',
+    status_message: '',
+    valid_id_url: '',
+    password: '',
+    service_ids: '',
+  }
+  adminFormError.value = ''
+  isAdminSaving.value = false
+  isAdminModalOpen.value = true
+}
+
 const openEditAdminModal = (admin) => {
+  adminModalMode.value = 'edit'
   adminTarget.value = admin
   adminForm.value = {
     name: admin.name || '',
     email: admin.email || '',
     role: admin.role || 'staff_admin',
+    status: admin.status || 'approved',
+    status_message: admin.status_message || '',
+    valid_id_url: admin.valid_id_url || '',
     password: '',
     service_ids: Array.isArray(admin.service_ids) ? admin.service_ids.join(', ') : '',
   }
@@ -4817,10 +4902,10 @@ const closeAdminModal = () => {
   adminFormError.value = ''
   isAdminSaving.value = false
   adminTarget.value = null
+  adminModalMode.value = 'edit'
 }
 
 const submitAdminForm = async () => {
-  if (!adminTarget.value) return
   adminFormError.value = ''
   const serviceIds = adminForm.value.service_ids
     ? adminForm.value.service_ids
@@ -4833,6 +4918,8 @@ const submitAdminForm = async () => {
     email: adminForm.value.email.trim(),
     role: adminForm.value.role,
     service_ids: adminForm.value.role === 'super_admin' ? [] : serviceIds,
+    status: adminForm.value.status,
+    status_message: adminForm.value.status_message.trim() || null,
   }
 
   if (!payload.name || !payload.email) {
@@ -4840,13 +4927,26 @@ const submitAdminForm = async () => {
     return
   }
 
-  if (adminForm.value.password) {
+  if (adminModalMode.value === 'create') {
+    if (!adminForm.value.password) {
+      adminFormError.value = 'Password is required for new admins.'
+      return
+    }
+    payload.password = adminForm.value.password
+  } else if (adminForm.value.password) {
     payload.password = adminForm.value.password
   }
 
   isAdminSaving.value = true
   try {
-    await apiUpdateAdmin(adminTarget.value.id, payload)
+    if (adminModalMode.value === 'create') {
+      await apiCreateAdmin(payload)
+    } else if (adminTarget.value) {
+      await apiUpdateAdmin(adminTarget.value.id, payload)
+    } else {
+      adminFormError.value = 'Admin record not selected.'
+      return
+    }
     closeAdminModal()
     await loadAdmins()
   } catch (err) {
@@ -4854,6 +4954,11 @@ const submitAdminForm = async () => {
   } finally {
     isAdminSaving.value = false
   }
+}
+
+const applyAdminStatus = async (status) => {
+  adminForm.value.status = status
+  await submitAdminForm()
 }
 
 const resetAdminFilters = () => {
@@ -4943,6 +5048,7 @@ const submitResidentForm = async () => {
     last_name: residentForm.value.last_name.trim(),
     email: residentForm.value.email.trim(),
     status: residentForm.value.status,
+    status_message: residentForm.value.status_message.trim() || null,
     username: residentForm.value.username.trim() || null,
     middle_name: residentForm.value.middle_name.trim() || null,
     date_of_birth: residentForm.value.date_of_birth || null,
@@ -5341,26 +5447,6 @@ const loadAdmins = async () => {
     adminError.value = err.message
   } finally {
     isLoadingAdmins.value = false
-  }
-}
-
-const createAdmin = async () => {
-  adminError.value = ''
-  try {
-    const serviceIds = newAdmin.value.service_ids
-      ? newAdmin.value.service_ids.split(',').map((id) => parseInt(id.trim(), 10)).filter(Boolean)
-      : []
-    await apiCreateAdmin({
-      name: newAdmin.value.name,
-      email: newAdmin.value.email,
-      password: newAdmin.value.password,
-      role: newAdmin.value.role,
-      service_ids: serviceIds,
-    })
-    newAdmin.value = { name: '', email: '', password: '', role: 'staff_admin', service_ids: '' }
-    await loadAdmins()
-  } catch (err) {
-    adminError.value = err.message
   }
 }
 

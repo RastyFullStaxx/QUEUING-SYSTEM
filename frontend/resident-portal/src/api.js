@@ -13,10 +13,18 @@ async function request(path, options = {}) {
     ...options,
   })
 
-  const data = await response.json()
+  let data = {}
+  try {
+    data = await response.json()
+  } catch (err) {
+    data = {}
+  }
   if (!response.ok) {
     const message = data?.error || 'Request failed'
-    throw new Error(message)
+    const error = new Error(message)
+    error.data = data
+    error.status = response.status
+    throw error
   }
   return data
 }

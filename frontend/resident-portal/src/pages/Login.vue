@@ -337,8 +337,7 @@
                       </div>
                     </form>
                   </transition>
-                  <p v-if="error" class="auth-error">{{ error }}</p>
-                  <div v-if="showVerifyDialog" class="auth-modal-overlay" role="alertdialog" aria-modal="true">
+                  <div v-if="notice.open" class="auth-modal-overlay" role="alertdialog" aria-modal="true">
                     <div class="auth-modal-card">
                       <div class="auth-modal-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -348,17 +347,20 @@
                         </svg>
                       </div>
                       <div>
-                        <h3 class="auth-modal-title">Account not verified</h3>
-                        <p class="auth-modal-text">
-                          Your registration is still under review. You can sign in once the barangay team approves your account.
-                        </p>
+                        <h3 class="auth-modal-title">{{ notice.title }}</h3>
+                        <p class="auth-modal-text">{{ notice.message }}</p>
                       </div>
                       <div class="auth-modal-actions">
-                        <button class="auth-modal-primary" type="button" @click="showVerifyDialog = false">
-                          Okay
+                        <button class="auth-modal-primary" type="button" @click="closeNotice">
+                          {{ notice.primaryLabel }}
                         </button>
-                        <button class="auth-modal-ghost" type="button" @click="mode = 'register'; showVerifyDialog = false">
-                          Update details
+                        <button
+                          v-if="notice.secondaryLabel"
+                          class="auth-modal-ghost"
+                          type="button"
+                          @click="runNoticeSecondary"
+                        >
+                          {{ notice.secondaryLabel }}
                         </button>
                       </div>
                     </div>
@@ -381,7 +383,15 @@ import { request } from '../api'
 const router = useRouter()
 const email = ref('')
 const password = ref('')
-const error = ref('')
+const notice = ref({
+  open: false,
+  title: '',
+  message: '',
+  primaryLabel: 'Okay',
+  secondaryLabel: '',
+  onPrimary: null,
+  onSecondary: null,
+})
 const isLoading = ref(false)
 const mode = ref('login')
 const showAuth = ref(false)
@@ -399,7 +409,6 @@ const mobileNumber = ref('')
 const address = ref('')
 const isRegistering = ref(false)
 const validIdFile = ref(null)
-const showVerifyDialog = ref(false)
 const helpLink = 'mailto:helpdesk@barangay.local'
 
 const genderOptions = ['Male', 'Female', 'Non-binary', 'Prefer not to say']
@@ -412,19 +421,51 @@ const isPasswordMismatch = computed(() => {
 
 const openAuth = () => {
   mode.value = 'login'
-  error.value = ''
-  showVerifyDialog.value = false
+  notice.value.open = false
   showAuth.value = true
 }
 
 const closeAuth = () => {
   showAuth.value = false
-  error.value = ''
-  showVerifyDialog.value = false
+  notice.value.open = false
+}
+
+const resetRegisterForm = () => {
+  firstName.value = ''
+  middleName.value = ''
+  lastName.value = ''
+  regEmail.value = ''
+  regPassword.value = ''
+  confirmPassword.value = ''
+  username.value = ''
+  dateOfBirth.value = ''
+  gender.value = ''
+  civilStatus.value = ''
+  mobileNumber.value = ''
+  address.value = ''
+  validIdFile.value = null
+}
+
+const openNotice = ({ title, message, primaryLabel = 'Okay', secondaryLabel = '', onPrimary = null, onSecondary = null }) => {
+  notice.value = { open: true, title, message, primaryLabel, secondaryLabel, onPrimary, onSecondary }
+}
+
+const closeNotice = () => {
+  const handler = notice.value.onPrimary
+  notice.value.open = false
+  notice.value.onPrimary = null
+  if (typeof handler === 'function') handler()
+}
+
+const runNoticeSecondary = () => {
+  const handler = notice.value.onSecondary
+  notice.value.open = false
+  notice.value.onSecondary = null
+  if (typeof handler === 'function') handler()
 }
 
 const onSubmit = async () => {
-  error.value = ''
+  notice.value.open = false
   isLoading.value = true
   try {
     const data = await request('/api/auth/resident/login', {
@@ -432,7 +473,22 @@ const onSubmit = async () => {
       body: JSON.stringify({ email: email.value, password: password.value }),
     })
     if (data.resident?.status !== 'approved') {
-      showVerifyDialog.value = true
+      const status = data.resident?.status || 'pending'
+      const note = data.resident?.status_message
+      const baseMessage =
+        status === 'rejected'
+          ? 'Your account was not approved. Please review the message below or update your details.'
+          : 'Your registration is under verification by the barangay admin.'
+      const message = note ? `${baseMessage}\n\nMessage from admin: ${note}` : baseMessage
+      openNotice({
+        title: status === 'rejected' ? 'Account Rejected' : 'Account Pending',
+        message,
+        primaryLabel: 'Okay',
+        secondaryLabel: 'Update details',
+        onSecondary: () => {
+          mode.value = 'register'
+        },
+      })
       return
     }
     localStorage.setItem('resident_token', data.token)
@@ -448,22 +504,41 @@ const onSubmit = async () => {
     localStorage.setItem('resident_profile', JSON.stringify({ ...cachedProfile, ...data.resident }))
     router.push('/dashboard')
   } catch (err) {
-    error.value = err.message
+    const payload = err?.data || {}
+    if (payload.status && payload.status !== 'approved') {
+      const status = payload.status
+      const baseMessage =
+        status === 'rejected'
+          ? 'Your account was not approved. Please review the message below or update your details.'
+          : 'Your registration is under verification by the barangay admin.'
+      const message = payload.message ? `${baseMessage}\n\nMessage from admin: ${payload.message}` : baseMessage
+      openNotice({
+        title: status === 'rejected' ? 'Account Rejected' : 'Account Pending',
+        message,
+        primaryLabel: 'Okay',
+        secondaryLabel: 'Update details',
+        onSecondary: () => {
+          mode.value = 'register'
+        },
+      })
+    } else {
+      openNotice({ title: 'Login Failed', message: err.message || 'Unable to sign in.' })
+    }
   } finally {
     isLoading.value = false
   }
 }
 
 const onRegister = async () => {
-  error.value = ''
+  notice.value.open = false
   isRegistering.value = true
   if (!validIdFile.value) {
-    error.value = 'Valid ID upload is required.'
+    openNotice({ title: 'Valid ID required', message: 'Please upload a clear photo or PDF of your valid ID.' })
     isRegistering.value = false
     return
   }
   if (isPasswordMismatch.value) {
-    error.value = 'Passwords do not match.'
+    openNotice({ title: 'Password mismatch', message: 'Passwords do not match.' })
     isRegistering.value = false
     return
   }
@@ -485,25 +560,17 @@ const onRegister = async () => {
       method: 'POST',
       body: formData,
     })
-    const enrichedResident = {
-      ...data.resident,
-      username: username.value,
-      middle_name: middleName.value,
-      date_of_birth: dateOfBirth.value,
-      gender: gender.value,
-      mobile_number: mobileNumber.value,
-      civil_status: civilStatus.value,
-      address: address.value,
-    }
-    localStorage.setItem('resident_profile', JSON.stringify(enrichedResident))
-    if (data.resident?.status !== 'approved') {
-      showVerifyDialog.value = true
-      return
-    }
-    localStorage.setItem('resident_token', data.token)
-    router.push('/dashboard')
+    openNotice({
+      title: 'Registration Submitted',
+      message:
+        'Your account is now under verification by the barangay admin. Please wait for approval before signing in.',
+      onPrimary: () => {
+        resetRegisterForm()
+        closeAuth()
+      },
+    })
   } catch (err) {
-    error.value = err.message
+    openNotice({ title: 'Registration Failed', message: err.message || 'Unable to register.' })
   } finally {
     isRegistering.value = false
   }

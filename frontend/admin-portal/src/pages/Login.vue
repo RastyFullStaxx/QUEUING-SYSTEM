@@ -113,17 +113,30 @@
                     </form>
 
                     <form v-else class="auth-form" @submit.prevent="submitRegister">
-                      <label class="auth-field">
-                        <span>Full Name</span>
-                        <input
-                          v-model="registerName"
-                          type="text"
-                          placeholder="First and last name"
-                          class="auth-input"
-                          autocomplete="name"
-                          required
-                        />
-                      </label>
+                      <div class="auth-grid">
+                        <label class="auth-field">
+                          <span>First Name</span>
+                          <input
+                            v-model="registerFirstName"
+                            type="text"
+                            placeholder="First name"
+                            class="auth-input"
+                            autocomplete="given-name"
+                            required
+                          />
+                        </label>
+                        <label class="auth-field">
+                          <span>Last Name</span>
+                          <input
+                            v-model="registerLastName"
+                            type="text"
+                            placeholder="Last name"
+                            class="auth-input"
+                            autocomplete="family-name"
+                            required
+                          />
+                        </label>
+                      </div>
                       <label class="auth-field">
                         <span>Email Address</span>
                         <input
@@ -157,17 +170,25 @@
                           required
                         />
                       </label>
+                      <label class="auth-field">
+                        <span>Valid ID Upload</span>
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          class="auth-file"
+                          @change="onRegisterIdChange"
+                          required
+                        />
+                        <small class="auth-help">{{ registerIdName }}</small>
+                      </label>
                       <div class="auth-note">
-                        Registration is only open for the first super admin. If your system is already set up, ask a super admin
-                        to create your account.
+                        Registration requests are reviewed by a super admin. You will receive access once your ID is verified.
                       </div>
                       <div class="auth-actions">
-                        <button class="auth-button" type="submit" :disabled="isSubmitting">Create Admin</button>
+                        <button class="auth-button" type="submit" :disabled="isSubmitting">Submit for Review</button>
                         <button class="auth-ghost" type="button" @click="setMode('signin')">Back to Sign In</button>
                       </div>
                     </form>
-
-                    <p v-if="error" class="auth-alert" role="alert" aria-live="polite">{{ error }}</p>
                     <p class="auth-footnote">Need help? Contact your IT coordinator for access.</p>
                   </div>
                 </section>
@@ -177,11 +198,35 @@
         </div>
       </div>
     </transition>
+
+    <div v-if="notice.open" class="auth-notice-overlay" role="alertdialog" aria-modal="true">
+      <div class="auth-notice-card">
+        <div class="auth-notice-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path
+              d="M12 3.5 3.5 20.5h17L12 3.5z"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linejoin="round"
+            />
+            <path d="M12 8.5v5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            <circle cx="12" cy="17.5" r="1" fill="currentColor" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="auth-notice-title">{{ notice.title }}</h3>
+          <p class="auth-notice-text">{{ notice.message }}</p>
+        </div>
+        <div class="auth-notice-actions">
+          <button class="auth-notice-primary" type="button" @click="closeNotice">{{ notice.actionLabel }}</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { request } from '../api'
 
@@ -190,34 +235,57 @@ const mode = ref('signin')
 const showAuth = ref(false)
 const loginEmail = ref('')
 const loginPassword = ref('')
-const registerName = ref('')
+const registerFirstName = ref('')
+const registerLastName = ref('')
 const registerEmail = ref('')
 const registerPassword = ref('')
 const registerConfirm = ref('')
-const error = ref('')
+const registerIdFile = ref(null)
+const notice = ref({ open: false, title: '', message: '', actionLabel: 'Okay', onClose: null })
 const isSubmitting = ref(false)
+const registerIdName = computed(() => registerIdFile.value?.name || 'No file selected yet.')
 
 const openAuth = () => {
   mode.value = 'signin'
-  error.value = ''
+  notice.value.open = false
   showAuth.value = true
 }
 
 const closeAuth = () => {
   showAuth.value = false
-  error.value = ''
+  notice.value.open = false
 }
 
 const setMode = (nextMode) => {
   if (mode.value !== nextMode) {
     mode.value = nextMode
-    error.value = ''
+    notice.value.open = false
   }
+}
+
+const resetRegisterForm = () => {
+  registerFirstName.value = ''
+  registerLastName.value = ''
+  registerEmail.value = ''
+  registerPassword.value = ''
+  registerConfirm.value = ''
+  registerIdFile.value = null
+}
+
+const openNotice = ({ title, message, actionLabel = 'Okay', onClose = null }) => {
+  notice.value = { open: true, title, message, actionLabel, onClose }
+}
+
+const closeNotice = () => {
+  const handler = notice.value.onClose
+  notice.value.open = false
+  notice.value.onClose = null
+  if (typeof handler === 'function') handler()
 }
 
 const submitLogin = async () => {
   if (isSubmitting.value) return
-  error.value = ''
+  notice.value.open = false
   isSubmitting.value = true
   try {
     const data = await request('/api/auth/admin/login', {
@@ -228,7 +296,16 @@ const submitLogin = async () => {
     localStorage.setItem('admin_profile', JSON.stringify(data.admin))
     router.push('/dashboard')
   } catch (err) {
-    error.value = err.message
+    const payload = err?.data || {}
+    if (payload.status && payload.status !== 'approved') {
+      const title = payload.status === 'rejected' ? 'Account Rejected' : 'Account Pending'
+      const message = payload.message
+        ? `Your admin account is not verified yet.\n\nMessage from admin: ${payload.message}`
+        : 'Your admin account is still under verification. Please wait for approval.'
+      openNotice({ title, message })
+    } else {
+      openNotice({ title: 'Sign In Failed', message: err.message || 'Unable to sign in.' })
+    }
   } finally {
     isSubmitting.value = false
   }
@@ -236,41 +313,64 @@ const submitLogin = async () => {
 
 const submitRegister = async () => {
   if (isSubmitting.value) return
-  error.value = ''
-  if (!registerName.value.trim()) {
-    error.value = 'Name is required'
+  notice.value.open = false
+  if (!registerFirstName.value.trim() || !registerLastName.value.trim()) {
+    openNotice({ title: 'Missing details', message: 'First and last name are required.' })
     return
   }
   if (!registerEmail.value.trim()) {
-    error.value = 'Email is required'
+    openNotice({ title: 'Missing details', message: 'Email is required.' })
     return
   }
   if (registerPassword.value.length < 8) {
-    error.value = 'Password must be at least 8 characters'
+    openNotice({ title: 'Weak password', message: 'Password must be at least 8 characters.' })
     return
   }
   if (registerPassword.value !== registerConfirm.value) {
-    error.value = 'Passwords do not match'
+    openNotice({ title: 'Password mismatch', message: 'Passwords do not match.' })
+    return
+  }
+  if (!registerIdFile.value) {
+    openNotice({ title: 'Valid ID required', message: 'Please upload a photo or PDF of your valid ID.' })
     return
   }
   isSubmitting.value = true
   try {
+    const formData = new FormData()
+    formData.append('first_name', registerFirstName.value.trim())
+    formData.append('last_name', registerLastName.value.trim())
+    formData.append('email', registerEmail.value.trim())
+    formData.append('password', registerPassword.value)
+    formData.append('valid_id', registerIdFile.value)
     const data = await request('/api/auth/admin/register', {
       method: 'POST',
-      body: JSON.stringify({
-        name: registerName.value.trim(),
-        email: registerEmail.value.trim(),
-        password: registerPassword.value,
-      }),
+      body: formData,
     })
-    localStorage.setItem('admin_token', data.token)
-    localStorage.setItem('admin_profile', JSON.stringify(data.admin))
-    router.push('/dashboard')
+    const status = data?.admin?.status || 'pending'
+    const message =
+      status === 'approved'
+        ? 'Your admin account is approved. Please sign in to continue.'
+        : 'Your admin account request is under verification by the super admin. You will be notified once approved.'
+    const note = data?.admin?.status_message
+    const fullMessage = note ? `${message}\n\nMessage from admin: ${note}` : message
+    openNotice({
+      title: status === 'approved' ? 'Account Approved' : 'Registration Received',
+      message: fullMessage,
+      onClose: () => {
+        resetRegisterForm()
+        closeAuth()
+      },
+    })
   } catch (err) {
-    error.value = err.message
+    openNotice({ title: 'Registration Failed', message: err.message || 'Unable to register.' })
   } finally {
     isSubmitting.value = false
   }
+}
+
+const onRegisterIdChange = (event) => {
+  const file = event.target.files?.[0] || null
+  registerIdFile.value = file
 }
 </script>
 
@@ -500,8 +600,105 @@ const submitRegister = async () => {
   align-items: stretch;
 }
 
+.auth-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.auth-file {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+  padding: 0.7rem 0.9rem;
+  font-size: 0.95rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+}
+
+.auth-help {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: rgba(15, 23, 42, 0.6);
+}
+
 .auth-layout--single {
   grid-template-columns: 1fr;
+}
+
+.auth-notice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 14, 28, 0.6);
+  backdrop-filter: blur(6px);
+  padding: 1.5rem;
+}
+
+.auth-notice-card {
+  width: min(92vw, 420px);
+  border-radius: 24px;
+  padding: 1.6rem 1.8rem;
+  background: #ffffff;
+  box-shadow: 0 28px 70px rgba(10, 25, 60, 0.35);
+  display: grid;
+  gap: 1rem;
+}
+
+.auth-notice-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: rgba(14, 116, 144, 0.12);
+  color: #0b2c6f;
+  display: grid;
+  place-items: center;
+}
+
+.auth-notice-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.auth-notice-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0b2c6f;
+  margin-bottom: 0.35rem;
+}
+
+.auth-notice-text {
+  font-size: 0.95rem;
+  color: rgba(15, 23, 42, 0.7);
+  white-space: pre-line;
+}
+
+.auth-notice-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.auth-notice-primary {
+  border: none;
+  border-radius: 999px;
+  padding: 0.65rem 1.4rem;
+  background: #0b2c6f;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.auth-notice-primary:hover {
+  background: #082255;
+}
+
+@media (max-width: 720px) {
+  .auth-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .auth-aside {

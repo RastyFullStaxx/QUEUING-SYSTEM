@@ -763,8 +763,8 @@ if ($path === '/api/auth/resident/register' && $method === 'POST') {
     $hash = password_hash($password, PASSWORD_DEFAULT);
     $qrToken = generate_resident_qr_token($pdo);
     $stmt = $pdo->prepare(
-        'INSERT INTO residents (username, first_name, middle_name, last_name, date_of_birth, gender, civil_status, mobile_number, address, email, password_hash, qr_token, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
+        'INSERT INTO residents (username, first_name, middle_name, last_name, date_of_birth, gender, civil_status, mobile_number, address, email, password_hash, qr_token, status, status_message, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
     );
     $stmt->execute([
         $username,
@@ -780,6 +780,7 @@ if ($path === '/api/auth/resident/register' && $method === 'POST') {
         $hash,
         $qrToken,
         'pending',
+        null,
     ]);
     $residentId = (int) $pdo->lastInsertId();
     $token = issue_token('resident', $residentId, $appKey);
@@ -826,6 +827,7 @@ if ($path === '/api/auth/resident/register' && $method === 'POST') {
             'address' => $address,
             'email' => $email,
             'status' => 'pending',
+            'status_message' => null,
             'qr_token' => $qrToken,
             'profile_photo_url' => null,
             'valid_id_url' => $validIdUrl ?: null,
@@ -842,7 +844,7 @@ if ($path === '/api/auth/resident/login' && $method === 'POST') {
 
     $stmt = $pdo->prepare(
         'SELECT r.id, r.username, r.first_name, r.middle_name, r.last_name, r.date_of_birth, r.gender,
-                r.civil_status, r.mobile_number, r.address, r.email, r.status, r.qr_token, r.profile_photo_url,
+                r.civil_status, r.mobile_number, r.address, r.email, r.status, r.status_message, r.qr_token, r.profile_photo_url,
                 r.password_hash, ri.valid_id_url, ri.verification_status
          FROM residents r
          LEFT JOIN resident_ids ri ON ri.id = (
@@ -873,6 +875,7 @@ if ($path === '/api/auth/resident/login' && $method === 'POST') {
             'address' => $resident['address'],
             'email' => $resident['email'],
             'status' => $resident['status'],
+            'status_message' => $resident['status_message'],
             'qr_token' => $resident['qr_token'],
             'profile_photo_url' => $resident['profile_photo_url'],
             'valid_id_url' => $resident['valid_id_url'],
@@ -890,7 +893,7 @@ if ($path === '/api/resident/me' && $method === 'GET') {
 
     $stmt = $pdo->prepare(
         'SELECT r.id, r.username, r.first_name, r.middle_name, r.last_name, r.date_of_birth, r.gender,
-                r.civil_status, r.mobile_number, r.address, r.email, r.status, r.qr_token, r.profile_photo_url,
+                r.civil_status, r.mobile_number, r.address, r.email, r.status, r.status_message, r.qr_token, r.profile_photo_url,
                 ri.valid_id_url, ri.verification_status
          FROM residents r
          LEFT JOIN resident_ids ri ON ri.id = (
@@ -1173,23 +1176,30 @@ if ($path === '/api/resident/profile' && $method === 'POST') {
 }
 
 if ($path === '/api/auth/admin/register' && $method === 'POST') {
-    $body = read_json_body();
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+    $isMultipart = str_contains($contentType, 'multipart/form-data');
+    $body = $isMultipart ? $_POST : read_json_body();
+    $firstName = trim($body['first_name'] ?? '');
+    $lastName = trim($body['last_name'] ?? '');
     $name = trim($body['name'] ?? '');
+    if (!$name && ($firstName || $lastName)) {
+        $name = trim($firstName . ' ' . $lastName);
+    }
     $email = strtolower(trim($body['email'] ?? ''));
     $password = $body['password'] ?? '';
+    $validIdUrl = trim($body['valid_id_url'] ?? '');
+    $uploadedId = $isMultipart ? ($_FILES['valid_id'] ?? null) : null;
 
     if (!$name || !$email || !$password) {
-        json_response(['error' => 'Name, email, and password are required'], 422);
+        json_response(['error' => 'First name, last name, email, and password are required'], 422);
         exit;
     }
     if (strlen($password) < 8) {
         json_response(['error' => 'Password must be at least 8 characters'], 422);
         exit;
     }
-
-    $count = (int) $pdo->query('SELECT COUNT(*) FROM admins')->fetchColumn();
-    if ($count > 0) {
-        json_response(['error' => 'Registration is disabled. Contact a super admin.'], 403);
+    if (!$validIdUrl && !$uploadedId) {
+        json_response(['error' => 'Valid ID upload is required'], 422);
         exit;
     }
 
@@ -1200,23 +1210,95 @@ if ($path === '/api/auth/admin/register' && $method === 'POST') {
         exit;
     }
 
+    $fileExtension = null;
+    if ($uploadedId) {
+        if (($uploadedId['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+            json_response(['error' => 'Valid ID upload failed'], 422);
+            exit;
+        }
+        if (($uploadedId['size'] ?? 0) > 5 * 1024 * 1024) {
+            json_response(['error' => 'Valid ID must be 5MB or less'], 422);
+            exit;
+        }
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($uploadedId['tmp_name']);
+        $allowedTypes = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp',
+            'application/pdf' => 'pdf',
+        ];
+        if (!isset($allowedTypes[$mimeType])) {
+            json_response(['error' => 'Valid ID must be a JPG, PNG, WEBP, or PDF'], 422);
+            exit;
+        }
+        $fileExtension = $allowedTypes[$mimeType];
+    }
+
+    $count = (int) $pdo->query('SELECT COUNT(*) FROM admins')->fetchColumn();
+    $isFirstAdmin = $count === 0;
+    $role = $isFirstAdmin ? 'super_admin' : 'staff_admin';
+    $status = $isFirstAdmin ? 'approved' : 'pending';
     $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-    $serviceIds = json_encode([]);
-    $stmt = $pdo->prepare('INSERT INTO admins (name, email, password_hash, role, service_ids, created_at) VALUES (?, ?, ?, ?, ?, NOW())');
-    $stmt->execute([$name, $email, $passwordHash, 'super_admin', $serviceIds]);
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO admins (name, email, password_hash, role, service_ids, status, status_message, valid_id_url, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())'
+    );
+    $stmt->execute([
+        $name,
+        $email,
+        $passwordHash,
+        $role,
+        json_encode([]),
+        $status,
+        null,
+        null,
+    ]);
     $adminId = (int) $pdo->lastInsertId();
+
+    if ($uploadedId) {
+        $uploadDir = __DIR__ . '/uploads/admin-ids';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+            $pdo->prepare('DELETE FROM admins WHERE id = ?')->execute([$adminId]);
+            json_response(['error' => 'Unable to store valid ID upload'], 500);
+            exit;
+        }
+        $filename = sprintf(
+            'admin_%d_%s.%s',
+            $adminId,
+            bin2hex(random_bytes(6)),
+            $fileExtension
+        );
+        $destination = $uploadDir . '/' . $filename;
+        if (!move_uploaded_file($uploadedId['tmp_name'], $destination)) {
+            $pdo->prepare('DELETE FROM admins WHERE id = ?')->execute([$adminId]);
+            json_response(['error' => 'Unable to store valid ID upload'], 500);
+            exit;
+        }
+        $validIdUrl = '/uploads/admin-ids/' . $filename;
+    }
+
+    if ($validIdUrl) {
+        $stmt = $pdo->prepare('UPDATE admins SET valid_id_url = ? WHERE id = ?');
+        $stmt->execute([$validIdUrl, $adminId]);
+    }
 
     log_audit($pdo, 'admin', $adminId, 'admin.registered', ['admin_id' => $adminId]);
 
-    $token = issue_token('admin', $adminId, $appKey);
+    $token = $status === 'approved' ? issue_token('admin', $adminId, $appKey) : null;
     json_response([
         'token' => $token,
         'admin' => [
             'id' => $adminId,
             'name' => $name,
             'email' => $email,
-            'role' => 'super_admin',
+            'role' => $role,
             'service_ids' => [],
+            'status' => $status,
+            'status_message' => null,
+            'valid_id_url' => $validIdUrl ?: null,
         ],
     ], 201);
     exit;
@@ -1234,6 +1316,16 @@ if ($path === '/api/auth/admin/login' && $method === 'POST') {
         json_response(['error' => 'Invalid credentials'], 401);
         exit;
     }
+    if (($admin['status'] ?? 'approved') !== 'approved') {
+        $status = $admin['status'] ?? 'pending';
+        $error = $status === 'rejected' ? 'Account rejected' : 'Account not verified';
+        json_response([
+            'error' => $error,
+            'status' => $status,
+            'message' => $admin['status_message'] ?? null,
+        ], 403);
+        exit;
+    }
 
     $token = issue_token('admin', (int) $admin['id'], $appKey);
     json_response([
@@ -1244,6 +1336,8 @@ if ($path === '/api/auth/admin/login' && $method === 'POST') {
             'email' => $admin['email'],
             'role' => $admin['role'],
             'service_ids' => $admin['service_ids'] ? json_decode($admin['service_ids'], true) : [],
+            'status' => $admin['status'] ?? 'approved',
+            'status_message' => $admin['status_message'] ?? null,
         ],
     ]);
     exit;
@@ -1255,7 +1349,7 @@ if ($path === '/api/admin/me' && $method === 'GET') {
         exit;
     }
 
-    $stmt = $pdo->prepare('SELECT id, name, email, role, service_ids FROM admins WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, name, email, role, service_ids, status, status_message FROM admins WHERE id = ?');
     $stmt->execute([(int) $payload['id']]);
     $admin = $stmt->fetch();
     if (!$admin) {
@@ -1277,7 +1371,7 @@ if ($path === '/api/admin/residents' && $method === 'GET') {
     $status = $_GET['status'] ?? null;
     $search = trim($_GET['search'] ?? '');
     $query = 'SELECT r.id, r.username, r.first_name, r.middle_name, r.last_name, r.date_of_birth, r.gender,
-                     r.civil_status, r.mobile_number, r.address, r.email, r.status, r.profile_photo_url, r.created_at,
+                     r.civil_status, r.mobile_number, r.address, r.email, r.status, r.status_message, r.profile_photo_url, r.created_at,
                      ri.valid_id_url, ri.verification_status
               FROM residents r
               LEFT JOIN resident_ids ri ON ri.id = (
@@ -1330,6 +1424,7 @@ if ($path === '/api/admin/residents' && $method === 'POST') {
     $mobileNumber = trim($body['mobile_number'] ?? '');
     $address = trim($body['address'] ?? '');
     $status = $body['status'] ?? 'pending';
+    $statusMessage = $body['status_message'] ?? null;
 
     if (!$email || !$password || !$firstName || !$lastName) {
         json_response(['error' => 'first_name, last_name, email, and password are required'], 422);
@@ -1359,8 +1454,8 @@ if ($path === '/api/admin/residents' && $method === 'POST') {
     $hash = password_hash($password, PASSWORD_DEFAULT);
     $qrToken = generate_resident_qr_token($pdo);
     $stmt = $pdo->prepare(
-        'INSERT INTO residents (username, first_name, middle_name, last_name, date_of_birth, gender, civil_status, mobile_number, address, email, password_hash, qr_token, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
+        'INSERT INTO residents (username, first_name, middle_name, last_name, date_of_birth, gender, civil_status, mobile_number, address, email, password_hash, qr_token, status, status_message, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())'
     );
     $stmt->execute([
         $username !== '' ? $username : null,
@@ -1376,6 +1471,7 @@ if ($path === '/api/admin/residents' && $method === 'POST') {
         $hash,
         $qrToken,
         $status,
+        $statusMessage !== null && trim((string) $statusMessage) !== '' ? trim((string) $statusMessage) : null,
     ]);
     $residentId = (int) $pdo->lastInsertId();
 
@@ -1383,7 +1479,7 @@ if ($path === '/api/admin/residents' && $method === 'POST') {
         'resident_id' => $residentId,
     ]);
 
-    $stmt = $pdo->prepare('SELECT id, username, first_name, middle_name, last_name, date_of_birth, gender, civil_status, mobile_number, address, email, status, profile_photo_url, created_at FROM residents WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, username, first_name, middle_name, last_name, date_of_birth, gender, civil_status, mobile_number, address, email, status, status_message, profile_photo_url, created_at FROM residents WHERE id = ?');
     $stmt->execute([$residentId]);
     json_response(['resident' => $stmt->fetch()], 201);
     exit;
@@ -1417,6 +1513,7 @@ if (preg_match('#^/api/admin/residents/(\\d+)$#', $path, $matches) && $method ==
     $address = $body['address'] ?? null;
     $status = $body['status'] ?? null;
     $password = $body['password'] ?? null;
+    $statusMessage = $body['status_message'] ?? null;
 
     if ($status !== null && !in_array($status, ['approved', 'rejected', 'pending'], true)) {
         json_response(['error' => 'Invalid status'], 422);
@@ -1513,6 +1610,11 @@ if (preg_match('#^/api/admin/residents/(\\d+)$#', $path, $matches) && $method ==
         $updates[] = 'status = ?';
         $params[] = $status;
     }
+    if ($statusMessage !== null) {
+        $message = trim((string) $statusMessage);
+        $updates[] = 'status_message = ?';
+        $params[] = $message !== '' ? $message : null;
+    }
     if ($password !== null && $password !== '') {
         $updates[] = 'password_hash = ?';
         $params[] = password_hash($password, PASSWORD_DEFAULT);
@@ -1542,7 +1644,7 @@ if (preg_match('#^/api/admin/residents/(\\d+)$#', $path, $matches) && $method ==
     ]);
 
     $stmt = $pdo->prepare('SELECT r.id, r.username, r.first_name, r.middle_name, r.last_name, r.date_of_birth, r.gender,
-                                  r.civil_status, r.mobile_number, r.address, r.email, r.status, r.profile_photo_url, r.created_at,
+                                  r.civil_status, r.mobile_number, r.address, r.email, r.status, r.status_message, r.profile_photo_url, r.created_at,
                                   ri.valid_id_url, ri.verification_status
                            FROM residents r
                            LEFT JOIN resident_ids ri ON ri.id = (
@@ -1597,14 +1699,23 @@ if (preg_match('#^/api/admin/residents/(\\d+)/status$#', $path, $matches) && $me
 
     $body = read_json_body();
     $status = $body['status'] ?? '';
+    $statusMessage = $body['status_message'] ?? null;
     if (!in_array($status, ['approved', 'rejected', 'pending'], true)) {
         json_response(['error' => 'Invalid status'], 422);
         exit;
     }
 
     $residentId = (int) $matches[1];
-    $stmt = $pdo->prepare('UPDATE residents SET status = ?, updated_at = NOW() WHERE id = ?');
-    $stmt->execute([$status, $residentId]);
+    $updates = ['status = ?', 'updated_at = NOW()'];
+    $params = [$status];
+    if ($statusMessage !== null) {
+        $message = trim((string) $statusMessage);
+        $updates[] = 'status_message = ?';
+        $params[] = $message !== '' ? $message : null;
+    }
+    $params[] = $residentId;
+    $stmt = $pdo->prepare('UPDATE residents SET ' . implode(', ', $updates) . ' WHERE id = ?');
+    $stmt->execute($params);
     $stmt = $pdo->prepare('UPDATE resident_ids SET verification_status = ? WHERE resident_id = ?');
     $stmt->execute([$status, $residentId]);
 
@@ -1625,7 +1736,7 @@ if (preg_match('#^/api/admin/residents/(\\d+)/status$#', $path, $matches) && $me
     ]);
 
     $stmt = $pdo->prepare('SELECT r.id, r.username, r.first_name, r.middle_name, r.last_name, r.date_of_birth, r.gender,
-                                  r.civil_status, r.mobile_number, r.address, r.email, r.status, r.profile_photo_url, r.created_at,
+                                  r.civil_status, r.mobile_number, r.address, r.email, r.status, r.status_message, r.profile_photo_url, r.created_at,
                                   ri.valid_id_url, ri.verification_status
                            FROM residents r
                            LEFT JOIN resident_ids ri ON ri.id = (
@@ -1743,7 +1854,7 @@ if ($path === '/api/admin/users' && $method === 'GET') {
         exit;
     }
 
-    $stmt = $pdo->query('SELECT id, name, email, role, service_ids, created_at FROM admins ORDER BY created_at DESC');
+    $stmt = $pdo->query('SELECT id, name, email, role, service_ids, status, status_message, valid_id_url, created_at FROM admins ORDER BY created_at DESC');
     $admins = $stmt->fetchAll();
     foreach ($admins as &$admin) {
         $admin['service_ids'] = $admin['service_ids'] ? json_decode($admin['service_ids'], true) : [];
@@ -1767,6 +1878,8 @@ if ($path === '/api/admin/users' && $method === 'POST') {
     $password = $body['password'] ?? '';
     $role = $body['role'] ?? 'staff_admin';
     $serviceIds = $body['service_ids'] ?? [];
+    $status = $body['status'] ?? 'approved';
+    $statusMessage = $body['status_message'] ?? null;
 
     if (!$name || !$email || !$password) {
         json_response(['error' => 'name, email, and password are required'], 422);
@@ -1776,20 +1889,29 @@ if ($path === '/api/admin/users' && $method === 'POST') {
         json_response(['error' => 'Invalid role'], 422);
         exit;
     }
+    if (!in_array($status, ['approved', 'pending', 'rejected'], true)) {
+        json_response(['error' => 'Invalid status'], 422);
+        exit;
+    }
 
     $hash = password_hash($password, PASSWORD_DEFAULT);
-    $stmt = $pdo->prepare('INSERT INTO admins (name, email, password_hash, role, service_ids, created_at) VALUES (?, ?, ?, ?, ?, NOW())');
+    $stmt = $pdo->prepare(
+        'INSERT INTO admins (name, email, password_hash, role, service_ids, status, status_message, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())'
+    );
     $stmt->execute([
         $name,
         $email,
         $hash,
         $role,
         $serviceIds ? json_encode($serviceIds) : null,
+        $status,
+        $statusMessage ? trim($statusMessage) : null,
     ]);
     $adminId = (int) $pdo->lastInsertId();
     log_audit($pdo, 'admin', (int) $payload['id'], 'admin.created', ['admin_id' => $adminId]);
 
-    $stmt = $pdo->prepare('SELECT id, name, email, role, service_ids, created_at FROM admins WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, name, email, role, service_ids, status, status_message, valid_id_url, created_at FROM admins WHERE id = ?');
     $stmt->execute([$adminId]);
     $admin = $stmt->fetch();
     $admin['service_ids'] = $admin['service_ids'] ? json_decode($admin['service_ids'], true) : [];
@@ -1813,6 +1935,8 @@ if (preg_match('#^/api/admin/users/(\\d+)$#', $path, $matches) && $method === 'P
     $role = $body['role'] ?? null;
     $serviceIds = $body['service_ids'] ?? null;
     $password = $body['password'] ?? null;
+    $status = $body['status'] ?? null;
+    $statusMessage = $body['status_message'] ?? null;
 
     $updates = [];
     $params = [];
@@ -1836,6 +1960,19 @@ if (preg_match('#^/api/admin/users/(\\d+)$#', $path, $matches) && $method === 'P
         $updates[] = 'service_ids = ?';
         $params[] = $serviceIds ? json_encode($serviceIds) : null;
     }
+    if ($status !== null) {
+        if (!in_array($status, ['approved', 'pending', 'rejected'], true)) {
+            json_response(['error' => 'Invalid status'], 422);
+            exit;
+        }
+        $updates[] = 'status = ?';
+        $params[] = $status;
+    }
+    if ($statusMessage !== null) {
+        $message = trim((string) $statusMessage);
+        $updates[] = 'status_message = ?';
+        $params[] = $message !== '' ? $message : null;
+    }
     if ($password) {
         $updates[] = 'password_hash = ?';
         $params[] = password_hash($password, PASSWORD_DEFAULT);
@@ -1850,7 +1987,7 @@ if (preg_match('#^/api/admin/users/(\\d+)$#', $path, $matches) && $method === 'P
     $stmt->execute($params);
     log_audit($pdo, 'admin', (int) $payload['id'], 'admin.updated', ['admin_id' => $adminId]);
 
-    $stmt = $pdo->prepare('SELECT id, name, email, role, service_ids, created_at FROM admins WHERE id = ?');
+    $stmt = $pdo->prepare('SELECT id, name, email, role, service_ids, status, status_message, valid_id_url, created_at FROM admins WHERE id = ?');
     $stmt->execute([$adminId]);
     $admin = $stmt->fetch();
     if (!$admin) {

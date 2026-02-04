@@ -199,7 +199,6 @@
           <span class="text-[#6B7280]">Already registered?</span>
           <router-link class="text-[#0B2C6F] font-semibold" to="/login">Login</router-link>
         </div>
-        <p v-if="error" class="auth-error">{{ error }}</p>
       </div>
       <div class="order-1 lg:order-2 space-y-6">
         <div>
@@ -214,6 +213,27 @@
         </p>
         <div class="rounded-2xl border border-[#E5E7EB] bg-[#F3F4F6] p-4 text-sm text-[#6B7280]">
           Bring a valid ID for quick verification.
+        </div>
+      </div>
+    </div>
+
+    <div v-if="notice.open" class="auth-modal-overlay" role="alertdialog" aria-modal="true">
+      <div class="auth-modal-card">
+        <div class="auth-modal-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 8v5" stroke-linecap="round" />
+            <circle cx="12" cy="16.5" r="1" fill="currentColor" />
+            <path d="M10.2 3.8 3.7 16a2 2 0 0 0 1.8 3h13a2 2 0 0 0 1.8-3l-6.5-12a2 2 0 0 0-3.6 0Z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="auth-modal-title">{{ notice.title }}</h3>
+          <p class="auth-modal-text">{{ notice.message }}</p>
+        </div>
+        <div class="auth-modal-actions">
+          <button class="auth-modal-primary" type="button" @click="closeNotice">
+            {{ notice.primaryLabel }}
+          </button>
         </div>
       </div>
     </div>
@@ -238,7 +258,13 @@ const gender = ref('')
 const civilStatus = ref('')
 const mobileNumber = ref('')
 const address = ref('')
-const error = ref('')
+const notice = ref({
+  open: false,
+  title: '',
+  message: '',
+  primaryLabel: 'Okay',
+  onPrimary: null,
+})
 const validIdFile = ref(null)
 const isSubmitting = ref(false)
 
@@ -251,15 +277,15 @@ const isPasswordMismatch = computed(() => {
 })
 
 const onSubmit = async () => {
-  error.value = ''
+  notice.value.open = false
   isSubmitting.value = true
   if (!validIdFile.value) {
-    error.value = 'Valid ID upload is required.'
+    openNotice({ title: 'Valid ID required', message: 'Please upload a clear photo or PDF of your valid ID.' })
     isSubmitting.value = false
     return
   }
   if (isPasswordMismatch.value) {
-    error.value = 'Passwords do not match.'
+    openNotice({ title: 'Password mismatch', message: 'Passwords do not match.' })
     isSubmitting.value = false
     return
   }
@@ -282,20 +308,16 @@ const onSubmit = async () => {
       body: formData,
     })
     localStorage.setItem('resident_token', data.token)
-    const enrichedResident = {
-      ...data.resident,
-      username: username.value,
-      middle_name: middleName.value,
-      date_of_birth: dateOfBirth.value,
-      gender: gender.value,
-      mobile_number: mobileNumber.value,
-      civil_status: civilStatus.value,
-      address: address.value,
-    }
-    localStorage.setItem('resident_profile', JSON.stringify(enrichedResident))
-    router.push('/dashboard')
+    openNotice({
+      title: 'Registration Submitted',
+      message:
+        'Your account is now under verification by the barangay admin. Please wait for approval before signing in.',
+      onPrimary: () => {
+        router.push('/login')
+      },
+    })
   } catch (err) {
-    error.value = err.message
+    openNotice({ title: 'Registration Failed', message: err.message || 'Unable to register.' })
   } finally {
     isSubmitting.value = false
   }
@@ -304,5 +326,16 @@ const onSubmit = async () => {
 const onValidIdChange = (event) => {
   const file = event.target.files?.[0] || null
   validIdFile.value = file
+}
+
+const openNotice = ({ title, message, primaryLabel = 'Okay', onPrimary = null }) => {
+  notice.value = { open: true, title, message, primaryLabel, onPrimary }
+}
+
+const closeNotice = () => {
+  const handler = notice.value.onPrimary
+  notice.value.open = false
+  notice.value.onPrimary = null
+  if (typeof handler === 'function') handler()
 }
 </script>
