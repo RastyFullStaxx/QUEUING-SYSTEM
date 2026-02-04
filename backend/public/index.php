@@ -48,6 +48,10 @@ function get_bearer_token(): ?string
     if (preg_match('/Bearer\s+(.*)$/i', $header, $matches)) {
         return trim($matches[1]);
     }
+    $queryToken = $_GET['token'] ?? '';
+    if ($queryToken) {
+        return trim($queryToken);
+    }
     return null;
 }
 
@@ -167,62 +171,166 @@ function compute_time_stats(array $values): array
     ];
 }
 
-function replace_docx_placeholders(string $xml, array $replacements): string
+function sanitize_docx_replacement($value): string
 {
-    $dom = new DOMDocument('1.0', 'UTF-8');
-    $dom->preserveWhiteSpace = false;
-    $dom->formatOutput = false;
-    $dom->loadXML($xml);
-    $xpath = new DOMXPath($dom);
-    $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
-    $nodes = $xpath->query('//w:t');
+    $value = (string) $value;
+    if (function_exists('iconv')) {
+        $converted = @iconv('UTF-8', 'UTF-8//IGNORE', $value);
+        if ($converted !== false) {
+            $value = $converted;
+        }
+    }
+    $value = preg_replace('/[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]/u', '', $value);
+    $value = preg_replace('/[^\\x09\\x0A\\x0D\\x20-\\x{D7FF}\\x{E000}-\\x{FFFD}\\x{10000}-\\x{10FFFF}]/u', '', $value);
+    $value = str_replace(["\r\n", "\r", "\n"], ' ', $value);
+    return $value;
+}
 
-    $startNode = null;
-    $buffer = '';
-    $prefix = '';
-
+function build_docx_text_map(array $nodes): array
+{
+    $text = '';
+    $map = [];
+    $offset = 0;
     foreach ($nodes as $node) {
-        $text = $node->nodeValue ?? '';
-        if ($startNode === null) {
-            foreach ($replacements as $token => $value) {
-                if (strpos($text, $token) !== false) {
-                    $text = str_replace($token, $value, $text);
-                }
-            }
-            $node->nodeValue = $text;
-            $startPos = strpos($text, '${');
-            if ($startPos !== false) {
-                $startNode = $node;
-                $prefix = substr($text, 0, $startPos);
-                $buffer = substr($text, $startPos);
-                $node->nodeValue = $prefix;
-            } else {
-                continue;
-            }
-        } else {
-            $buffer .= $text;
-            $node->nodeValue = '';
+        $value = (string) ($node->nodeValue ?? '');
+        $length = strlen($value);
+        $map[] = [
+            'node' => $node,
+            'text' => $value,
+            'start' => $offset,
+            'end' => $offset + $length,
+        ];
+        $text .= $value;
+        $offset += $length;
+    }
+    return [$text, $map];
+}
+
+function replace_docx_token_in_nodes(array $nodes, string $token, string $replacement): bool
+{
+    if ($token === '') {
+        return false;
+    }
+
+    $changed = false;
+    $offset = 0;
+    $iterations = 0;
+    $maxIterations = 1000;
+
+    while ($iterations < $maxIterations) {
+        [$fullText, $map] = build_docx_text_map($nodes);
+        $pos = strpos($fullText, $token, $offset);
+        if ($pos === false) {
+            break;
         }
 
-        if ($startNode !== null && strpos($buffer, '}') !== false) {
-            $endPos = strpos($buffer, '}');
-            $token = substr($buffer, 0, $endPos + 1);
-            $after = substr($buffer, $endPos + 1);
-            $replacement = $replacements[$token] ?? $token;
-            $startNode->nodeValue = $prefix . $replacement . $after;
-            $startNode = null;
-            $buffer = '';
-            $prefix = '';
+        $iterations += 1;
+        $changed = true;
+        $end = $pos + strlen($token);
+        $startIndex = null;
+        $endIndex = null;
+
+        foreach ($map as $index => $info) {
+            if ($startIndex === null && $pos >= $info['start'] && $pos < $info['end']) {
+                $startIndex = $index;
+            }
+            if ($endIndex === null && $end > $info['start'] && $end <= $info['end']) {
+                $endIndex = $index;
+                break;
+            }
+        }
+
+        if ($startIndex === null || $endIndex === null) {
+            break;
+        }
+
+        $startInfo = $map[$startIndex];
+        $endInfo = $map[$endIndex];
+        $startOffset = $pos - $startInfo['start'];
+        $endOffset = $end - $endInfo['start'];
+
+        if ($startIndex === $endIndex) {
+            $before = substr($startInfo['text'], 0, $startOffset);
+            $after = substr($startInfo['text'], $endOffset);
+            $startInfo['node']->nodeValue = $before . $replacement . $after;
+        } else {
+            $before = substr($startInfo['text'], 0, $startOffset);
+            $after = substr($endInfo['text'], $endOffset);
+            $startInfo['node']->nodeValue = $before . $replacement . $after;
+            for ($i = $startIndex + 1; $i <= $endIndex; $i++) {
+                $map[$i]['node']->nodeValue = '';
+            }
+        }
+
+        $offset = $pos + max(1, strlen($replacement));
+    }
+
+    return $changed;
+}
+
+function replace_docx_placeholders(string $xml, array $replacements): string
+{
+    if (!$replacements) {
+        return $xml;
+    }
+
+    $sanitized = [];
+    foreach ($replacements as $token => $value) {
+        $sanitized[$token] = sanitize_docx_replacement($value);
+    }
+
+    if (class_exists('DOMDocument')) {
+        $dom = new DOMDocument();
+        $dom->preserveWhiteSpace = true;
+        $dom->formatOutput = false;
+        $previousErrors = libxml_use_internal_errors(true);
+        $loaded = $dom->loadXML($xml);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previousErrors);
+
+        if ($loaded) {
+            $xpath = new DOMXPath($dom);
+            $xpath->registerNamespace('w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main');
+            $nodeList = $xpath->query('//w:t');
+            if ($nodeList && $nodeList->length > 0) {
+                $nodes = [];
+                foreach ($nodeList as $node) {
+                    $nodes[] = $node;
+                }
+                $changed = false;
+                foreach ($sanitized as $token => $value) {
+                    if (replace_docx_token_in_nodes($nodes, $token, $value)) {
+                        $changed = true;
+                    }
+                }
+                if ($changed) {
+                    $updated = $dom->saveXML();
+                    if ($updated !== false) {
+                        return $updated;
+                    }
+                } else {
+                    return $xml;
+                }
+            }
         }
     }
 
-    return $dom->saveXML();
+    foreach ($sanitized as $token => $value) {
+        $safeValue = htmlspecialchars($value, ENT_XML1 | ENT_QUOTES, 'UTF-8');
+        $xml = str_replace($token, $safeValue, $xml);
+    }
+
+    return $xml;
 }
 
 function render_docx_template(string $templatePath, array $replacements): ?string
 {
     if (!file_exists($templatePath)) {
         return null;
+    }
+
+    if (!class_exists('ZipArchive')) {
+        throw new RuntimeException('ZipArchive extension is not available.');
     }
 
     $tmpPath = tempnam(sys_get_temp_dir(), 'docx_');
@@ -239,17 +347,163 @@ function render_docx_template(string $templatePath, array $replacements): ?strin
         return null;
     }
 
-    $documentXml = $zip->getFromName('word/document.xml');
-    if ($documentXml === false) {
-        $zip->close();
-        return null;
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $stat = $zip->statIndex($i);
+        if (!$stat || empty($stat['name'])) {
+            continue;
+        }
+        $name = $stat['name'];
+        if (strpos($name, 'word/') !== 0) {
+            continue;
+        }
+        if (substr($name, -4) !== '.xml') {
+            continue;
+        }
+        $xml = $zip->getFromName($name);
+        if ($xml === false) {
+            continue;
+        }
+        $updatedXml = replace_docx_placeholders($xml, $replacements);
+        if ($updatedXml !== $xml) {
+            $zip->addFromString($name, $updatedXml);
+        }
     }
-
-    $updatedXml = replace_docx_placeholders($documentXml, $replacements);
-    $zip->addFromString('word/document.xml', $updatedXml);
     $zip->close();
 
     return $tmpPath;
+}
+
+function merge_docx_documents(array $paths): ?string
+{
+    if (count($paths) <= 1) {
+        return $paths[0] ?? null;
+    }
+
+    if (!class_exists('ZipArchive')) {
+        throw new RuntimeException('ZipArchive extension is not available.');
+    }
+
+    $basePath = $paths[0];
+    $baseZip = new ZipArchive();
+    if ($baseZip->open($basePath) !== true) {
+        return null;
+    }
+
+    $documentXml = $baseZip->getFromName('word/document.xml');
+    if ($documentXml === false) {
+        $baseZip->close();
+        return null;
+    }
+
+    $relsXml = $baseZip->getFromName('word/_rels/document.xml.rels');
+    if ($relsXml === false) {
+        $relsXml = '<?xml version="1.0" encoding="UTF-8"?>'
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+    }
+
+    $contentTypesXml = $baseZip->getFromName('[Content_Types].xml');
+    if ($contentTypesXml === false) {
+        $contentTypesXml = '<?xml version="1.0" encoding="UTF-8"?>'
+            . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>';
+    }
+
+    $docDom = new DOMDocument();
+    $docDom->preserveWhiteSpace = false;
+    if (!$docDom->loadXML($documentXml)) {
+        $baseZip->close();
+        return null;
+    }
+    $namespace = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+    $relNamespace = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    $docXpath = new DOMXPath($docDom);
+    $docXpath->registerNamespace('w', $namespace);
+    $body = $docXpath->query('/w:document/w:body')->item(0);
+    if (!$body) {
+        $baseZip->close();
+        return null;
+    }
+    $sectPr = $docXpath->query('w:sectPr', $body)->item(0);
+    if (!$sectPr) {
+        $sectPr = $docDom->createElementNS($namespace, 'w:sectPr');
+        $body->appendChild($sectPr);
+    }
+
+    $relsDom = new DOMDocument();
+    $relsDom->preserveWhiteSpace = false;
+    $relsDom->loadXML($relsXml);
+    $relsXpath = new DOMXPath($relsDom);
+    $relsXpath->registerNamespace('rel', 'http://schemas.openxmlformats.org/package/2006/relationships');
+    $relsRoot = $relsDom->documentElement;
+    $maxRId = 0;
+    foreach ($relsXpath->query('//rel:Relationship') as $relNode) {
+        $id = $relNode->getAttribute('Id');
+        if (preg_match('/rId(\d+)/', $id, $matches)) {
+            $maxRId = max($maxRId, (int) $matches[1]);
+        }
+    }
+
+    $typesDom = new DOMDocument();
+    $typesDom->preserveWhiteSpace = false;
+    $typesDom->loadXML($contentTypesXml);
+    $typesXpath = new DOMXPath($typesDom);
+    $typesXpath->registerNamespace('ct', 'http://schemas.openxmlformats.org/package/2006/content-types');
+    $typesRoot = $typesDom->documentElement;
+
+    $chunkIndex = 1;
+    foreach (array_slice($paths, 1) as $docPath) {
+        if (!is_file($docPath)) {
+            continue;
+        }
+        while ($baseZip->locateName('word/afchunk' . $chunkIndex . '.docx') !== false) {
+            $chunkIndex += 1;
+        }
+        $chunkName = 'afchunk' . $chunkIndex . '.docx';
+        $chunkTarget = $chunkName;
+        $chunkPartName = 'word/' . $chunkName;
+
+        $baseZip->addFile($docPath, $chunkPartName);
+
+        $newId = 'rId' . (++$maxRId);
+        $relationship = $relsDom->createElementNS(
+            'http://schemas.openxmlformats.org/package/2006/relationships',
+            'Relationship'
+        );
+        $relationship->setAttribute('Id', $newId);
+        $relationship->setAttribute(
+            'Type',
+            'http://schemas.openxmlformats.org/officeDocument/2006/relationships/aFChunk'
+        );
+        $relationship->setAttribute('Target', $chunkTarget);
+        $relsRoot->appendChild($relationship);
+
+        $altChunk = $docDom->createElementNS($namespace, 'w:altChunk');
+        $altChunk->setAttributeNS($relNamespace, 'r:id', $newId);
+        $body->insertBefore($altChunk, $sectPr);
+
+        $overridePath = '/' . $chunkPartName;
+        $existing = $typesXpath->query('//ct:Override[@PartName="' . $overridePath . '"]');
+        if ($existing->length === 0) {
+            $override = $typesDom->createElementNS(
+                'http://schemas.openxmlformats.org/package/2006/content-types',
+                'Override'
+            );
+            $override->setAttribute('PartName', $overridePath);
+            $override->setAttribute(
+                'ContentType',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            );
+            $typesRoot->appendChild($override);
+        }
+
+        $chunkIndex += 1;
+    }
+
+    $baseZip->addFromString('word/document.xml', $docDom->saveXML());
+    $baseZip->addFromString('word/_rels/document.xml.rels', $relsDom->saveXML());
+    $baseZip->addFromString('[Content_Types].xml', $typesDom->saveXML());
+    $baseZip->close();
+
+    return $basePath;
 }
 
 function normalize_service_ids($serviceIds): array
@@ -407,6 +661,24 @@ function fetch_queue_ticket(PDO $pdo, int $ticketId): ?array
 
 if ($path === '/api/health' && $method === 'GET') {
     json_response(['status' => 'ok']);
+    exit;
+}
+
+if ($path === '/api/admin/zip-check' && $method === 'GET') {
+    $payload = require_auth('admin', $appKey);
+    if (!$payload) {
+        exit;
+    }
+
+    json_response([
+        'zip_loaded' => extension_loaded('zip'),
+        'zip_class' => class_exists('ZipArchive'),
+        'php_version' => PHP_VERSION,
+        'sapi' => php_sapi_name(),
+        'php_ini' => php_ini_loaded_file(),
+        'php_ini_scanned' => php_ini_scanned_files(),
+        'extension_dir' => ini_get('extension_dir'),
+    ]);
     exit;
 }
 
@@ -1842,132 +2114,141 @@ if (preg_match('#^/api/admin/queue/(\\d+)/print$#', $path, $matches) && $method 
         exit;
     }
 
-    $ticketId = (int) $matches[1];
-    $ticket = fetch_queue_ticket($pdo, $ticketId);
-    if (!$ticket) {
-        json_response(['error' => 'Ticket not found'], 404);
-        exit;
-    }
+    ini_set('display_errors', '0');
+    ini_set('html_errors', '0');
 
-    $serviceIds = [];
-    foreach (($ticket['services'] ?? []) as $serviceItem) {
-        $serviceId = (int) ($serviceItem['id'] ?? 0);
-        if ($serviceId) {
-            $serviceIds[] = $serviceId;
-        }
-    }
-    if (!$serviceIds && !empty($ticket['service_id'])) {
-        $serviceIds[] = (int) $ticket['service_id'];
-    }
-    $serviceIds = array_values(array_unique($serviceIds));
-    $serviceLookup = fetch_services_by_ids($pdo, $serviceIds);
-    $services = [];
-    foreach ($serviceIds as $serviceId) {
-        if (isset($serviceLookup[$serviceId])) {
-            $services[] = $serviceLookup[$serviceId];
-        }
-    }
-    if (!$services) {
-        json_response(['error' => 'Service not found'], 404);
-        exit;
-    }
-
-    $templateMap = [
-        'PROOF_RESIDENCY' => 'template_residency.docx',
-        'INDIGENCY' => 'template_indigency.docx',
-        'INCOME_LOAN' => 'template_low_income.docx',
-        'SOLO_PARENT' => 'template_solo_parent.docx',
-        'SPECIAL_PERMIT' => 'template_special_permit.docx',
-        'BUILDING_PERMIT' => 'template_building_permit.docx',
-    ];
-    $fullNameParts = [
-        $ticket['resident_first_name'] ?? '',
-        $ticket['resident_middle_name'] ?? '',
-        $ticket['resident_last_name'] ?? '',
-    ];
-    $fullName = trim(preg_replace('/\\s+/', ' ', implode(' ', array_filter($fullNameParts))));
-    $fullName = ucwords(strtolower($fullName));
-    $lastName = isset($ticket['resident_last_name']) ? ucwords(strtolower($ticket['resident_last_name'])) : '';
-    $address = trim($ticket['resident_address'] ?? '');
-    $now = new DateTime('now');
-    $month = $now->format('F');
-    $day = $now->format('j');
-    $dateLabel = $now->format('F j, Y');
-
-    $age = '';
-    if (!empty($ticket['resident_date_of_birth'])) {
-        try {
-            $dob = new DateTime($ticket['resident_date_of_birth']);
-            $age = (string) $dob->diff($now)->y;
-        } catch (Exception $e) {
-            $age = '';
-        }
-    }
-
-    $replacements = [
-        '${FULL_NAME}' => $fullName,
-        '${LAST_NAME}' => $lastName,
-        '${ADDRESS}' => $address,
-        '${AGE}' => $age,
-        '${MONTH}' => $month,
-        '${DAY}' => $day,
-        '${DATE}' => $dateLabel,
-    ];
-
-    $safeTicket = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($ticket['ticket_no'] ?? $ticketId));
-    $renderedFiles = [];
-    foreach ($services as $service) {
-        $templateFile = $templateMap[$service['code']] ?? null;
-        if (!$templateFile) {
-            json_response(['error' => 'Template not configured for this service'], 404);
+    try {
+        $ticketId = (int) $matches[1];
+        $ticket = fetch_queue_ticket($pdo, $ticketId);
+        if (!$ticket) {
+            json_response(['error' => 'Ticket not found'], 404);
             exit;
         }
-        $templatePath = __DIR__ . '/../templates/' . $templateFile;
-        $renderedPath = render_docx_template($templatePath, $replacements);
-        if (!$renderedPath) {
-            json_response(['error' => 'Unable to render template'], 500);
+
+        $serviceIds = [];
+        foreach (($ticket['services'] ?? []) as $serviceItem) {
+            $serviceId = (int) ($serviceItem['id'] ?? 0);
+            if ($serviceId) {
+                $serviceIds[] = $serviceId;
+            }
+        }
+        if (!$serviceIds && !empty($ticket['service_id'])) {
+            $serviceIds[] = (int) $ticket['service_id'];
+        }
+        $serviceIds = array_values(array_unique($serviceIds));
+        $serviceLookup = fetch_services_by_ids($pdo, $serviceIds);
+        $services = [];
+        foreach ($serviceIds as $serviceId) {
+            if (isset($serviceLookup[$serviceId])) {
+                $services[] = $serviceLookup[$serviceId];
+            }
+        }
+        if (!$services) {
+            json_response(['error' => 'Service not found'], 404);
             exit;
         }
-        $filename = sprintf('%s-%s.docx', strtolower($service['code']), $safeTicket ?: $ticketId);
-        $renderedFiles[] = ['path' => $renderedPath, 'filename' => $filename];
-    }
 
-    if (count($renderedFiles) === 1) {
-        $renderedPath = $renderedFiles[0]['path'];
-        $filename = $renderedFiles[0]['filename'];
+        $templateMap = [
+            'PROOF_RESIDENCY' => 'template_residency.docx',
+            'INDIGENCY' => 'template_indigency.docx',
+            'INCOME_LOAN' => 'template_low_income.docx',
+            'SOLO_PARENT' => 'template_solo_parent.docx',
+            'SPECIAL_PERMIT' => 'template_special_permit.docx',
+            'BUILDING_PERMIT' => 'template_building_permit.docx',
+        ];
+        $lastNameRaw = trim($ticket['resident_last_name'] ?? '');
+        $lastName = $lastNameRaw !== '' ? ucwords(strtolower($lastNameRaw)) : '';
+        $fullNameParts = [
+            $ticket['resident_first_name'] ?? '',
+            $ticket['resident_middle_name'] ?? '',
+            $ticket['resident_last_name'] ?? '',
+        ];
+        $fullName = trim(preg_replace('/\\s+/', ' ', implode(' ', array_filter($fullNameParts))));
+        $fullName = ucwords(strtolower($fullName));
+        $address = trim($ticket['resident_address'] ?? '');
+        $now = new DateTime('now');
+        $month = $now->format('F');
+        $day = $now->format('j');
+        $date = $now->format('F j, Y');
+
+        $age = '';
+        if (!empty($ticket['resident_date_of_birth'])) {
+            try {
+                $dob = new DateTime($ticket['resident_date_of_birth']);
+                $age = (string) $dob->diff($now)->y;
+            } catch (Exception $e) {
+                $age = '';
+            }
+        }
+
+        $replacements = [
+            '${FULL_NAME}' => $fullName,
+            '${LAST_NAME}' => $lastName,
+            '${ADDRESS}' => $address,
+            '${AGE}' => $age,
+            '${MONTH}' => $month,
+            '${DAY}' => $day,
+            '${DATE}' => $date,
+        ];
+
+        $safeTicket = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($ticket['ticket_no'] ?? $ticketId));
+        $renderedFiles = [];
+        foreach ($services as $service) {
+            $templateFile = $templateMap[$service['code']] ?? null;
+            if (!$templateFile) {
+                json_response(['error' => 'Template not configured for this service'], 404);
+                exit;
+            }
+            $templatePath = __DIR__ . '/../templates/' . $templateFile;
+            $renderedPath = render_docx_template($templatePath, $replacements);
+            if (!$renderedPath) {
+                json_response(['error' => 'Unable to render template'], 500);
+                exit;
+            }
+            $filename = sprintf('%s-%s.docx', strtolower($service['code']), $safeTicket ?: $ticketId);
+            $renderedFiles[] = ['path' => $renderedPath, 'filename' => $filename];
+        }
+
+        if (count($renderedFiles) === 1) {
+            $renderedPath = $renderedFiles[0]['path'];
+            $filename = $renderedFiles[0]['filename'];
+            while (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Content-Length: ' . filesize($renderedPath));
+            readfile($renderedPath);
+            unlink($renderedPath);
+            exit;
+        }
+
+        $mergedPath = merge_docx_documents(array_column($renderedFiles, 'path'));
+        if (!$mergedPath) {
+            foreach ($renderedFiles as $file) {
+                @unlink($file['path']);
+            }
+            json_response(['error' => 'Unable to prepare templates'], 500);
+            exit;
+        }
+
+        $mergedName = sprintf('ticket-%s-forms.docx', $safeTicket ?: $ticketId);
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
         header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-        header('Content-Length: ' . filesize($renderedPath));
-        readfile($renderedPath);
-        unlink($renderedPath);
-        exit;
-    }
+        header('Content-Disposition: attachment; filename="' . $mergedName . '"');
+        header('Content-Length: ' . filesize($mergedPath));
+        readfile($mergedPath);
 
-    $zipPath = tempnam(sys_get_temp_dir(), 'ticket_forms_');
-    $zip = new ZipArchive();
-    if ($zip->open($zipPath, ZipArchive::OVERWRITE) !== true) {
         foreach ($renderedFiles as $file) {
             @unlink($file['path']);
         }
-        json_response(['error' => 'Unable to prepare templates'], 500);
+        exit;
+    } catch (Throwable $e) {
+        json_response(['error' => 'Print failed: ' . $e->getMessage()], 500);
         exit;
     }
-    foreach ($renderedFiles as $file) {
-        $zip->addFile($file['path'], $file['filename']);
-    }
-    $zip->close();
-
-    $zipName = sprintf('ticket-%s-forms.zip', $safeTicket ?: $ticketId);
-    header('Content-Type: application/zip');
-    header('Content-Disposition: attachment; filename="' . $zipName . '"');
-    header('Content-Length: ' . filesize($zipPath));
-    readfile($zipPath);
-
-    foreach ($renderedFiles as $file) {
-        @unlink($file['path']);
-    }
-    @unlink($zipPath);
-    exit;
 }
 
 if ($path === '/api/admin/audit-logs' && $method === 'GET') {

@@ -1377,7 +1377,6 @@
                     <div>
                       <p class="queue-kicker">Call Station</p>
                       <h3 class="queue-title">Now Serving</h3>
-                      <p class="queue-subtitle">Always show who is being processed right now.</p>
                     </div>
                     <span
                       v-if="activeCallTicket"
@@ -1417,7 +1416,7 @@
                     </div>
                     <div class="queue-serving-actions">
                       <button class="resident-secondary" type="button" @click="printCallTicket(activeCallTicket)">
-                        Preview PDF
+                        Print Form
                       </button>
                       <button class="resident-primary" type="button" @click="serveTicket(activeCallTicket)">
                         Mark Done
@@ -1427,15 +1426,43 @@
                       </button>
                     </div>
                   </div>
-                  <p v-else class="queue-serving-empty">
-                    No active ticket yet. Use the next-call panel to start serving.
-                  </p>
+                  <div v-else class="queue-serving-empty">
+                    <p class="queue-serving-empty-text">
+                      No active ticket yet. Use the suggested next call or pick a ticket manually.
+                    </p>
+                    <div v-if="queueNextCandidate" class="queue-serving-suggest-card">
+                      <div>
+                        <span class="queue-serving-suggest-label">Suggested next</span>
+                        <div class="queue-serving-suggest-ticket">{{ queueNextCandidate.ticket_no }}</div>
+                        <div class="queue-serving-suggest-resident">{{ formatTicketResident(queueNextCandidate) }}</div>
+                        <div class="queue-serving-suggest-service">{{ ticketServiceLabel(queueNextCandidate) }}</div>
+                      </div>
+                      <button class="resident-primary queue-serving-suggest-cta" type="button" @click="callNext">
+                        Call next
+                      </button>
+                    </div>
+                    <div v-else class="queue-serving-empty-state">
+                      No waiting tickets right now. The call station will update once a new ticket arrives.
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <div class="queue-side-stack">
                 <div class="queue-next-card is-inline">
                   <p class="queue-card-label">Next in Line</p>
+                  <div v-if="queueWaitingTotal === 0 && !isLoadingQueue" class="queue-empty-notice">
+                    <div class="queue-empty-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M5 12h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                        <path d="M9 16h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+                      </svg>
+                    </div>
+                    <div>
+                      <strong>All caught up</strong>
+                      <span>No waiting tickets right now.</span>
+                    </div>
+                  </div>
                   <label class="queue-field">
                     <span>Service for Next Call</span>
                     <select v-model="callNextServiceId" class="queue-input">
@@ -1445,22 +1472,64 @@
                       </option>
                     </select>
                   </label>
-                  <div class="queue-next-main">
-                    <div>
-                      <p class="queue-next-ticket">{{ queueNextCandidate ? queueNextCandidate.ticket_no : '--' }}</p>
-                      <p class="queue-next-resident">
-                        {{ queueNextCandidate ? formatTicketResident(queueNextCandidate) : 'No waiting ticket' }}
-                      </p>
+                  <div class="queue-next-block">
+                    <p class="queue-next-label">Suggested next</p>
+                    <div class="queue-next-main">
+                      <div>
+                        <p class="queue-next-ticket">{{ queueNextCandidate ? queueNextCandidate.ticket_no : '--' }}</p>
+                        <p class="queue-next-resident">
+                          {{ queueNextCandidate ? formatTicketResident(queueNextCandidate) : 'No waiting ticket' }}
+                        </p>
+                      </div>
+                      <button class="resident-primary queue-call-cta" type="button" :disabled="!queueNextCandidate" @click="callNext">
+                        Call next
+                      </button>
                     </div>
-                    <button class="resident-primary queue-call-cta" type="button" :disabled="!queueNextCandidate" @click="callNext">
-                      Call next
+                    <div class="queue-next-meta">
+                      <span>Waiting: {{ queueWaitingList.length }}</span>
+                      <span>Issued: {{ queueNextCandidate ? formatTime(queueNextCandidate.issued_at) : '--' }}</span>
+                    </div>
+                    <p class="queue-call-note">{{ queueDecisionNote }}</p>
+                  </div>
+                  <div class="queue-next-block">
+                    <p class="queue-next-label">Manual pick</p>
+                    <label class="queue-field">
+                      <span>Select waiting ticket</span>
+                      <select v-model="manualNextTicketId" class="queue-input">
+                        <option value="">Choose from waiting list</option>
+                        <option v-for="ticket in queueWaitingList" :key="ticket.id" :value="ticket.id">
+                          {{ ticket.ticket_no }} — {{ formatTicketResident(ticket) }} · {{ ticketServiceCodeLabel(ticket) }}
+                        </option>
+                      </select>
+                    </label>
+                    <button
+                      class="resident-secondary queue-manual-cta"
+                      type="button"
+                      :disabled="!manualNextTicket"
+                      @click="callTicket(manualNextTicket)"
+                    >
+                      Call selected
                     </button>
                   </div>
-                  <div class="queue-next-meta">
-                    <span>Waiting: {{ queueWaitingList.length }}</span>
-                    <span>Issued: {{ queueNextCandidate ? formatTime(queueNextCandidate.issued_at) : '--' }}</span>
+                </div>
+
+                <div class="queue-monitor-card">
+                  <div class="queue-monitor-header">
+                    <div>
+                      <p class="queue-card-label">Queue Monitor</p>
+                      <p class="queue-monitor-subtitle">Live preview of the public display.</p>
+                    </div>
+                    <span class="queue-monitor-pill">Preview</span>
                   </div>
-                  <p class="queue-call-note">{{ queueDecisionNote }}</p>
+                  <div class="queue-monitor-frame" ref="queueMonitorFrame">
+                    <iframe
+                      :src="queueMonitorUrl"
+                      :style="queueMonitorIframeStyle"
+                      title="Queue monitor preview"
+                      loading="lazy"
+                      referrerpolicy="no-referrer"
+                    ></iframe>
+                  </div>
                 </div>
 
                 <div class="queue-metric-card is-summary">
@@ -2584,7 +2653,6 @@ import {
   queueCancel,
   getAuditLogs,
   getTimingAnalytics,
-  downloadQueueTemplate,
 } from '../adminApi'
 
 const router = useRouter()
@@ -2675,6 +2743,7 @@ const queueSortDirection = ref('asc')
 const queuePage = ref(1)
 const queuePageSize = 10
 const callNextServiceId = ref('auto')
+const manualNextTicketId = ref('')
 const activeCallTicket = ref(null)
 const transactions = ref([])
 const isLoadingTransactions = ref(false)
@@ -2730,6 +2799,12 @@ const timingError = ref('')
 const lastUpdatedAt = ref(new Date())
 const phTimeLabel = ref('')
 const phTimeTimer = ref(null)
+const queueRefreshTimer = ref(null)
+const isQueueAutoRefreshing = ref(false)
+const queueMonitorFrame = ref(null)
+const queueMonitorObserver = ref(null)
+const queueMonitorScale = ref(1)
+const queueMonitorOffset = ref({ x: 0, y: 0 })
 
 const lastUpdatedLabel = computed(() => {
   if (!lastUpdatedAt.value) return 'Just Now'
@@ -3210,7 +3285,17 @@ const queueWaitingList = computed(() => {
     .sort((a, b) => new Date(a.issued_at || 0).getTime() - new Date(b.issued_at || 0).getTime())
 })
 
+const queueWaitingTotal = computed(() =>
+  queueTickets.value.filter((ticket) => ticket.status === 'waiting').length
+)
+
 const queueNextCandidate = computed(() => queueWaitingList.value[0] || null)
+
+const manualNextTicket = computed(() => {
+  const selectedId = parseInt(manualNextTicketId.value, 10)
+  if (!selectedId) return null
+  return queueWaitingList.value.find((ticket) => ticket.id === selectedId) || null
+})
 
 const queueDecisionNote = computed(() => {
   if (!queueWaitingList.value.length) {
@@ -3221,6 +3306,14 @@ const queueDecisionNote = computed(() => {
   return callNextServiceId.value === 'auto'
     ? 'Auto will call the earliest waiting ticket across all services.'
     : 'Calling uses the earliest waiting ticket by issued time, matching the queue monitor.'
+})
+
+watch(queueWaitingList, (list) => {
+  if (!manualNextTicketId.value) return
+  const selectedId = parseInt(manualNextTicketId.value, 10)
+  if (!selectedId || !list.some((ticket) => ticket.id === selectedId)) {
+    manualNextTicketId.value = ''
+  }
 })
 
 const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
@@ -3503,6 +3596,36 @@ const queueStatusPercentages = computed(() => {
 })
 
 const activeQueueCount = computed(() => queueStatusCounts.value.waiting + queueStatusCounts.value.serving)
+
+const queueMonitorUrl = computed(() => {
+  if (import.meta.env.VITE_QUEUE_MONITOR_URL) return import.meta.env.VITE_QUEUE_MONITOR_URL
+  if (typeof window === 'undefined') return ''
+  return `${window.location.origin}/queue-monitor/`
+})
+
+const queueMonitorBaseSize = { width: 1920, height: 1080 }
+
+const updateQueueMonitorScale = () => {
+  const frame = queueMonitorFrame.value
+  if (!frame) return
+  const { width, height } = frame.getBoundingClientRect()
+  if (!width || !height) return
+  const scale = Math.min(width / queueMonitorBaseSize.width, height / queueMonitorBaseSize.height, 1)
+  queueMonitorScale.value = scale
+  const scaledWidth = queueMonitorBaseSize.width * scale
+  const scaledHeight = queueMonitorBaseSize.height * scale
+  queueMonitorOffset.value = {
+    x: Math.max(0, (width - scaledWidth) / 2),
+    y: Math.max(0, (height - scaledHeight) / 2),
+  }
+}
+
+const queueMonitorIframeStyle = computed(() => ({
+  width: `${queueMonitorBaseSize.width}px`,
+  height: `${queueMonitorBaseSize.height}px`,
+  transform: `translate(${queueMonitorOffset.value.x}px, ${queueMonitorOffset.value.y}px) scale(${queueMonitorScale.value})`,
+  transformOrigin: 'top left',
+}))
 
 const averageWaitMinutes = computed(() => {
   const now = Date.now()
@@ -5039,6 +5162,17 @@ const loadAllQueueTickets = async () => {
   }
 }
 
+const refreshQueueSnapshot = async () => {
+  if (isQueueAutoRefreshing.value) return
+  isQueueAutoRefreshing.value = true
+  try {
+    await loadQueue()
+    await loadAllQueueTickets()
+  } finally {
+    isQueueAutoRefreshing.value = false
+  }
+}
+
 const loadTransactions = async () => {
   transactionError.value = ''
   isLoadingTransactions.value = true
@@ -5137,283 +5271,23 @@ const escapeHtml = (value) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 
-const buildQueuePrintPreviewHtml = (ticket) => {
-  const services = resolveTicketServices(ticket)
-  const systemName = 'Automated Kiosk for Application Queuing System'
-  const systemLocation = 'Barangay San Miguel, Pasig City'
-  const preparedBy = profile?.name || 'Admin User'
-  const preparedEmail = profile?.email || 'admin@barangay.local'
-  const residentName = formatTicketResident(ticket)
-  const residentId = ticket?.resident_id ? `BSM-RES-${String(ticket.resident_id).padStart(6, '0')}` : '—'
-  const issuedAt = ticket?.issued_at ? formatReportTimestamp(new Date(ticket.issued_at)) : '—'
-  const ticketNo = ticket?.ticket_no || `Ticket #${ticket?.id || '--'}`
-  const address = ticket?.resident_address || '—'
-  const gender = ticket?.resident_gender || '—'
-  const civilStatus = ticket?.resident_civil_status || '—'
-  const mobile = ticket?.resident_mobile_number || '—'
-  const email = ticket?.resident_email || '—'
-  const age = (() => {
-    if (!ticket?.resident_date_of_birth) return ''
-    const dob = new Date(ticket.resident_date_of_birth)
-    if (Number.isNaN(dob.getTime())) return ''
-    const today = new Date()
-    let years = today.getFullYear() - dob.getFullYear()
-    const monthDelta = today.getMonth() - dob.getMonth()
-    if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < dob.getDate())) {
-      years -= 1
-    }
-    return years > 0 ? String(years) : ''
-  })()
-
-  const pages = services.length ? services : []
-  const pageHtml = pages
-    .map((service, index) => {
-      const title = formatServiceName(service.name || serviceName(service.id))
-      const code = service.code || serviceCode(service.id) || '—'
-      const position = `${index + 1}`.padStart(2, '0')
-      return `
-        <section class="page">
-          <div class="page-watermark">Barangay San Miguel</div>
-          <header class="page-header">
-            <div class="brand">
-              <img src="/logo.png" alt="Barangay San Miguel" />
-              <div>
-                <h1>${escapeHtml(systemName)}</h1>
-                <p>${escapeHtml(systemLocation)}</p>
-              </div>
-            </div>
-            <div class="header-meta">
-              <span>Ticket: ${escapeHtml(ticketNo)}</span>
-              <span>Issued: ${escapeHtml(issuedAt)}</span>
-              <span>Prepared: ${escapeHtml(preparedBy)}</span>
-            </div>
-          </header>
-          <div class="page-title">
-            <div>
-              <h2>${escapeHtml(title)}</h2>
-              <p>Service Code: ${escapeHtml(code)}</p>
-            </div>
-            <div class="page-badge">Form ${escapeHtml(position)} of ${escapeHtml(String(pages.length))}</div>
-          </div>
-
-          <div class="info-grid">
-            <div class="info-card">
-              <h3>Resident Information</h3>
-              <div class="info-row"><span>Name</span><strong>${escapeHtml(residentName)}</strong></div>
-              <div class="info-row"><span>Resident ID</span><strong>${escapeHtml(residentId)}</strong></div>
-              <div class="info-row"><span>Age</span><strong>${escapeHtml(age || '—')}</strong></div>
-              <div class="info-row"><span>Gender</span><strong>${escapeHtml(gender)}</strong></div>
-              <div class="info-row"><span>Civil Status</span><strong>${escapeHtml(civilStatus)}</strong></div>
-            </div>
-            <div class="info-card">
-              <h3>Contact Details</h3>
-              <div class="info-row"><span>Address</span><strong>${escapeHtml(address)}</strong></div>
-              <div class="info-row"><span>Email</span><strong>${escapeHtml(email)}</strong></div>
-              <div class="info-row"><span>Mobile</span><strong>${escapeHtml(mobile)}</strong></div>
-            </div>
-          </div>
-
-          <div class="statement">
-            <h3>Statement</h3>
-            <p>
-              This document certifies that the resident listed above has requested the ${escapeHtml(title)} service
-              through the Automated Kiosk for Application Queuing System. The information captured here reflects the
-              details on record at the time of issuance (${escapeHtml(issuedAt)}).
-            </p>
-          </div>
-
-          <div class="signatures">
-            <div class="signature-block">
-              <span>Prepared By</span>
-              <strong>${escapeHtml(preparedBy)}</strong>
-              <small>${escapeHtml(preparedEmail)}</small>
-            </div>
-            <div class="signature-block">
-              <span>Resident Signature</span>
-              <strong>_______________________</strong>
-              <small>${escapeHtml(residentName)}</small>
-            </div>
-          </div>
-        </section>
-      `
-    })
-    .join('')
-
-  return `<!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <title>${escapeHtml(ticketNo)} - Service Forms</title>
-        <style>
-          @page { size: A4; margin: 16mm; }
-          * { box-sizing: border-box; font-family: "Segoe UI", Tahoma, sans-serif; }
-          body { margin: 0; color: #0f172a; background: #eef2ff; }
-          .toolbar {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 20px;
-            background: #ffffff;
-            border-bottom: 1px solid rgba(15, 23, 42, 0.1);
-          }
-          .toolbar-title { font-size: 14px; font-weight: 700; color: #0b2c6f; }
-          .toolbar-actions { display: flex; gap: 10px; }
-          .toolbar button {
-            border: 0;
-            border-radius: 999px;
-            padding: 8px 14px;
-            font-weight: 600;
-            font-size: 12px;
-            cursor: pointer;
-            background: #0b2c6f;
-            color: #ffffff;
-          }
-          .toolbar button.secondary {
-            background: #f2c300;
-            color: #0b1f3a;
-          }
-          .pages { padding: 24px; display: grid; gap: 24px; }
-          .page {
-            position: relative;
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 22px 40px -32px rgba(15, 23, 42, 0.35);
-            page-break-after: always;
-            break-after: page;
-          }
-          .page:last-child { page-break-after: auto; break-after: auto; }
-          .page-watermark {
-            position: absolute;
-            inset: 0;
-            display: grid;
-            place-items: center;
-            font-size: 56px;
-            font-weight: 700;
-            letter-spacing: 0.12em;
-            color: rgba(15, 23, 42, 0.04);
-            transform: rotate(-20deg);
-            pointer-events: none;
-          }
-          .page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 16px;
-            border-bottom: 2px solid #0b2c6f;
-            padding-bottom: 12px;
-            position: relative;
-            z-index: 1;
-          }
-          .brand { display: flex; gap: 12px; align-items: center; }
-          .brand img { width: 48px; height: 48px; object-fit: contain; }
-          .brand h1 { margin: 0; font-size: 16px; color: #0b2c6f; }
-          .brand p { margin: 2px 0 0; font-size: 11px; color: #475569; }
-          .header-meta { text-align: right; font-size: 11px; color: #475569; display: grid; gap: 2px; }
-          .page-title {
-            margin-top: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 12px;
-            position: relative;
-            z-index: 1;
-          }
-          .page-title h2 { margin: 0; font-size: 18px; color: #0f172a; }
-          .page-title p { margin: 4px 0 0; font-size: 12px; color: #64748b; }
-          .page-badge {
-            background: #0b2c6f;
-            color: #ffffff;
-            padding: 6px 12px;
-            border-radius: 999px;
-            font-size: 11px;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-          }
-          .info-grid { margin-top: 18px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-          .info-card {
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 14px;
-            background: #f8fafc;
-            position: relative;
-            z-index: 1;
-          }
-          .info-card h3 { margin: 0 0 10px; font-size: 12px; color: #0b2c6f; text-transform: uppercase; letter-spacing: 0.08em; }
-          .info-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: #475569; padding: 4px 0; }
-          .info-row strong { color: #0f172a; font-weight: 600; }
-          .statement {
-            margin-top: 18px;
-            padding: 14px;
-            border-radius: 12px;
-            background: #f1f5f9;
-            position: relative;
-            z-index: 1;
-          }
-          .statement h3 { margin: 0 0 8px; font-size: 12px; color: #0b2c6f; text-transform: uppercase; letter-spacing: 0.08em; }
-          .statement p { margin: 0; font-size: 12px; color: #334155; line-height: 1.6; }
-          .signatures {
-            margin-top: 20px;
-            display: flex;
-            justify-content: space-between;
-            gap: 16px;
-            position: relative;
-            z-index: 1;
-          }
-          .signature-block { flex: 1; border-top: 1px solid #cbd5f5; padding-top: 10px; font-size: 11px; color: #475569; }
-          .signature-block strong { display: block; font-size: 12px; color: #0f172a; margin-top: 4px; }
-          .signature-block small { display: block; margin-top: 2px; color: #94a3b8; }
-
-          @media print {
-            body { background: #ffffff; }
-            .toolbar { display: none; }
-            .pages { padding: 0; gap: 0; }
-            .page { box-shadow: none; border-radius: 0; padding: 0; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="toolbar">
-          <div class="toolbar-title">Service Form Preview</div>
-          <div class="toolbar-actions">
-            <button class="secondary" onclick="window.print()">Save As PDF</button>
-            <button onclick="window.close()">Close</button>
-          </div>
-        </div>
-        <div class="pages">
-          ${pageHtml}
-        </div>
-      </body>
-    </html>`
-}
-
 const printCallTicket = async (ticket) => {
   if (!ticket?.id) return
   queueError.value = ''
   try {
-    const previewWindow = window.open('', 'queue-print-preview')
-    if (!previewWindow) {
-      const blob = await downloadQueueTemplate(ticket.id)
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      const fallbackName = ticket.ticket_no ? `${ticket.ticket_no}` : `ticket-${ticket.id}`
-      const serviceCount = resolveTicketServices(ticket).length
-      const extension = serviceCount > 1 ? 'zip' : 'docx'
-      link.href = url
-      link.download = `${fallbackName}.${extension}`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(url)
+    const token = localStorage.getItem('admin_token')
+    if (!token) {
+      queueError.value = 'Please sign in again to print the form.'
       return
     }
-    previewWindow.document.write(buildQueuePrintPreviewHtml(ticket))
-    previewWindow.document.close()
-    previewWindow.focus()
+    const fallbackName = ticket.ticket_no ? `${ticket.ticket_no}` : `ticket-${ticket.id}`
+    const url = `${baseUrl}/api/admin/queue/${ticket.id}/print?token=${encodeURIComponent(token)}`
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${fallbackName}.docx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   } catch (err) {
     queueError.value = err.message
   }
@@ -5642,6 +5516,17 @@ onMounted(() => {
   }
   updatePhTime()
   phTimeTimer.value = setInterval(updatePhTime, 60 * 1000)
+  queueRefreshTimer.value = setInterval(() => {
+    if (document.hidden) return
+    refreshQueueSnapshot()
+  }, 8000)
+  if (typeof ResizeObserver !== 'undefined') {
+    queueMonitorObserver.value = new ResizeObserver(() => updateQueueMonitorScale())
+    if (queueMonitorFrame.value) {
+      queueMonitorObserver.value.observe(queueMonitorFrame.value)
+    }
+  }
+  requestAnimationFrame(updateQueueMonitorScale)
 
   const sectionIds = ['dashboard', 'queue-control', 'resident-verification', 'services', 'transactions', 'kiosk-devices', 'audit-logs', 'admin-users']
   const sections = sectionIds
@@ -5677,6 +5562,13 @@ watch(
   }
 )
 
+watch(activeSection, (section) => {
+  if (section === 'queue-control') {
+    refreshQueueSnapshot()
+    requestAnimationFrame(updateQueueMonitorScale)
+  }
+})
+
 onBeforeUnmount(() => {
   if (dockObserver) {
     dockObserver.disconnect()
@@ -5686,6 +5578,12 @@ onBeforeUnmount(() => {
   }
   if (phTimeTimer.value) {
     clearInterval(phTimeTimer.value)
+  }
+  if (queueRefreshTimer.value) {
+    clearInterval(queueRefreshTimer.value)
+  }
+  if (queueMonitorObserver.value) {
+    queueMonitorObserver.value.disconnect()
   }
 })
 </script>
@@ -5708,7 +5606,9 @@ onBeforeUnmount(() => {
 .admin-dock {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1rem;
+  flex-wrap: nowrap;
+  min-width: 0;
   padding: 0.95rem 1.45rem;
   border-radius: 26px;
   background: linear-gradient(135deg, rgba(11, 44, 111, 0.98), rgba(9, 30, 78, 0.95));
@@ -5739,6 +5639,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .admin-avatar {
@@ -5758,18 +5660,25 @@ onBeforeUnmount(() => {
   font-size: 1.1rem;
   font-weight: 600;
   color: #f8f7ff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .admin-email {
   margin-top: 0.15rem;
   font-size: 1rem;
   color: rgba(226, 232, 240, 0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .admin-dock-divider {
   height: 38px;
   width: 1px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.08));
+  flex: 0 0 auto;
 }
 
 .admin-dock-nav {
@@ -5777,16 +5686,28 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.6rem;
   flex: 1;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.admin-dock-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .admin-nav-item {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  padding: 0.65rem 1rem;
+  padding: 0.55rem 0.85rem;
   border-radius: 999px;
-  font-size: 1rem;
+  font-size: 0.92rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  flex-shrink: 0;
   color: rgba(255, 255, 255, 0.88);
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -5849,6 +5770,8 @@ onBeforeUnmount(() => {
   background: linear-gradient(135deg, rgba(242, 195, 0, 0.18), rgba(255, 255, 255, 0.08));
   border: 1px solid rgba(242, 195, 0, 0.25);
   box-shadow: 0 10px 22px rgba(11, 44, 111, 0.18);
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .admin-time-label {
@@ -6915,6 +6838,102 @@ onBeforeUnmount(() => {
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.09);
 }
 
+.queue-monitor-card {
+  border-radius: 22px;
+  padding: 1.1rem;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.queue-monitor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.queue-monitor-subtitle {
+  margin: 0.35rem 0 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.queue-monitor-pill {
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(11, 44, 111, 0.1);
+  color: #0b2c6f;
+}
+
+.queue-monitor-frame {
+  width: 100%;
+  height: 320px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  background: #0f172a;
+  position: relative;
+}
+
+.queue-monitor-frame iframe {
+  border: none;
+}
+
+.queue-empty-notice {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  padding: 0.75rem 0.9rem;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+}
+
+.queue-empty-notice strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.queue-empty-notice span {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.queue-empty-icon {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: #e2e8f0;
+  color: #0b2c6f;
+}
+
+.queue-next-block {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.queue-next-label {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #64748b;
+}
+
 .queue-next-main {
   display: flex;
   align-items: center;
@@ -6930,6 +6949,13 @@ onBeforeUnmount(() => {
   box-shadow: 0 14px 30px rgba(11, 44, 111, 0.22);
   background: linear-gradient(135deg, #0b2c6f 0%, #1d4ed8 100%);
   border-color: #1d4ed8;
+}
+
+.queue-manual-cta {
+  align-self: flex-start;
+  padding: 0.55rem 1.3rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
 }
 
 .queue-next-ticket {
@@ -7053,6 +7079,66 @@ onBeforeUnmount(() => {
   color: rgba(226, 232, 240, 0.8);
   font-size: 0.9rem;
   text-align: center;
+  display: grid;
+  gap: 0.9rem;
+  justify-items: center;
+}
+
+.queue-serving-empty-text {
+  margin: 0;
+}
+
+.queue-serving-suggest-card {
+  width: min(100%, 520px);
+  padding: 0.9rem 1.1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  text-align: left;
+}
+
+.queue-serving-suggest-label {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 0.65rem;
+  color: rgba(226, 232, 240, 0.7);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.queue-serving-suggest-ticket {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #f2c300;
+  letter-spacing: 0.08em;
+}
+
+.queue-serving-suggest-resident {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.queue-serving-suggest-service {
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.75);
+}
+
+.queue-serving-suggest-cta {
+  padding: 0.65rem 1.5rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.queue-serving-empty-state {
+  font-size: 0.85rem;
+  color: rgba(226, 232, 240, 0.65);
 }
 
 .queue-serving-status {
@@ -7084,10 +7170,10 @@ onBeforeUnmount(() => {
 .queue-snapshot-card {
   border-radius: 16px;
   padding: 0.75rem 0.85rem;
-  color: #0f172a;
+  color: #ffffff;
   display: grid;
   gap: 0.3rem;
-  border: 1px solid transparent;
+  border: 1px solid rgba(11, 44, 111, 0.6);
   box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
 }
 
@@ -7105,29 +7191,36 @@ onBeforeUnmount(() => {
 
 .queue-snapshot-card small {
   font-size: 0.75rem;
-  opacity: 0.85;
+  color: rgba(248, 250, 252, 0.85);
 }
 
 .queue-snapshot-card.is-waiting {
-  background: linear-gradient(135deg, #fde68a 0%, #fbbf24 100%);
-  border-color: rgba(180, 83, 9, 0.2);
+  background: #f2c300;
+  border-color: rgba(242, 195, 0, 0.85);
+  color: #0b2c6f;
 }
 
 .queue-snapshot-card.is-serving {
-  background: linear-gradient(135deg, #93c5fd 0%, #3b82f6 100%);
-  color: #0b1f3b;
-  border-color: rgba(30, 64, 175, 0.2);
+  background: #0b2c6f;
+  border-color: rgba(11, 44, 111, 0.6);
+  color: #ffffff;
 }
 
 .queue-snapshot-card.is-done {
-  background: linear-gradient(135deg, #bbf7d0 0%, #22c55e 100%);
-  border-color: rgba(21, 128, 61, 0.2);
+  background: #2e7d32;
+  border-color: rgba(46, 125, 50, 0.7);
+  color: #ffffff;
 }
 
 .queue-snapshot-card.is-cancelled {
-  background: linear-gradient(135deg, #fecaca 0%, #ef4444 100%);
-  color: #3f1010;
-  border-color: rgba(153, 27, 27, 0.2);
+  background: #c0392b;
+  border-color: rgba(192, 57, 43, 0.7);
+  color: #ffffff;
+}
+
+.queue-snapshot-card.is-waiting small,
+.queue-snapshot-card.is-waiting span {
+  color: rgba(11, 44, 111, 0.8);
 }
 
 .queue-snapshot-footer {
@@ -10217,6 +10310,15 @@ onBeforeUnmount(() => {
   .service-table-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .queue-monitor-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .queue-monitor-frame {
+    height: 220px;
   }
 
   .queue-serving-status {
